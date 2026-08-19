@@ -12,7 +12,9 @@ from app.core.db.session import Base
 
 # Ensure models are imported so Base.metadata includes every mapped table.
 from app.models import (
+    activity,  # noqa: F401
     api_key,  # noqa: F401
+    github,  # noqa: F401
     user,  # noqa: F401
 )
 

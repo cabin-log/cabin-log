@@ -1,13 +1,15 @@
 from urllib.parse import urlencode, urljoin
 
 from fastapi import APIRouter, Body, Depends, Query, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.config.settings import SETTINGS
 from app.core.error import AuthErrorCode, AuthException, auth_error_responses
 from app.core.observability.logging import get_logger
 from app.deps import get_current_admin_user, get_current_user
+from app.models.github import GitHubProfiles
 from app.models.oauth import OAuthProvider, OAuthProvidersResponse
 from app.models.user import (
     ForgotPasswordForm,
@@ -39,6 +41,27 @@ def _resolve_preferred_language(request: Request) -> str | None:
     if app_language and app_language.strip():
         return app_language
     return request.headers.get("Accept-Language")
+
+
+def _oauth_json_mode_enabled() -> bool:
+    return SETTINGS.OAUTH_CALLBACK_RESPONSE_MODE == "json"
+
+
+def _oauth_failure_response(error: str, message: str | None = None) -> Response:
+    if _oauth_json_mode_enabled():
+        payload: dict[str, str] = {"error": error}
+        if message:
+            payload["message"] = message
+        return JSONResponse(status_code=400, content=payload)
+
+    failure_query = urlencode(
+        {"error": error} if message is None else {"error": error, "message": message}
+    )
+    failure_url = urljoin(
+        f"{SETTINGS.APP_BASE_URL.rstrip('/')}/",
+        SETTINGS.OAUTH_FRONTEND_FAILURE_PATH.lstrip("/"),
+    )
+    return RedirectResponse(url=f"{failure_url}?{failure_query}", status_code=307)
 
 
 @router.post(
@@ -94,8 +117,6 @@ async def oauth_start(
 @router.get(
     "/oauth/{provider}/callback",
     name="oauth_callback",
-    response_class=RedirectResponse,
-    status_code=307,
 )
 async def oauth_callback(
     provider: OAuthProvider,
@@ -104,18 +125,13 @@ async def oauth_callback(
     state: str | None = Query(default=None),
     error: str | None = Query(default=None),
     service: AuthService = Depends(AuthService),
-) -> RedirectResponse:
+) -> Response:
     # Provider-side errors are returned as a frontend redirect, not raised as API JSON errors.
     if error:
         logger.error(
             "OAuth callback returned provider error (provider=%s, error=%s).", provider, error
         )
-        failure_query = urlencode({"error": error})
-        failure_url = urljoin(
-            f"{SETTINGS.APP_BASE_URL.rstrip('/')}/",
-            SETTINGS.OAUTH_FRONTEND_FAILURE_PATH.lstrip("/"),
-        )
-        return RedirectResponse(url=f"{failure_url}?{failure_query}", status_code=307)
+        return _oauth_failure_response(error=error)
 
     # OAuth callback contract requires both authorization code and state.
     try:
@@ -130,17 +146,10 @@ async def oauth_callback(
             provider.value,
             callback_error.code.error,
         )
-        failure_query = urlencode(
-            {
-                "error": callback_error.code.error,
-                "message": callback_error.message,
-            }
+        return _oauth_failure_response(
+            error=callback_error.code.error,
+            message=callback_error.message,
         )
-        failure_url = urljoin(
-            f"{SETTINGS.APP_BASE_URL.rstrip('/')}/",
-            SETTINGS.OAUTH_FRONTEND_FAILURE_PATH.lstrip("/"),
-        )
-        return RedirectResponse(url=f"{failure_url}?{failure_query}", status_code=307)
 
     refresh_session_id = create_refresh_session_id()
     try:
@@ -159,17 +168,30 @@ async def oauth_callback(
             provider.value,
             auth_error.code.error,
         )
-        failure_query = urlencode(
-            {
-                "error": auth_error.code.error,
-                "message": auth_error.message,
-            }
+        return _oauth_failure_response(error=auth_error.code.error, message=auth_error.message)
+
+    if _oauth_json_mode_enabled():
+        github_profile = None
+        if provider == OAuthProvider.GITHUB:
+            github_profile = await GitHubProfiles.get_profile_by_user_id(token_payload.user.id)
+
+        response = JSONResponse(
+            status_code=200,
+            content=jsonable_encoder(
+                {
+                    **token_payload.model_dump(),
+                    "github_profile": github_profile,
+                }
+            ),
         )
-        failure_url = urljoin(
-            f"{SETTINGS.APP_BASE_URL.rstrip('/')}/",
-            SETTINGS.OAUTH_FRONTEND_FAILURE_PATH.lstrip("/"),
+        set_refresh_cookies(
+            response=response,
+            request=request,
+            refresh_token=token_payload.refresh_token,
+            refresh_session_id=refresh_session_id,
+            remember_me=True,
         )
-        return RedirectResponse(url=f"{failure_url}?{failure_query}", status_code=307)
+        return response
 
     success_url = urljoin(
         f"{SETTINGS.APP_BASE_URL.rstrip('/')}/",

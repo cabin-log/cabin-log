@@ -87,6 +87,9 @@ class Settings(BaseModel):
     OAUTH_ENABLED: bool = os.getenv("OAUTH_ENABLED", "false").lower() == "true"
     OAUTH_ALLOWED_PROVIDERS: str = os.getenv("OAUTH_ALLOWED_PROVIDERS", "google,github")
     OAUTH_STATE_EXPIRE_MINUTES: int = int(os.getenv("OAUTH_STATE_EXPIRE_MINUTES", "10"))
+    OAUTH_CALLBACK_RESPONSE_MODE: str = os.getenv(
+        "OAUTH_CALLBACK_RESPONSE_MODE", "redirect"
+    ).lower()
     OAUTH_FRONTEND_SUCCESS_PATH: str = os.getenv("OAUTH_FRONTEND_SUCCESS_PATH", "/dashboard")
     OAUTH_FRONTEND_FAILURE_PATH: str = os.getenv("OAUTH_FRONTEND_FAILURE_PATH", "/login")
 
@@ -113,6 +116,7 @@ class Settings(BaseModel):
     OAUTH_GITHUB_USERINFO_URL: str = os.getenv(
         "OAUTH_GITHUB_USERINFO_URL", "https://api.github.com/user"
     )
+    GITHUB_WEBHOOK_SECRET: str = os.getenv("GITHUB_WEBHOOK_SECRET", "")
     SSE_HEARTBEAT_SECONDS: int = int(os.getenv("SSE_HEARTBEAT_SECONDS", "20"))
     SSE_RETRY_MILLIS: int = int(os.getenv("SSE_RETRY_MILLIS", "5000"))
 

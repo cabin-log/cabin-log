@@ -14,6 +14,7 @@ from app.core.config.settings import SETTINGS
 from app.core.error import AuthErrorCode, AuthException
 from app.core.observability.logging import get_logger, mask_email
 from app.core.task_queue.services.mail import MAIL_QUEUE_SERVICE
+from app.models.github import GitHubProfiles, GitHubProfileUpsert
 from app.models.oauth import (
     OAuthIdentityProfile,
     OAuthProvider,
@@ -30,6 +31,7 @@ from app.models.user import (
     UserRoleStatsResponse,
     Users,
 )
+from app.services.github import GitHubService
 from app.utils.cookies import get_refresh_cookie_value
 from app.utils.security import hash_password, verify_password
 from app.utils.token import (
@@ -186,6 +188,19 @@ class AuthService:
         profile = await self._fetch_oauth_profile(provider, provider_config, access_token)
 
         user = await self._resolve_oauth_user(profile)
+        if provider == OAuthProvider.GITHUB:
+            await self._upsert_github_profile(user_id=user.id, profile=profile)
+            try:
+                await GitHubService().sync_user_repositories(
+                    user_id=user.id,
+                    access_token=access_token,
+                )
+            except Exception:
+                logger.warning(
+                    "GitHub repository sync failed after OAuth login (user_id=%s).",
+                    user.id,
+                    exc_info=True,
+                )
         user_ip = self._get_client_ip(request)
         await Users.update_login_metadata(
             user_id=user.id,
@@ -483,7 +498,8 @@ class AuthService:
         else:
             provider_user_id = str(payload.get("id", "")).strip()
             email = str(payload.get("email", "")).strip().lower()
-            name = str(payload.get("name", "")).strip() or str(payload.get("login", "")).strip()
+            login = str(payload.get("login", "")).strip()
+            name = str(payload.get("name", "")).strip() or login
             verified_email, email_verified = await self._fetch_github_primary_email(
                 provider_config,
                 access_token,
@@ -503,6 +519,44 @@ class AuthService:
             email=email,
             name=name or email,
             email_verified=email_verified,
+            login=login if provider == OAuthProvider.GITHUB else None,
+            avatar_url=(
+                str(payload.get("avatar_url", "")).strip()
+                if provider == OAuthProvider.GITHUB and payload.get("avatar_url")
+                else None
+            ),
+            profile_url=(
+                str(payload.get("html_url", "")).strip()
+                if provider == OAuthProvider.GITHUB and payload.get("html_url")
+                else None
+            ),
+        )
+
+    async def _upsert_github_profile(self, user_id: int, profile: OAuthIdentityProfile) -> None:
+        try:
+            github_user_id = int(profile.provider_user_id)
+        except ValueError as error:
+            raise AuthException(
+                code=AuthErrorCode.INVALID_TOKEN,
+                message="GitHub OAuth profile id is invalid.",
+            ) from error
+
+        login = (profile.login or profile.name or profile.email).strip()
+        if not login:
+            raise AuthException(
+                code=AuthErrorCode.INVALID_TOKEN,
+                message="GitHub OAuth profile login is missing.",
+            )
+
+        await GitHubProfiles.upsert_profile(
+            GitHubProfileUpsert(
+                user_id=user_id,
+                github_user_id=github_user_id,
+                login=login,
+                display_name=profile.name,
+                avatar_url=profile.avatar_url,
+                profile_url=profile.profile_url,
+            )
         )
 
     async def _fetch_github_primary_email(

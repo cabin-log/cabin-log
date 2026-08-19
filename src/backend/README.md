@@ -61,6 +61,22 @@ Cabinlog auth defaults:
 - Password signup/login endpoints are disabled unless `PASSWORD_AUTH_ENABLED=true`.
 - GitHub is the only OAuth provider listed by default (`OAUTH_ALLOWED_PROVIDERS=github`).
 - Set `OAUTH_ENABLED=true` only after configuring `OAUTH_GITHUB_CLIENT_ID` and `OAUTH_GITHUB_CLIENT_SECRET`.
+- Use `OAUTH_CALLBACK_RESPONSE_MODE=json` for backend-only OAuth verification; it returns tokens and the linked GitHub profile directly from the callback.
+
+GitHub backend foundation:
+- `GET /api/v1/github/me` returns the GitHub profile linked during OAuth login for the current bearer/API-key user.
+- `GET /api/v1/github/repositories` returns the repository/language snapshot collected during OAuth login.
+- `GET /api/v1/github/stack-summary` returns language byte totals and ratios across the collected repositories.
+- `POST /api/v1/webhooks/github` accepts GitHub webhooks signed with `GITHUB_WEBHOOK_SECRET`.
+- Initial webhook normalization supports `push` and `pull_request` events and persists them as Cabinlog activities.
+- `GET /api/v1/github/activities` returns the current user's persisted GitHub-derived activities.
+- Unsupported webhook events are acknowledged as ignored and do not create game activity.
+
+Backend-only OAuth check:
+1. Set `APP_BASE_URL=http://localhost:8000` and `OAUTH_CALLBACK_RESPONSE_MODE=json`.
+2. Open `/api/v1/auth/oauth/github/start` in a browser.
+3. After GitHub approval, the callback returns JSON with `access_token`, `refresh_token`, `user`, and `github_profile`.
+4. Use the `access_token` as a bearer token for `/api/v1/github/me`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, and `/api/v1/github/activities`.
 
 Prometheus metrics:
 - `http://localhost:8000/metrics`

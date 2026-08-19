@@ -28,6 +28,9 @@ class OAuthIdentityProfile(BaseModel):
     email: str
     name: str
     email_verified: bool = False
+    login: str | None = None
+    avatar_url: str | None = None
+    profile_url: str | None = None
 
 
 class OAuthProvidersResponse(BaseModel):
