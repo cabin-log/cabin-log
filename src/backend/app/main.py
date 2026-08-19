@@ -67,6 +67,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 class AppConfigResponse(BaseModel):
     api_base_path: str
     login_enabled: bool
+    password_auth_enabled: bool
     frontend_base_path: str
     email_enabled: bool
     oauth_enabled: bool
@@ -235,6 +236,7 @@ def create_app() -> FastAPI:
         return {
             "api_base_path": "/api/v1",
             "login_enabled": SETTINGS.LOGIN_ENABLED,
+            "password_auth_enabled": SETTINGS.PASSWORD_AUTH_ENABLED,
             "frontend_base_path": "",
             "email_enabled": SETTINGS.EMAIL_ENABLED,
             "oauth_enabled": SETTINGS.OAUTH_ENABLED,

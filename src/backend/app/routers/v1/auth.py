@@ -47,6 +47,7 @@ def _resolve_preferred_language(request: Request) -> str | None:
     responses=auth_error_responses(
         AuthErrorCode.EMAIL_ALREADY_EXISTS,
         AuthErrorCode.SIGNUP_FAILED,
+        AuthErrorCode.PASSWORD_AUTH_DISABLED,
     ),
 )
 async def signup(
@@ -190,6 +191,7 @@ async def oauth_callback(
     response_model=LoginResponse,
     responses=auth_error_responses(
         AuthErrorCode.LOGIN_DISABLED,
+        AuthErrorCode.PASSWORD_AUTH_DISABLED,
         AuthErrorCode.INVALID_CREDENTIALS,
         AuthErrorCode.EMAIL_NOT_VERIFIED,
         AuthErrorCode.ACCOUNT_LOCKED,
@@ -214,6 +216,7 @@ async def oauth_token_login(
     response_model=LoginResponse,
     responses=auth_error_responses(
         AuthErrorCode.LOGIN_DISABLED,
+        AuthErrorCode.PASSWORD_AUTH_DISABLED,
         AuthErrorCode.INVALID_CREDENTIALS,
         AuthErrorCode.EMAIL_NOT_VERIFIED,
         AuthErrorCode.ACCOUNT_LOCKED,
@@ -325,6 +328,7 @@ async def refresh_token(
     responses=auth_error_responses(
         AuthErrorCode.INVALID_TOKEN,
         AuthErrorCode.USER_NOT_FOUND,
+        AuthErrorCode.PASSWORD_AUTH_DISABLED,
     ),
 )
 async def verify_email(
@@ -338,6 +342,7 @@ async def verify_email(
 @router.post(
     "/resend-verification",
     response_model=ResendVerificationResponse,
+    responses=auth_error_responses(AuthErrorCode.PASSWORD_AUTH_DISABLED),
 )
 async def resend_verification_email(
     request: Request,
@@ -357,6 +362,7 @@ async def resend_verification_email(
     "/forgot-password",
     response_model=ForgotPasswordResponse,
     responses=auth_error_responses(
+        AuthErrorCode.PASSWORD_AUTH_DISABLED,
         AuthErrorCode.EMAIL_DISABLED,
     ),
 )
@@ -379,6 +385,7 @@ async def forgot_password(
     response_model=ResetPasswordResponse,
     responses=auth_error_responses(
         AuthErrorCode.INVALID_TOKEN,
+        AuthErrorCode.PASSWORD_AUTH_DISABLED,
         AuthErrorCode.EMAIL_DISABLED,
         AuthErrorCode.USER_NOT_FOUND,
     ),

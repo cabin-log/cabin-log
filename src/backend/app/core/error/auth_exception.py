@@ -41,6 +41,11 @@ class AuthErrorCode(Enum):
         "Login is currently disabled.",
         status.HTTP_403_FORBIDDEN,
     )
+    PASSWORD_AUTH_DISABLED = ServiceErrorCode(
+        "PASSWORD_AUTH_DISABLED",
+        "Password-based authentication is disabled.",
+        status.HTTP_403_FORBIDDEN,
+    )
     EMAIL_DISABLED = ServiceErrorCode(
         "EMAIL_DISABLED",
         "Email-based features are disabled.",

@@ -51,11 +51,13 @@ def integration_client(tmp_path: Path):
     original_database_url = SETTINGS.DATABASE_URL
     original_email_enabled = SETTINGS.EMAIL_ENABLED
     original_login_enabled = SETTINGS.LOGIN_ENABLED
+    original_password_auth_enabled = SETTINGS.PASSWORD_AUTH_ENABLED
     original_provider = MAIL_SERVICE._provider
     test_db_url = f"sqlite+aiosqlite:///{(tmp_path / 'integration.db').as_posix()}"
 
     object.__setattr__(SETTINGS, "DATABASE_URL", test_db_url)
     object.__setattr__(SETTINGS, "LOGIN_ENABLED", True)
+    object.__setattr__(SETTINGS, "PASSWORD_AUTH_ENABLED", True)
     object.__setattr__(SETTINGS, "EMAIL_ENABLED", False)
     object.__setattr__(MAIL_SERVICE, "_provider", NullMailProvider())
 
@@ -74,6 +76,7 @@ def integration_client(tmp_path: Path):
         object.__setattr__(SETTINGS, "DATABASE_URL", original_database_url)
         object.__setattr__(SETTINGS, "EMAIL_ENABLED", original_email_enabled)
         object.__setattr__(SETTINGS, "LOGIN_ENABLED", original_login_enabled)
+        object.__setattr__(SETTINGS, "PASSWORD_AUTH_ENABLED", original_password_auth_enabled)
         object.__setattr__(MAIL_SERVICE, "_provider", original_provider)
         database._ENGINE = None
         database._SESSION_FACTORY = None
@@ -85,11 +88,13 @@ def email_enabled_integration_client(tmp_path: Path):
     original_database_url = SETTINGS.DATABASE_URL
     original_email_enabled = SETTINGS.EMAIL_ENABLED
     original_login_enabled = SETTINGS.LOGIN_ENABLED
+    original_password_auth_enabled = SETTINGS.PASSWORD_AUTH_ENABLED
     original_provider = MAIL_SERVICE._provider
     test_db_url = f"sqlite+aiosqlite:///{(tmp_path / 'integration-email-enabled.db').as_posix()}"
 
     object.__setattr__(SETTINGS, "DATABASE_URL", test_db_url)
     object.__setattr__(SETTINGS, "LOGIN_ENABLED", True)
+    object.__setattr__(SETTINGS, "PASSWORD_AUTH_ENABLED", True)
     object.__setattr__(SETTINGS, "EMAIL_ENABLED", True)
     object.__setattr__(MAIL_SERVICE, "_provider", NullMailProvider())
 
@@ -108,6 +113,49 @@ def email_enabled_integration_client(tmp_path: Path):
         object.__setattr__(SETTINGS, "DATABASE_URL", original_database_url)
         object.__setattr__(SETTINGS, "EMAIL_ENABLED", original_email_enabled)
         object.__setattr__(SETTINGS, "LOGIN_ENABLED", original_login_enabled)
+        object.__setattr__(SETTINGS, "PASSWORD_AUTH_ENABLED", original_password_auth_enabled)
+        object.__setattr__(MAIL_SERVICE, "_provider", original_provider)
+        database._ENGINE = None
+        database._SESSION_FACTORY = None
+
+
+@pytest.fixture
+def password_auth_disabled_integration_client(tmp_path: Path):
+    """Integration harness that keeps login on but blocks email/password auth routes."""
+    original_database_url = SETTINGS.DATABASE_URL
+    original_email_enabled = SETTINGS.EMAIL_ENABLED
+    original_login_enabled = SETTINGS.LOGIN_ENABLED
+    original_password_auth_enabled = SETTINGS.PASSWORD_AUTH_ENABLED
+    original_oauth_enabled = SETTINGS.OAUTH_ENABLED
+    original_provider = MAIL_SERVICE._provider
+    test_db_url = (
+        f"sqlite+aiosqlite:///{(tmp_path / 'integration-password-disabled.db').as_posix()}"
+    )
+
+    object.__setattr__(SETTINGS, "DATABASE_URL", test_db_url)
+    object.__setattr__(SETTINGS, "LOGIN_ENABLED", True)
+    object.__setattr__(SETTINGS, "PASSWORD_AUTH_ENABLED", False)
+    object.__setattr__(SETTINGS, "EMAIL_ENABLED", False)
+    object.__setattr__(SETTINGS, "OAUTH_ENABLED", False)
+    object.__setattr__(MAIL_SERVICE, "_provider", NullMailProvider())
+
+    database._ENGINE = None
+    database._SESSION_FACTORY = None
+    asyncio.run(RedisManager.close())
+
+    from app.main import create_app
+
+    app = create_app()
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        asyncio.run(RedisManager.close())
+        object.__setattr__(SETTINGS, "DATABASE_URL", original_database_url)
+        object.__setattr__(SETTINGS, "EMAIL_ENABLED", original_email_enabled)
+        object.__setattr__(SETTINGS, "LOGIN_ENABLED", original_login_enabled)
+        object.__setattr__(SETTINGS, "PASSWORD_AUTH_ENABLED", original_password_auth_enabled)
+        object.__setattr__(SETTINGS, "OAUTH_ENABLED", original_oauth_enabled)
         object.__setattr__(MAIL_SERVICE, "_provider", original_provider)
         database._ENGINE = None
         database._SESSION_FACTORY = None
