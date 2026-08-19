@@ -59,6 +59,22 @@ Cabinlog 인증 기본값:
 - `PASSWORD_AUTH_ENABLED=true`가 아니면 비밀번호 기반 가입/로그인 엔드포인트는 비활성화됩니다.
 - 기본 OAuth provider 목록은 GitHub만 포함합니다(`OAUTH_ALLOWED_PROVIDERS=github`).
 - `OAUTH_ENABLED=true`는 `OAUTH_GITHUB_CLIENT_ID`, `OAUTH_GITHUB_CLIENT_SECRET` 설정 후 사용하세요.
+- 백엔드 단독 OAuth 검증에는 `OAUTH_CALLBACK_RESPONSE_MODE=json`을 사용하세요. callback에서 token과 연결된 GitHub profile을 바로 반환합니다.
+
+GitHub 백엔드 기반:
+- `GET /api/v1/github/me`는 OAuth 로그인 중 연결된 현재 사용자의 GitHub profile을 반환합니다.
+- `GET /api/v1/github/repositories`는 OAuth 로그인 중 수집된 repository/language snapshot을 반환합니다.
+- `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.
+- `POST /api/v1/webhooks/github`는 `GITHUB_WEBHOOK_SECRET`으로 서명 검증된 GitHub webhook을 수신합니다.
+- 초기 webhook 정규화는 `push`, `pull_request` 이벤트를 지원하고 Cabinlog activity로 저장합니다.
+- `GET /api/v1/github/activities`는 현재 사용자의 저장된 GitHub 기반 activity를 반환합니다.
+- 지원하지 않는 webhook 이벤트는 ignored 상태로 응답하며 게임 activity를 생성하지 않습니다.
+
+백엔드 단독 OAuth 확인:
+1. `APP_BASE_URL=http://localhost:8000`, `OAUTH_CALLBACK_RESPONSE_MODE=json`을 설정합니다.
+2. 브라우저에서 `/api/v1/auth/oauth/github/start`를 엽니다.
+3. GitHub 승인 후 callback이 `access_token`, `refresh_token`, `user`, `github_profile` JSON을 반환합니다.
+4. 반환된 `access_token`을 bearer token으로 사용해 `/api/v1/github/me`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, `/api/v1/github/activities`를 호출합니다.
 
 Prometheus metrics:
 - `http://localhost:8000/metrics`

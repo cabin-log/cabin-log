@@ -1,9 +1,13 @@
+from datetime import UTC, datetime
+
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.core.config.settings import SETTINGS
 from app.deps import get_current_admin_user, get_current_user
 from app.main import register_exception_handlers
+from app.models.github import GitHubProfileResponse, GitHubProfiles
 from app.models.oauth import OAuthProvider, OAuthProviderPublicConfig
 from app.models.user import (
     LoginForm,
@@ -61,6 +65,39 @@ class FakeAuthService:
                 start_path="/api/v1/auth/oauth/google/start",
             )
         ]
+
+    def require_oauth_callback_params(
+        self,
+        *,
+        provider: OAuthProvider,
+        code: str | None,
+        state: str | None,
+    ) -> tuple[str, str]:
+        _ = provider
+        if not code or not state:
+            raise AssertionError("Fake callback requires code and state.")
+        return code, state
+
+    async def oauth_callback_login(
+        self,
+        provider: OAuthProvider,
+        code: str,
+        state: str,
+        redirect_uri: str,
+        request,
+        refresh_session_id: str,
+    ) -> LoginResponse:
+        _ = provider
+        _ = code
+        _ = state
+        _ = redirect_uri
+        _ = request
+        return LoginResponse(
+            access_token=f"oauth-access-token-for-{self._user.id}",
+            refresh_token=f"oauth-refresh-token-for-{refresh_session_id}",
+            token_type="bearer",
+            user=self._user,
+        )
 
     async def refresh_with_request_context(
         self,
@@ -217,6 +254,45 @@ def test_oauth_providers_success(sample_user: UserResponse):
     # Then: one provider from fake service is returned.
     assert response.status_code == 200
     assert response.json()["providers"][0]["provider"] == "google"
+
+
+def test_oauth_callback_json_mode_returns_tokens_and_github_profile(
+    sample_user: UserResponse,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Scenario: backend-only OAuth callback mode returns token payload for Swagger/manual use."""
+    original_mode = SETTINGS.OAUTH_CALLBACK_RESPONSE_MODE
+    object.__setattr__(SETTINGS, "OAUTH_CALLBACK_RESPONSE_MODE", "json")
+
+    async def fake_get_profile_by_user_id(user_id: int):
+        return GitHubProfileResponse(
+            user_id=user_id,
+            github_user_id=987654,
+            login="octodev",
+            display_name="Octo Dev",
+            avatar_url="https://avatars.githubusercontent.com/u/987654?v=4",
+            profile_url="https://github.com/octodev",
+            updated_at=datetime.now(UTC),
+        )
+
+    monkeypatch.setattr(GitHubProfiles, "get_profile_by_user_id", fake_get_profile_by_user_id)
+
+    try:
+        client = create_auth_test_client(sample_user)
+        response = client.get(
+            "/api/v1/auth/oauth/github/callback",
+            params={"code": "github-code", "state": "state-token"},
+        )
+    finally:
+        object.__setattr__(SETTINGS, "OAUTH_CALLBACK_RESPONSE_MODE", original_mode)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["token_type"] == "bearer"
+    assert payload["access_token"] == f"oauth-access-token-for-{sample_user.id}"
+    assert payload["refresh_token"]
+    assert payload["user"]["id"] == sample_user.id
+    assert payload["github_profile"]["login"] == "octodev"
 
 
 def test_login_success_returns_token_contract(sample_user: UserResponse):

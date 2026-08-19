@@ -24,6 +24,13 @@ from .error import (
     select_error_responses,
     service_exception_to_http,
 )
+from .github_exception import (
+    GitHubErrorCode,
+    GitHubErrorDetail,
+    GitHubErrorResponse,
+    GitHubException,
+    github_error_responses,
+)
 
 __all__ = [
     "AuthErrorCode",
@@ -36,6 +43,11 @@ __all__ = [
     "APIKeyErrorResponse",
     "APIKeyException",
     "api_key_error_responses",
+    "GitHubErrorCode",
+    "GitHubErrorDetail",
+    "GitHubErrorResponse",
+    "GitHubException",
+    "github_error_responses",
     "ErrorDetail",
     "ErrorResponse",
     "ServiceErrorCode",
