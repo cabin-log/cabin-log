@@ -11,6 +11,7 @@
 - 스키마/모델이 바뀌면 Alembic 마이그레이션 업데이트 필수
 - RBAC는 `app/deps.py` 의존성(예: admin 전용 가드)으로 강제
 - `LOGIN_ENABLED=false` 부트스트랩 모드에서는 bootstrap 사용자를 `admin`으로 프로비저닝/승격
+- `PASSWORD_AUTH_ENABLED=false`는 OAuth 로그인은 유지하면서 레거시 이메일/비밀번호 진입점을 비활성화
 - 시작 시 백엔드는 현재 `DATABASE_URL`에 대해 Alembic `upgrade head`만 수행(다운그레이드 경로 없음)
 - API 키는 누적 사용량(`request_count`)과 선택적 만료(`expires_at`)를 추적
 - 실시간 SSE 스트림은 `/api/v1/events/stream`에서 제공되며 heartbeat 및 Redis Pub/Sub fan-out을 사용
@@ -53,6 +54,11 @@ uv run uvicorn app.main:app --reload --port 8000
 
 API 문서:
 - `http://localhost:8000/docs`
+
+Cabinlog 인증 기본값:
+- `PASSWORD_AUTH_ENABLED=true`가 아니면 비밀번호 기반 가입/로그인 엔드포인트는 비활성화됩니다.
+- 기본 OAuth provider 목록은 GitHub만 포함합니다(`OAUTH_ALLOWED_PROVIDERS=github`).
+- `OAUTH_ENABLED=true`는 `OAUTH_GITHUB_CLIENT_ID`, `OAUTH_GITHUB_CLIENT_SECRET` 설정 후 사용하세요.
 
 Prometheus metrics:
 - `http://localhost:8000/metrics`

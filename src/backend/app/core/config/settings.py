@@ -48,6 +48,7 @@ class Settings(BaseModel):
     LOGIN_FAILED_LIMIT: int = int(os.getenv("LOGIN_FAILED_LIMIT", "5"))
     LOGIN_LOCKED_MINUTES: int = int(os.getenv("LOGIN_LOCKED_MINUTES", "5"))
     LOGIN_ENABLED: bool = os.getenv("LOGIN_ENABLED", "true").lower() == "true"
+    PASSWORD_AUTH_ENABLED: bool = os.getenv("PASSWORD_AUTH_ENABLED", "false").lower() == "true"
     BOOTSTRAP_USER_EMAIL: str = os.getenv("BOOTSTRAP_USER_EMAIL", "demo@example.com")
     BOOTSTRAP_USER_NAME: str = os.getenv("BOOTSTRAP_USER_NAME", "Demo User")
 
@@ -120,6 +121,7 @@ class Settings(BaseModel):
 
         # When login is globally disabled, auth entry integrations must also stay off.
         if not self.LOGIN_ENABLED:
+            object.__setattr__(self, "PASSWORD_AUTH_ENABLED", False)
             object.__setattr__(self, "EMAIL_ENABLED", False)
             object.__setattr__(self, "OAUTH_ENABLED", False)
 

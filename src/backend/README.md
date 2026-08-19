@@ -13,6 +13,7 @@ Current locale example (`ko`): `docs/ko/backend/README.md`, `docs/ko/backend/BAC
 - If schema/models change, Alembic migration updates are required
 - RBAC is enforced via dependencies in `app/deps.py` (for example admin-only guards)
 - In `LOGIN_ENABLED=false` bootstrap mode, bootstrap user is provisioned/promoted as `admin`
+- `PASSWORD_AUTH_ENABLED=false` disables legacy email/password entrypoints while keeping OAuth login available
 - On startup, backend runs Alembic `upgrade head` against the active `DATABASE_URL` only (no downgrade path)
 - API keys track cumulative usage (`request_count`) and optional expiration (`expires_at`)
 - Realtime SSE stream is available at `/api/v1/events/stream` with heartbeat and Redis Pub/Sub fan-out
@@ -55,6 +56,11 @@ uv run uvicorn app.main:app --reload --port 8000
 
 API docs:
 - `http://localhost:8000/docs`
+
+Cabinlog auth defaults:
+- Password signup/login endpoints are disabled unless `PASSWORD_AUTH_ENABLED=true`.
+- GitHub is the only OAuth provider listed by default (`OAUTH_ALLOWED_PROVIDERS=github`).
+- Set `OAUTH_ENABLED=true` only after configuring `OAUTH_GITHUB_CLIENT_ID` and `OAUTH_GITHUB_CLIENT_SECRET`.
 
 Prometheus metrics:
 - `http://localhost:8000/metrics`

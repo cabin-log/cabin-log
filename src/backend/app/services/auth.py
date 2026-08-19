@@ -60,6 +60,12 @@ class AuthService:
             logger.debug("Blocked request because login is disabled.")
             raise AuthException(code=AuthErrorCode.LOGIN_DISABLED)
 
+    def _ensure_password_auth_enabled(self) -> None:
+        self._ensure_login_enabled()
+        if not SETTINGS.PASSWORD_AUTH_ENABLED:
+            logger.debug("Blocked password auth request because password auth is disabled.")
+            raise AuthException(code=AuthErrorCode.PASSWORD_AUTH_DISABLED)
+
     def get_oauth_provider_configs(self) -> list[OAuthProviderConfig]:
         self._ensure_login_enabled()
         if not SETTINGS.OAUTH_ENABLED:
@@ -224,6 +230,7 @@ class AuthService:
         return code, state
 
     async def signup(self, form: SignupForm, preferred_language: str | None = None) -> UserResponse:
+        self._ensure_password_auth_enabled()
         logger.info("Signup attempt (email=%s).", mask_email(form.email))
         try:
             user = await Users.create_signup_user(
@@ -245,7 +252,7 @@ class AuthService:
     async def login(
         self, form: LoginForm, request: Request, refresh_session_id: str
     ) -> LoginResponse:
-        self._ensure_login_enabled()
+        self._ensure_password_auth_enabled()
         user_ip = self._get_client_ip(request)
         logger.debug("Login attempt received (email=%s, ip=%s).", mask_email(form.email), user_ip)
         await self._check_login_limit(user_ip)
@@ -637,6 +644,7 @@ class AuthService:
         return client_ip
 
     async def verify_email(self, token: str) -> UserResponse:
+        self._ensure_password_auth_enabled()
         user_id = await consume_email_verification_token(token)
         if user_id is None:
             logger.debug("Email verification failed: token invalid or expired.")
@@ -654,6 +662,7 @@ class AuthService:
     async def resend_verification_email(
         self, email: str, preferred_language: str | None = None
     ) -> None:
+        self._ensure_password_auth_enabled()
         if not SETTINGS.EMAIL_ENABLED:
             logger.debug("Resend verification skipped because email integration is disabled.")
             return
@@ -673,6 +682,7 @@ class AuthService:
     async def request_password_reset(
         self, email: str, preferred_language: str | None = None
     ) -> None:
+        self._ensure_password_auth_enabled()
         if not SETTINGS.EMAIL_ENABLED:
             logger.debug("Password reset rejected because email integration is disabled.")
             raise AuthException(code=AuthErrorCode.EMAIL_DISABLED)
@@ -704,6 +714,7 @@ class AuthService:
         return user
 
     async def reset_password(self, token: str, password: str) -> None:
+        self._ensure_password_auth_enabled()
         if not SETTINGS.EMAIL_ENABLED:
             logger.debug("Password reset rejected because email integration is disabled.")
             raise AuthException(code=AuthErrorCode.EMAIL_DISABLED)

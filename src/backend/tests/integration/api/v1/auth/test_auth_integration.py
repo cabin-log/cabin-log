@@ -118,6 +118,56 @@ def test_signup_duplicate_email_returns_409(integration_client: TestClient):
 
 
 @pytest.mark.primary_data
+def test_password_auth_disabled_blocks_email_password_entrypoints(
+    password_auth_disabled_integration_client: TestClient,
+):
+    """Scenario: Cabinlog can keep login on while disabling legacy password auth routes."""
+    signup_response = password_auth_disabled_integration_client.post(
+        "/api/v1/auth/signup",
+        json=build_signup_payload(
+            email="disabled-signup@example.com",
+            name="Disabled Signup",
+            password=VALID_PASSWORD,
+        ),
+    )
+    assert signup_response.status_code == 403
+    assert signup_response.json()["detail"]["error"] == "PASSWORD_AUTH_DISABLED"
+
+    login_response = password_auth_disabled_integration_client.post(
+        "/api/v1/auth/login",
+        json=build_login_payload(
+            email="disabled-signup@example.com",
+            password=VALID_PASSWORD,
+            remember_me=False,
+        ),
+    )
+    assert login_response.status_code == 403
+    assert login_response.json()["detail"]["error"] == "PASSWORD_AUTH_DISABLED"
+
+    token_response = password_auth_disabled_integration_client.post(
+        "/api/v1/auth/token",
+        data={
+            "username": "disabled-signup@example.com",
+            "password": VALID_PASSWORD,
+        },
+    )
+    assert token_response.status_code == 403
+    assert token_response.json()["detail"]["error"] == "PASSWORD_AUTH_DISABLED"
+
+    forgot_password_response = password_auth_disabled_integration_client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": "disabled-signup@example.com"},
+    )
+    assert forgot_password_response.status_code == 403
+    assert forgot_password_response.json()["detail"]["error"] == "PASSWORD_AUTH_DISABLED"
+
+    config_response = password_auth_disabled_integration_client.get("/config")
+    assert config_response.status_code == 200
+    assert config_response.json()["login_enabled"] is True
+    assert config_response.json()["password_auth_enabled"] is False
+
+
+@pytest.mark.primary_data
 def test_login_invalid_password_returns_401(integration_client: TestClient):
     """Scenario: login returns invalid credentials for wrong password."""
     # Given: existing user in DB.
