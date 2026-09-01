@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
+from urllib.parse import quote
 from urllib.request import Request as URLRequest, urlopen
 
 from app.core.config.settings import SETTINGS
@@ -12,6 +13,9 @@ from app.core.error import GitHubErrorCode, GitHubException
 from app.core.observability.logging import get_logger
 from app.models.activity import Activities, ActivityCreate, ActivityCreateResult, ActivityType
 from app.models.github import (
+    GitHubAppInstallUrlResponse,
+    GitHubInstallationResponse,
+    GitHubInstallationUpsert,
     GitHubProfileResponse,
     GitHubProfiles,
     GitHubRepositoryResponse,
@@ -23,6 +27,15 @@ logger = get_logger("app.service.github")
 
 
 class GitHubService:
+    def get_app_install_url(self) -> GitHubAppInstallUrlResponse:
+        app_slug = SETTINGS.GITHUB_APP_SLUG.strip()
+        if not app_slug:
+            return GitHubAppInstallUrlResponse(configured=False)
+        return GitHubAppInstallUrlResponse(
+            configured=True,
+            install_url=f"https://github.com/apps/{quote(app_slug)}/installations/new",
+        )
+
     async def get_current_profile(self, user_id: int) -> GitHubProfileResponse:
         profile = await GitHubProfiles.get_profile_by_user_id(user_id)
         if profile is None:
@@ -34,6 +47,12 @@ class GitHubService:
 
     async def list_current_user_repositories(self, user_id: int) -> list[GitHubRepositoryResponse]:
         return await GitHubProfiles.list_repositories(user_id=user_id)
+
+    async def list_current_user_installations(
+        self,
+        user_id: int,
+    ) -> list[GitHubInstallationResponse]:
+        return await GitHubProfiles.list_installations(user_id=user_id)
 
     async def get_current_stack_summary(self, user_id: int) -> GitHubStackSummaryResponse:
         return await GitHubProfiles.get_stack_summary(user_id=user_id)
@@ -99,6 +118,18 @@ class GitHubService:
         self._verify_signature(signature=signature, body=body)
         payload = self._parse_payload(body)
 
+        if event_name == "installation":
+            return await self._ingest_installation_event(
+                delivery_id=delivery_id,
+                payload=payload,
+            )
+
+        if event_name == "installation_repositories":
+            return await self._ingest_installation_repositories_event(
+                delivery_id=delivery_id,
+                payload=payload,
+            )
+
         if event_name == "pull_request":
             result = await self._ingest_pull_request_event(
                 delivery_id=delivery_id,
@@ -149,20 +180,18 @@ class GitHubService:
         if not isinstance(sender, dict):
             raise GitHubException(code=GitHubErrorCode.GITHUB_WEBHOOK_MALFORMED_PAYLOAD)
 
-        github_user_id = sender.get("id")
-        if not isinstance(github_user_id, int):
-            raise GitHubException(code=GitHubErrorCode.GITHUB_WEBHOOK_MALFORMED_PAYLOAD)
-
-        user_id = await GitHubProfiles.get_user_id_by_github_user_id(github_user_id)
+        github_installation_id = self._extract_installation_id(payload)
+        user_id = await self._resolve_webhook_user_id(payload)
         if user_id is None:
             logger.info(
-                "GitHub webhook ignored unlinked sender (github_user_id=%s, delivery_id=%s).",
-                github_user_id,
+                "GitHub webhook ignored unlinked push (installation_id=%s, delivery_id=%s).",
+                github_installation_id,
                 delivery_id,
             )
-            return ActivityCreateResult(
-                activity=await self._create_ignored_sender_activity_stub(delivery_id),
-                duplicate=False,
+            raise GitHubException(
+                code=GitHubErrorCode.GITHUB_PROFILE_NOT_FOUND,
+                message="GitHub webhook installation or sender is not linked to a Cabinlog user.",
+                details={"delivery_id": delivery_id},
             )
 
         repository = payload.get("repository")
@@ -188,6 +217,7 @@ class GitHubService:
             ActivityCreate(
                 user_id=user_id,
                 type=ActivityType.PUSH,
+                github_installation_id=github_installation_id,
                 repository_github_id=repository_github_id,
                 repository_full_name=(
                     repository.get("full_name")
@@ -214,10 +244,8 @@ class GitHubService:
         if not isinstance(repository, dict):
             raise GitHubException(code=GitHubErrorCode.GITHUB_WEBHOOK_MALFORMED_PAYLOAD)
 
-        github_user_id = sender.get("id")
-        if not isinstance(github_user_id, int):
-            raise GitHubException(code=GitHubErrorCode.GITHUB_WEBHOOK_MALFORMED_PAYLOAD)
-        user_id = await GitHubProfiles.get_user_id_by_github_user_id(github_user_id)
+        github_installation_id = self._extract_installation_id(payload)
+        user_id = await self._resolve_webhook_user_id(payload)
         if user_id is None:
             raise GitHubException(
                 code=GitHubErrorCode.GITHUB_PROFILE_NOT_FOUND,
@@ -247,6 +275,7 @@ class GitHubService:
             ActivityCreate(
                 user_id=user_id,
                 type=activity_type,
+                github_installation_id=github_installation_id,
                 repository_github_id=repository_github_id,
                 repository_full_name=(
                     repository.get("full_name")
@@ -266,12 +295,241 @@ class GitHubService:
             )
         )
 
-    async def _create_ignored_sender_activity_stub(self, delivery_id: str):
-        raise GitHubException(
-            code=GitHubErrorCode.GITHUB_PROFILE_NOT_FOUND,
-            message="GitHub webhook sender is not linked to a Cabinlog user.",
-            details={"delivery_id": delivery_id},
+    async def _ingest_installation_event(
+        self,
+        *,
+        delivery_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        installation_payload = self._require_installation_payload(payload)
+        github_installation_id = self._require_int(installation_payload.get("id"))
+        action = payload.get("action")
+
+        if action == "deleted":
+            deleted = await GitHubProfiles.mark_installation_deleted(github_installation_id)
+            return {
+                "status": "deleted" if deleted else "ignored",
+                "event": "installation",
+                "delivery_id": delivery_id,
+                "github_installation_id": github_installation_id,
+            }
+
+        if action not in {"created", "new_permissions_accepted", "suspend", "unsuspend"}:
+            return {
+                "status": "ignored",
+                "event": "installation",
+                "delivery_id": delivery_id,
+                "reason": "unsupported_installation_action",
+            }
+
+        user_id = await self._resolve_sender_user_id(payload)
+        installation = await self._upsert_installation_from_payload(
+            installation_payload,
+            user_id=user_id,
+            deleted_at=None,
+            suspended_at=(
+                datetime.now(UTC)
+                if action == "suspend"
+                else _parse_github_datetime(installation_payload.get("suspended_at"))
+            ),
         )
+        repositories = self._extract_repository_upserts(
+            payload.get("repositories") if isinstance(payload.get("repositories"), list) else [],
+            user_id=user_id,
+            github_installation_id=github_installation_id,
+        )
+        if repositories and user_id is not None:
+            await GitHubProfiles.upsert_repositories(repositories)
+        return {
+            "status": "upserted",
+            "event": "installation",
+            "delivery_id": delivery_id,
+            "installation": installation.model_dump(mode="json"),
+            "repository_count": len(repositories),
+        }
+
+    async def _ingest_installation_repositories_event(
+        self,
+        *,
+        delivery_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        installation_payload = self._require_installation_payload(payload)
+        github_installation_id = self._require_int(installation_payload.get("id"))
+        installation = await GitHubProfiles.get_installation_by_github_id(github_installation_id)
+        user_id = (
+            installation.user_id
+            if installation is not None
+            else await self._resolve_sender_user_id(payload)
+        )
+
+        if installation is None:
+            installation = await self._upsert_installation_from_payload(
+                installation_payload,
+                user_id=user_id,
+            )
+
+        added_payload = payload.get("repositories_added")
+        removed_payload = payload.get("repositories_removed")
+        added_repositories = self._extract_repository_upserts(
+            added_payload if isinstance(added_payload, list) else [],
+            user_id=user_id,
+            github_installation_id=github_installation_id,
+        )
+        if added_repositories and user_id is not None:
+            await GitHubProfiles.upsert_repositories(added_repositories)
+
+        removed_ids = [
+            repo_id
+            for repo_id in (
+                repository.get("id")
+                for repository in (removed_payload if isinstance(removed_payload, list) else [])
+                if isinstance(repository, dict)
+            )
+            if isinstance(repo_id, int)
+        ]
+        await GitHubProfiles.remove_installation_repositories(
+            github_installation_id=github_installation_id,
+            github_repo_ids=removed_ids,
+        )
+
+        return {
+            "status": "updated",
+            "event": "installation_repositories",
+            "delivery_id": delivery_id,
+            "installation": installation.model_dump(mode="json"),
+            "repositories_added": len(added_repositories),
+            "repositories_removed": len(removed_ids),
+        }
+
+    async def _upsert_installation_from_payload(
+        self,
+        installation_payload: dict[str, Any],
+        *,
+        user_id: int | None,
+        deleted_at: datetime | None = None,
+        suspended_at: datetime | None = None,
+    ) -> GitHubInstallationResponse:
+        account = installation_payload.get("account")
+        if not isinstance(account, dict):
+            account = {}
+        return await GitHubProfiles.upsert_installation(
+            GitHubInstallationUpsert(
+                user_id=user_id,
+                github_installation_id=self._require_int(installation_payload.get("id")),
+                account_id=account.get("id") if isinstance(account.get("id"), int) else None,
+                account_login=account.get("login")
+                if isinstance(account.get("login"), str)
+                else None,
+                account_type=account.get("type") if isinstance(account.get("type"), str) else None,
+                target_type=(
+                    installation_payload.get("target_type")
+                    if isinstance(installation_payload.get("target_type"), str)
+                    else None
+                ),
+                repository_selection=(
+                    installation_payload.get("repository_selection")
+                    if isinstance(installation_payload.get("repository_selection"), str)
+                    else None
+                ),
+                suspended_at=suspended_at,
+                deleted_at=deleted_at,
+            )
+        )
+
+    async def _resolve_webhook_user_id(self, payload: dict[str, Any]) -> int | None:
+        github_installation_id = self._extract_installation_id(payload)
+        if github_installation_id is not None:
+            installation = await GitHubProfiles.get_installation_by_github_id(
+                github_installation_id
+            )
+            if installation is not None and installation.deleted_at is None:
+                return installation.user_id
+        return await self._resolve_sender_user_id(payload)
+
+    async def _resolve_sender_user_id(self, payload: dict[str, Any]) -> int | None:
+        sender = payload.get("sender")
+        if not isinstance(sender, dict):
+            return None
+        github_user_id = sender.get("id")
+        if not isinstance(github_user_id, int):
+            return None
+        return await GitHubProfiles.get_user_id_by_github_user_id(github_user_id)
+
+    def _extract_installation_id(self, payload: dict[str, Any]) -> int | None:
+        installation = payload.get("installation")
+        if not isinstance(installation, dict):
+            return None
+        installation_id = installation.get("id")
+        return installation_id if isinstance(installation_id, int) else None
+
+    def _require_installation_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
+        installation = payload.get("installation")
+        if not isinstance(installation, dict):
+            raise GitHubException(code=GitHubErrorCode.GITHUB_WEBHOOK_MALFORMED_PAYLOAD)
+        return installation
+
+    def _require_int(self, value: Any) -> int:
+        if not isinstance(value, int):
+            raise GitHubException(code=GitHubErrorCode.GITHUB_WEBHOOK_MALFORMED_PAYLOAD)
+        return value
+
+    def _extract_repository_upserts(
+        self,
+        repositories: list[Any],
+        *,
+        user_id: int | None,
+        github_installation_id: int,
+    ) -> list[GitHubRepositoryUpsert]:
+        if user_id is None:
+            return []
+        upserts: list[GitHubRepositoryUpsert] = []
+        for repository in repositories:
+            if not isinstance(repository, dict):
+                continue
+            repo_id = repository.get("id")
+            full_name = repository.get("full_name")
+            name = repository.get("name")
+            if not isinstance(repo_id, int) or not isinstance(full_name, str):
+                continue
+            if not isinstance(name, str):
+                name = full_name.rsplit("/", 1)[-1]
+            owner_login = self._extract_owner_login(repository, full_name)
+            upserts.append(
+                GitHubRepositoryUpsert(
+                    user_id=user_id,
+                    github_installation_id=github_installation_id,
+                    github_repo_id=repo_id,
+                    owner_login=owner_login,
+                    name=name,
+                    full_name=full_name,
+                    private=bool(repository.get("private", False)),
+                    html_url=(
+                        repository.get("html_url")
+                        if isinstance(repository.get("html_url"), str)
+                        else None
+                    ),
+                    default_branch=(
+                        repository.get("default_branch")
+                        if isinstance(repository.get("default_branch"), str)
+                        else None
+                    ),
+                    primary_language=(
+                        repository.get("language")
+                        if isinstance(repository.get("language"), str)
+                        else None
+                    ),
+                    pushed_at=_parse_github_datetime(repository.get("pushed_at")),
+                    languages={},
+                )
+            )
+        return upserts
+
+    def _extract_owner_login(self, repository: dict[str, Any], full_name: str) -> str:
+        owner = repository.get("owner")
+        if isinstance(owner, Mapping) and isinstance(owner.get("login"), str):
+            return str(owner["login"])
+        return full_name.split("/", 1)[0]
 
     def _verify_signature(self, *, signature: str | None, body: bytes) -> None:
         secret = SETTINGS.GITHUB_WEBHOOK_SECRET.strip()

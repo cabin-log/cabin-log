@@ -4,6 +4,8 @@ from app.core.error import GitHubErrorCode, github_error_responses
 from app.deps import get_current_user
 from app.models.activity import ActivityResponse
 from app.models.github import (
+    GitHubAppInstallUrlResponse,
+    GitHubInstallationResponse,
     GitHubProfileResponse,
     GitHubRepositoryResponse,
     GitHubStackSummaryResponse,
@@ -26,6 +28,15 @@ async def github_me(
     return await service.get_current_profile(current_user.id)
 
 
+@router.get("/app/install-url", response_model=GitHubAppInstallUrlResponse)
+async def github_app_install_url(
+    current_user: UserResponse = Depends(get_current_user),
+    service: GitHubService = Depends(GitHubService),
+) -> GitHubAppInstallUrlResponse:
+    _ = current_user
+    return service.get_app_install_url()
+
+
 @router.get("/activities", response_model=list[ActivityResponse])
 async def github_activities(
     current_user: UserResponse = Depends(get_current_user),
@@ -41,6 +52,14 @@ async def github_repositories(
     service: GitHubService = Depends(GitHubService),
 ) -> list[GitHubRepositoryResponse]:
     return await service.list_current_user_repositories(user_id=current_user.id)
+
+
+@router.get("/installations", response_model=list[GitHubInstallationResponse])
+async def github_installations(
+    current_user: UserResponse = Depends(get_current_user),
+    service: GitHubService = Depends(GitHubService),
+) -> list[GitHubInstallationResponse]:
+    return await service.list_current_user_installations(user_id=current_user.id)
 
 
 @router.get("/stack-summary", response_model=GitHubStackSummaryResponse)
