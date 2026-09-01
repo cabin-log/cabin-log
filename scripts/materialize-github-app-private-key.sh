@@ -44,7 +44,7 @@ else
     exit 1
 fi
 
-if ! grep -Eq -- "-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----" "$output_path"; then
+if ! grep -Eq -- "-----BEGIN ((RSA|EC|OPENSSH) )?PRIVATE KEY-----" "$output_path"; then
     rm -f "$output_path"
     echo "output did not look like a PEM private key" >&2
     exit 1
