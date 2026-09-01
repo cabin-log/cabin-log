@@ -186,6 +186,12 @@ class GitHubAppInstallUrlResponse(BaseModel):
     install_url: str | None = None
 
 
+class GitHubInstallationSyncResponse(BaseModel):
+    github_installation_id: int
+    repository_count: int
+    repositories: list[GitHubRepositoryResponse] = Field(default_factory=list)
+
+
 class GitHubInstallationUpsert(BaseModel):
     user_id: int | None = None
     github_installation_id: int

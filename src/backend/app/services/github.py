@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import json
@@ -8,6 +9,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request as URLRequest, urlopen
 
+from jose import jwt
+
 from app.core.config.settings import SETTINGS
 from app.core.error import GitHubErrorCode, GitHubException
 from app.core.observability.logging import get_logger
@@ -15,6 +18,7 @@ from app.models.activity import Activities, ActivityCreate, ActivityCreateResult
 from app.models.github import (
     GitHubAppInstallUrlResponse,
     GitHubInstallationResponse,
+    GitHubInstallationSyncResponse,
     GitHubInstallationUpsert,
     GitHubProfileResponse,
     GitHubProfiles,
@@ -54,6 +58,42 @@ class GitHubService:
     ) -> list[GitHubInstallationResponse]:
         return await GitHubProfiles.list_installations(user_id=user_id)
 
+    async def sync_current_user_installation_repositories(
+        self,
+        *,
+        user_id: int,
+        github_installation_id: int,
+    ) -> GitHubInstallationSyncResponse:
+        installation = await GitHubProfiles.get_installation_by_github_id(github_installation_id)
+        if (
+            installation is None
+            or installation.user_id != user_id
+            or installation.deleted_at is not None
+        ):
+            raise GitHubException(
+                code=GitHubErrorCode.GITHUB_INSTALLATION_NOT_FOUND,
+                details={"github_installation_id": github_installation_id},
+            )
+
+        app_client = GitHubAppClient.from_settings()
+        installation_token = await app_client.create_installation_access_token(
+            github_installation_id
+        )
+        api_client = GitHubAPIClient(access_token=installation_token)
+        repositories = await api_client.fetch_installation_repositories()
+        upserts = await self._build_repository_upserts(
+            user_id=user_id,
+            repositories=repositories,
+            client=api_client,
+            github_installation_id=github_installation_id,
+        )
+        persisted = await GitHubProfiles.upsert_repositories(upserts)
+        return GitHubInstallationSyncResponse(
+            github_installation_id=github_installation_id,
+            repository_count=len(persisted),
+            repositories=persisted,
+        )
+
     async def get_current_stack_summary(self, user_id: int) -> GitHubStackSummaryResponse:
         return await GitHubProfiles.get_stack_summary(user_id=user_id)
 
@@ -65,6 +105,21 @@ class GitHubService:
     ) -> list[GitHubRepositoryResponse]:
         client = GitHubAPIClient(access_token=access_token)
         repositories = await client.fetch_authenticated_user_repositories()
+        upserts = await self._build_repository_upserts(
+            user_id=user_id,
+            repositories=repositories,
+            client=client,
+        )
+        return await GitHubProfiles.upsert_repositories(upserts)
+
+    async def _build_repository_upserts(
+        self,
+        *,
+        user_id: int,
+        repositories: list[dict[str, Any]],
+        client: "GitHubAPIClient",
+        github_installation_id: int | None = None,
+    ) -> list[GitHubRepositoryUpsert]:
         upserts: list[GitHubRepositoryUpsert] = []
         for repository in repositories:
             full_name = repository.get("full_name")
@@ -81,6 +136,7 @@ class GitHubService:
             upserts.append(
                 GitHubRepositoryUpsert(
                     user_id=user_id,
+                    github_installation_id=github_installation_id,
                     github_repo_id=repo_id,
                     owner_login=str(owner["login"]),
                     name=name,
@@ -105,7 +161,7 @@ class GitHubService:
                     languages=languages,
                 )
             )
-        return await GitHubProfiles.upsert_repositories(upserts)
+        return upserts
 
     async def ingest_webhook(
         self,
@@ -582,6 +638,23 @@ class GitHubAPIClient:
             return []
         return [item for item in payload if isinstance(item, dict)]
 
+    async def fetch_installation_repositories(self) -> list[dict[str, Any]]:
+        repositories: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            payload = await self._request_json(
+                f"https://api.github.com/installation/repositories?per_page=100&page={page}"
+            )
+            if not isinstance(payload, dict):
+                return repositories
+            page_repositories = payload.get("repositories")
+            if not isinstance(page_repositories, list):
+                return repositories
+            repositories.extend(item for item in page_repositories if isinstance(item, dict))
+            if len(page_repositories) < 100:
+                return repositories
+            page += 1
+
     async def fetch_repository_languages(self, full_name: str) -> dict[str, int]:
         payload = await self._request_json(f"https://api.github.com/repos/{full_name}/languages")
         if not isinstance(payload, dict):
@@ -601,13 +674,78 @@ class GitHubAPIClient:
             with urlopen(request, timeout=10) as response:
                 return response.read().decode("utf-8")
 
-        import asyncio
-
         try:
             raw = await asyncio.to_thread(_do_request)
             return json.loads(raw)
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
             logger.warning("GitHub API request failed (url=%s).", url)
+            raise GitHubException(
+                code=GitHubErrorCode.GITHUB_API_REQUEST_FAILED,
+            ) from error
+
+
+class GitHubAppClient:
+    def __init__(self, *, app_id: str, private_key: str):
+        self.app_id = app_id
+        self.private_key = private_key
+
+    @classmethod
+    def from_settings(cls) -> "GitHubAppClient":
+        app_id = SETTINGS.GITHUB_APP_ID.strip()
+        private_key = SETTINGS.get_github_app_private_key()
+        if not app_id or not private_key:
+            raise GitHubException(
+                code=GitHubErrorCode.GITHUB_APP_CONFIG_INVALID,
+                details={
+                    "missing": [
+                        name
+                        for name, value in {
+                            "GITHUB_APP_ID": app_id,
+                            "GITHUB_APP_PRIVATE_KEY_OR_PATH": private_key,
+                        }.items()
+                        if not value
+                    ]
+                },
+            )
+        return cls(app_id=app_id, private_key=private_key)
+
+    async def create_installation_access_token(self, github_installation_id: int) -> str:
+        app_jwt = self._create_app_jwt()
+        payload = await self._request_json(
+            f"https://api.github.com/app/installations/{github_installation_id}/access_tokens",
+            app_jwt=app_jwt,
+        )
+        if not isinstance(payload, dict) or not isinstance(payload.get("token"), str):
+            raise GitHubException(code=GitHubErrorCode.GITHUB_API_REQUEST_FAILED)
+        return str(payload["token"])
+
+    def _create_app_jwt(self) -> str:
+        now = int(datetime.now(UTC).timestamp())
+        return jwt.encode(
+            {
+                "iat": now - 60,
+                "exp": now + 9 * 60,
+                "iss": self.app_id,
+            },
+            self.private_key,
+            algorithm="RS256",
+        )
+
+    async def _request_json(self, url: str, *, app_jwt: str):
+        def _do_request():
+            request = URLRequest(url=url, data=b"{}", method="POST")
+            request.add_header("Authorization", f"Bearer {app_jwt}")
+            request.add_header("Accept", "application/vnd.github+json")
+            request.add_header("Content-Type", "application/json")
+            request.add_header("X-GitHub-Api-Version", "2022-11-28")
+            with urlopen(request, timeout=10) as response:
+                return response.read().decode("utf-8")
+
+        try:
+            raw = await asyncio.to_thread(_do_request)
+            return json.loads(raw)
+        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
+            logger.warning("GitHub App API request failed (url=%s).", url)
             raise GitHubException(
                 code=GitHubErrorCode.GITHUB_API_REQUEST_FAILED,
             ) from error

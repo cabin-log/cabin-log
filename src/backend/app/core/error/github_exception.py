@@ -21,6 +21,16 @@ class GitHubErrorCode(Enum):
         "GitHub API request failed.",
         status.HTTP_502_BAD_GATEWAY,
     )
+    GITHUB_APP_CONFIG_INVALID = ServiceErrorCode(
+        "GITHUB_APP_CONFIG_INVALID",
+        "GitHub App credentials are not configured.",
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+    GITHUB_INSTALLATION_NOT_FOUND = ServiceErrorCode(
+        "GITHUB_INSTALLATION_NOT_FOUND",
+        "GitHub App installation is not linked to this user.",
+        status.HTTP_404_NOT_FOUND,
+    )
     GITHUB_WEBHOOK_SECRET_MISSING = ServiceErrorCode(
         "GITHUB_WEBHOOK_SECRET_MISSING",
         "GitHub webhook secret is not configured.",
