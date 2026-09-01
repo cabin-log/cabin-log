@@ -67,6 +67,7 @@ Cabinlog auth defaults:
 GitHub backend foundation:
 - `GET /api/v1/github/me` returns the GitHub profile linked during OAuth login for the current bearer/API-key user.
 - GitHub OAuth login is the default data collection path. The callback stores the linked profile, repository/language snapshot, and OAuth API-derived commit, pull request, and issue activities.
+- `POST /api/v1/github/sync` manually refreshes the OAuth API snapshot for the current user with a request-scoped GitHub OAuth access token. The token is used for the sync request and is not stored.
 - `GET /api/v1/github/repositories` returns the repository/language snapshot collected from the OAuth API.
 - `GET /api/v1/github/stack-summary` returns language byte totals and ratios across the collected repositories.
 - `GET /api/v1/github/activities` returns the current user's persisted GitHub-derived activities, including OAuth API snapshot activities and optional webhook activities.
@@ -95,6 +96,9 @@ sequenceDiagram
     API->>GitHub: Fetch profile, repos, languages, commits, PRs, issues
     API->>DB: Upsert profile/repositories and dedupe activities by external id
     API-->>User: Login JSON or frontend redirect
+    User->>API: POST /api/v1/github/sync with GitHub OAuth access token
+    API->>GitHub: Refresh OAuth API snapshot
+    API->>DB: Upsert refreshed snapshot and ignore duplicate activities
 ```
 
 GitHub App installation flow:
@@ -120,6 +124,7 @@ Backend-only OAuth check:
 2. Open `/api/v1/auth/oauth/github/start` in a browser.
 3. After GitHub approval, the callback returns JSON with `access_token`, `refresh_token`, `user`, and `github_profile`.
 4. Use the `access_token` as a bearer token for `/api/v1/github/me`, `/api/v1/github/app/install-url`, `/api/v1/github/installations`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, and `/api/v1/github/activities`.
+5. To manually refresh OAuth API data without storing a GitHub token, call `POST /api/v1/github/sync` with the Cabinlog bearer token and JSON body `{"access_token":"<github-oauth-access-token>"}`.
 
 Optional GitHub App local setup:
 - Set `GITHUB_APP_ID` to the numeric GitHub App ID.

@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from sqlalchemy import (
     BigInteger,
     Boolean,
@@ -196,6 +196,10 @@ class GitHubOAuthSyncResponse(BaseModel):
     repository_count: int
     created_activity_count: int
     duplicate_activity_count: int
+
+
+class GitHubOAuthSyncRequest(BaseModel):
+    access_token: SecretStr
 
 
 class GitHubInstallationUpsert(BaseModel):
