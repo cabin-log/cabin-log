@@ -32,7 +32,11 @@ async def _create_github_oauth_user() -> tuple[int, str]:
     return user.id, token
 
 
-def _signed_headers(payload: dict, delivery_id: str = "delivery-001") -> dict[str, str]:
+def _signed_headers(
+    payload: dict,
+    delivery_id: str = "delivery-001",
+    event_name: str = "push",
+) -> dict[str, str]:
     body = json.dumps(payload).encode("utf-8")
     signature = hmac.new(
         SETTINGS.GITHUB_WEBHOOK_SECRET.encode("utf-8"),
@@ -40,7 +44,7 @@ def _signed_headers(payload: dict, delivery_id: str = "delivery-001") -> dict[st
         hashlib.sha256,
     ).hexdigest()
     return {
-        "X-GitHub-Event": "push",
+        "X-GitHub-Event": event_name,
         "X-GitHub-Delivery": delivery_id,
         "X-Hub-Signature-256": f"sha256={signature}",
         "Content-Type": "application/json",
@@ -52,6 +56,9 @@ def _push_payload() -> dict:
         "ref": "refs/heads/main",
         "before": "abc123",
         "after": "def456",
+        "installation": {
+            "id": 555666,
+        },
         "sender": {
             "id": 987654,
             "login": "octodev",
@@ -77,6 +84,9 @@ def _push_payload() -> dict:
 def _pull_request_payload(action: str = "opened", merged: bool = False) -> dict:
     return {
         "action": action,
+        "installation": {
+            "id": 555666,
+        },
         "sender": {
             "id": 987654,
             "login": "octodev",
@@ -91,6 +101,75 @@ def _pull_request_payload(action: str = "opened", merged: bool = False) -> dict:
             "html_url": "https://github.com/octodev/cabin/pull/42",
             "updated_at": "2026-08-19T10:00:00Z",
             "merged": merged,
+        },
+    }
+
+
+def _installation_payload(action: str = "created") -> dict:
+    return {
+        "action": action,
+        "installation": {
+            "id": 555666,
+            "account": {
+                "id": 987654,
+                "login": "octodev",
+                "type": "User",
+            },
+            "target_type": "User",
+            "repository_selection": "selected",
+        },
+        "repositories": [
+            {
+                "id": 111222,
+                "name": "cabin",
+                "full_name": "octodev/cabin",
+                "private": False,
+                "html_url": "https://github.com/octodev/cabin",
+                "default_branch": "main",
+                "language": "Python",
+            }
+        ],
+        "sender": {
+            "id": 987654,
+            "login": "octodev",
+        },
+    }
+
+
+def _installation_repositories_payload() -> dict:
+    return {
+        "action": "added",
+        "installation": {
+            "id": 555666,
+            "account": {
+                "id": 987654,
+                "login": "octodev",
+                "type": "User",
+            },
+            "target_type": "User",
+            "repository_selection": "selected",
+        },
+        "repositories_added": [
+            {
+                "id": 333444,
+                "name": "game-client",
+                "full_name": "octodev/game-client",
+                "private": False,
+                "html_url": "https://github.com/octodev/game-client",
+                "default_branch": "main",
+                "language": "TypeScript",
+            }
+        ],
+        "repositories_removed": [
+            {
+                "id": 111222,
+                "name": "cabin",
+                "full_name": "octodev/cabin",
+            }
+        ],
+        "sender": {
+            "id": 987654,
+            "login": "octodev",
         },
     }
 
@@ -113,6 +192,28 @@ def test_github_oauth_profile_can_be_viewed(integration_client: TestClient):
     assert payload["display_name"] == "Octo Dev"
     assert payload["avatar_url"].startswith("https://avatars.githubusercontent.com/")
     assert payload["profile_url"] == "https://github.com/octodev"
+
+
+@pytest.mark.primary_data
+def test_github_app_install_url_uses_configured_slug(integration_client: TestClient):
+    """Scenario: current user can fetch the configured GitHub App installation URL."""
+    original_slug = SETTINGS.GITHUB_APP_SLUG
+    object.__setattr__(SETTINGS, "GITHUB_APP_SLUG", "cabinlog-dev")
+    try:
+        _user_id, token = asyncio.run(_create_github_oauth_user())
+
+        response = integration_client.get(
+            "/api/v1/github/app/install-url",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "configured": True,
+            "install_url": "https://github.com/apps/cabinlog-dev/installations/new",
+        }
+    finally:
+        object.__setattr__(SETTINGS, "GITHUB_APP_SLUG", original_slug)
 
 
 @pytest.mark.primary_data
@@ -150,6 +251,7 @@ def test_github_push_webhook_creates_activity_once(integration_client: TestClien
         activities = activities_response.json()
         assert len(activities) == 1
         assert activities[0]["repository_github_id"] == 111222
+        assert activities[0]["github_installation_id"] == 555666
         assert activities[0]["repository_full_name"] == "octodev/cabin"
         assert activities[0]["github_delivery_id"] == "delivery-001"
         assert activities[0]["metadata"]["commit_count"] == 1
@@ -166,8 +268,11 @@ def test_github_pull_request_webhook_creates_pr_activities(integration_client: T
         _user_id, token = asyncio.run(_create_github_oauth_user())
 
         opened_payload = _pull_request_payload(action="opened", merged=False)
-        opened_headers = _signed_headers(opened_payload, delivery_id="delivery-pr-opened")
-        opened_headers["X-GitHub-Event"] = "pull_request"
+        opened_headers = _signed_headers(
+            opened_payload,
+            delivery_id="delivery-pr-opened",
+            event_name="pull_request",
+        )
         opened_response = integration_client.post(
             "/api/v1/webhooks/github",
             content=json.dumps(opened_payload),
@@ -177,8 +282,11 @@ def test_github_pull_request_webhook_creates_pr_activities(integration_client: T
         assert opened_response.json()["activity"]["type"] == "PULL_REQUEST_OPENED"
 
         merged_payload = _pull_request_payload(action="closed", merged=True)
-        merged_headers = _signed_headers(merged_payload, delivery_id="delivery-pr-merged")
-        merged_headers["X-GitHub-Event"] = "pull_request"
+        merged_headers = _signed_headers(
+            merged_payload,
+            delivery_id="delivery-pr-merged",
+            event_name="pull_request",
+        )
         merged_response = integration_client.post(
             "/api/v1/webhooks/github",
             content=json.dumps(merged_payload),
@@ -200,6 +308,172 @@ def test_github_pull_request_webhook_creates_pr_activities(integration_client: T
 
 
 @pytest.mark.primary_data
+def test_github_app_installation_webhook_links_repositories_and_activity(
+    integration_client: TestClient,
+):
+    """Scenario: GitHub App installation events link repos and later activity by installation id."""
+    original_secret = SETTINGS.GITHUB_WEBHOOK_SECRET
+    object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", "webhook-test-secret")
+    try:
+        _user_id, token = asyncio.run(_create_github_oauth_user())
+
+        installation_payload = _installation_payload()
+        installation_response = integration_client.post(
+            "/api/v1/webhooks/github",
+            content=json.dumps(installation_payload),
+            headers=_signed_headers(
+                installation_payload,
+                delivery_id="delivery-installation-created",
+                event_name="installation",
+            ),
+        )
+        assert installation_response.status_code == 200
+        assert installation_response.json()["status"] == "upserted"
+        assert installation_response.json()["installation"]["github_installation_id"] == 555666
+        assert installation_response.json()["repository_count"] == 1
+
+        installations_response = integration_client.get(
+            "/api/v1/github/installations",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert installations_response.status_code == 200
+        installations = installations_response.json()
+        assert len(installations) == 1
+        assert installations[0]["github_installation_id"] == 555666
+        assert installations[0]["account_login"] == "octodev"
+
+        repositories_response = integration_client.get(
+            "/api/v1/github/repositories",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert repositories_response.status_code == 200
+        repositories = repositories_response.json()
+        assert len(repositories) == 1
+        assert repositories[0]["full_name"] == "octodev/cabin"
+        assert repositories[0]["github_installation_id"] == 555666
+
+        push_payload = _push_payload()
+        push_payload["sender"] = {
+            "id": 123123,
+            "login": "repo-collaborator",
+        }
+        push_response = integration_client.post(
+            "/api/v1/webhooks/github",
+            content=json.dumps(push_payload),
+            headers=_signed_headers(
+                push_payload,
+                delivery_id="delivery-installation-push",
+            ),
+        )
+        assert push_response.status_code == 200
+        assert push_response.json()["status"] == "created"
+        assert push_response.json()["activity"]["github_installation_id"] == 555666
+
+        activities_response = integration_client.get(
+            "/api/v1/github/activities",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert activities_response.status_code == 200
+        assert activities_response.json()[0]["github_delivery_id"] == "delivery-installation-push"
+    finally:
+        object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", original_secret)
+
+
+@pytest.mark.primary_data
+def test_github_app_installation_repositories_webhook_updates_selected_repos(
+    integration_client: TestClient,
+):
+    """Scenario: GitHub App repository selection changes add and remove linked repositories."""
+    original_secret = SETTINGS.GITHUB_WEBHOOK_SECRET
+    object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", "webhook-test-secret")
+    try:
+        _user_id, token = asyncio.run(_create_github_oauth_user())
+
+        installation_payload = _installation_payload()
+        integration_client.post(
+            "/api/v1/webhooks/github",
+            content=json.dumps(installation_payload),
+            headers=_signed_headers(
+                installation_payload,
+                delivery_id="delivery-installation-seed",
+                event_name="installation",
+            ),
+        )
+
+        selection_payload = _installation_repositories_payload()
+        selection_response = integration_client.post(
+            "/api/v1/webhooks/github",
+            content=json.dumps(selection_payload),
+            headers=_signed_headers(
+                selection_payload,
+                delivery_id="delivery-installation-repositories",
+                event_name="installation_repositories",
+            ),
+        )
+        assert selection_response.status_code == 200
+        assert selection_response.json()["status"] == "updated"
+        assert selection_response.json()["repositories_added"] == 1
+        assert selection_response.json()["repositories_removed"] == 1
+
+        repositories_response = integration_client.get(
+            "/api/v1/github/repositories",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert repositories_response.status_code == 200
+        repositories = repositories_response.json()
+        assert {repo["full_name"] for repo in repositories} == {"octodev/game-client"}
+        assert repositories[0]["github_installation_id"] == 555666
+    finally:
+        object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", original_secret)
+
+
+@pytest.mark.primary_data
+def test_github_app_installation_deleted_marks_installation_deleted(
+    integration_client: TestClient,
+):
+    """Scenario: GitHub App installation deleted event keeps audit row and marks it deleted."""
+    original_secret = SETTINGS.GITHUB_WEBHOOK_SECRET
+    object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", "webhook-test-secret")
+    try:
+        _user_id, token = asyncio.run(_create_github_oauth_user())
+
+        installation_payload = _installation_payload()
+        integration_client.post(
+            "/api/v1/webhooks/github",
+            content=json.dumps(installation_payload),
+            headers=_signed_headers(
+                installation_payload,
+                delivery_id="delivery-installation-before-delete",
+                event_name="installation",
+            ),
+        )
+
+        deleted_payload = _installation_payload(action="deleted")
+        deleted_response = integration_client.post(
+            "/api/v1/webhooks/github",
+            content=json.dumps(deleted_payload),
+            headers=_signed_headers(
+                deleted_payload,
+                delivery_id="delivery-installation-deleted",
+                event_name="installation",
+            ),
+        )
+        assert deleted_response.status_code == 200
+        assert deleted_response.json()["status"] == "deleted"
+
+        installations_response = integration_client.get(
+            "/api/v1/github/installations",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert installations_response.status_code == 200
+        installations = installations_response.json()
+        assert len(installations) == 1
+        assert installations[0]["deleted_at"] is not None
+    finally:
+        object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", original_secret)
+
+
+@pytest.mark.primary_data
 def test_github_repositories_and_stack_summary_can_be_viewed(integration_client: TestClient):
     """Scenario: repository language snapshots are exposed with stack ratios."""
     user_id, token = asyncio.run(_create_github_oauth_user())
@@ -209,6 +483,7 @@ def test_github_repositories_and_stack_summary_can_be_viewed(integration_client:
             [
                 GitHubRepositoryUpsert(
                     user_id=user_id,
+                    github_installation_id=555666,
                     github_repo_id=111222,
                     owner_login="octodev",
                     name="cabin",
@@ -221,6 +496,7 @@ def test_github_repositories_and_stack_summary_can_be_viewed(integration_client:
                 ),
                 GitHubRepositoryUpsert(
                     user_id=user_id,
+                    github_installation_id=555666,
                     github_repo_id=333444,
                     owner_login="octodev",
                     name="game-client",

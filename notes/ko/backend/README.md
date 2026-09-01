@@ -63,18 +63,46 @@ Cabinlog 인증 기본값:
 
 GitHub 백엔드 기반:
 - `GET /api/v1/github/me`는 OAuth 로그인 중 연결된 현재 사용자의 GitHub profile을 반환합니다.
+- `GET /api/v1/github/app/install-url`은 설정된 GitHub App installation URL을 반환합니다.
 - `GET /api/v1/github/repositories`는 OAuth 로그인 중 수집된 repository/language snapshot을 반환합니다.
+- `GET /api/v1/github/installations`는 현재 사용자와 연결된 GitHub App installation 상태를 반환합니다.
 - `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.
 - `POST /api/v1/webhooks/github`는 `GITHUB_WEBHOOK_SECRET`으로 서명 검증된 GitHub webhook을 수신합니다.
-- 초기 webhook 정규화는 `push`, `pull_request` 이벤트를 지원하고 Cabinlog activity로 저장합니다.
+- GitHub App `installation`, `installation_repositories` webhook은 installation/repository selection 상태를 저장합니다.
+- Activity webhook은 GitHub App `installation.id`로 사용자/repository 귀속을 우선 처리하고, 없으면 sender의 연결된 GitHub profile로 fallback합니다.
+- 초기 activity 정규화는 `push`, `pull_request` 이벤트를 지원하고 Cabinlog activity로 저장합니다.
 - `GET /api/v1/github/activities`는 현재 사용자의 저장된 GitHub 기반 activity를 반환합니다.
 - 지원하지 않는 webhook 이벤트는 ignored 상태로 응답하며 게임 activity를 생성하지 않습니다.
+
+GitHub App installation 흐름:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant GitHub as GitHub App
+    participant API as Cabinlog Backend
+    participant DB as PostgreSQL
+
+    User->>GitHub: Cabinlog GitHub App 설치
+    GitHub->>API: installation webhook
+    API->>DB: github_installations 및 선택 repository upsert
+    GitHub->>API: installation.id 포함 push / pull_request webhook
+    API->>DB: 정규화된 Cabinlog activity 저장
+    User->>API: GET /api/v1/github/installations
+    API-->>User: 연결된 installation 상태
+```
 
 백엔드 단독 OAuth 확인:
 1. `APP_BASE_URL=http://localhost:8000`, `OAUTH_CALLBACK_RESPONSE_MODE=json`을 설정합니다.
 2. 브라우저에서 `/api/v1/auth/oauth/github/start`를 엽니다.
 3. GitHub 승인 후 callback이 `access_token`, `refresh_token`, `user`, `github_profile` JSON을 반환합니다.
-4. 반환된 `access_token`을 bearer token으로 사용해 `/api/v1/github/me`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, `/api/v1/github/activities`를 호출합니다.
+4. 반환된 `access_token`을 bearer token으로 사용해 `/api/v1/github/me`, `/api/v1/github/app/install-url`, `/api/v1/github/installations`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, `/api/v1/github/activities`를 호출합니다.
+
+GitHub App 로컬 설정:
+- `GITHUB_APP_SLUG`에는 GitHub App URL의 slug를 설정합니다(예: `cabinlog-dev`).
+- `GITHUB_WEBHOOK_SECRET`은 GitHub App webhook 설정에 입력한 secret과 같은 값으로 설정합니다.
+- GitHub App Webhook URL은 `${APP_BASE_URL}/api/v1/webhooks/github`로 설정합니다.
+- GitHub App webhook event는 `installation`, `installation_repositories`, `push`, `pull_request`를 구독합니다.
 
 Prometheus metrics:
 - `http://localhost:8000/metrics`

@@ -47,6 +47,9 @@ class GitHubRepository(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    github_installation_id: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, index=True
+    )
     github_repo_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=False)
     owner_login: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -86,6 +89,35 @@ class GitHubRepositoryLanguage(Base):
     repository = relationship("GitHubRepository", back_populates="languages")
 
 
+class GitHubInstallation(Base):
+    __tablename__ = "github_installations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    github_installation_id: Mapped[int] = mapped_column(
+        BigInteger, unique=True, index=True, nullable=False
+    )
+    account_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
+    account_login: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    account_type: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    target_type: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    repository_selection: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    suspended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    user = relationship("User")
+
+
 class GitHubProfileUpsert(BaseModel):
     user_id: int
     github_user_id: int
@@ -110,6 +142,7 @@ class GitHubProfileResponse(BaseModel):
 
 class GitHubRepositoryUpsert(BaseModel):
     user_id: int
+    github_installation_id: int | None = None
     github_repo_id: int
     owner_login: str
     name: str
@@ -123,6 +156,7 @@ class GitHubRepositoryUpsert(BaseModel):
 
 
 class GitHubRepositoryResponse(BaseModel):
+    github_installation_id: int | None = None
     github_repo_id: int
     owner_login: str
     name: str
@@ -145,6 +179,39 @@ class GitHubStackLanguageResponse(BaseModel):
 class GitHubStackSummaryResponse(BaseModel):
     total_bytes: int
     languages: list[GitHubStackLanguageResponse]
+
+
+class GitHubAppInstallUrlResponse(BaseModel):
+    configured: bool
+    install_url: str | None = None
+
+
+class GitHubInstallationUpsert(BaseModel):
+    user_id: int | None = None
+    github_installation_id: int
+    account_id: int | None = None
+    account_login: str | None = None
+    account_type: str | None = None
+    target_type: str | None = None
+    repository_selection: str | None = None
+    suspended_at: datetime | None = None
+    deleted_at: datetime | None = None
+
+
+class GitHubInstallationResponse(BaseModel):
+    user_id: int | None = None
+    github_installation_id: int
+    account_id: int | None = None
+    account_login: str | None = None
+    account_type: str | None = None
+    target_type: str | None = None
+    repository_selection: str | None = None
+    suspended_at: datetime | None = None
+    deleted_at: datetime | None = None
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class GitHubProfileRepository:
@@ -191,6 +258,80 @@ class GitHubProfileRepository:
             )
             return result.scalar_one_or_none()
 
+    async def upsert_installation(
+        self,
+        installation: GitHubInstallationUpsert,
+    ) -> GitHubInstallationResponse:
+        async with get_db() as db:
+            result = await db.execute(
+                select(GitHubInstallation).where(
+                    GitHubInstallation.github_installation_id == installation.github_installation_id
+                )
+            )
+            existing = result.scalar_one_or_none()
+            now = datetime.now(UTC)
+            if existing is None:
+                existing = GitHubInstallation(**installation.model_dump())
+                db.add(existing)
+            else:
+                if installation.user_id is not None:
+                    existing.user_id = installation.user_id
+                existing.account_id = installation.account_id
+                existing.account_login = installation.account_login
+                existing.account_type = installation.account_type
+                existing.target_type = installation.target_type
+                existing.repository_selection = installation.repository_selection
+                existing.suspended_at = installation.suspended_at
+                existing.deleted_at = installation.deleted_at
+                existing.updated_at = now
+
+            await db.commit()
+            await db.refresh(existing)
+            return GitHubInstallationResponse.model_validate(existing)
+
+    async def get_installation_by_github_id(
+        self,
+        github_installation_id: int,
+    ) -> GitHubInstallationResponse | None:
+        async with get_db() as db:
+            result = await db.execute(
+                select(GitHubInstallation).where(
+                    GitHubInstallation.github_installation_id == github_installation_id
+                )
+            )
+            installation = result.scalar_one_or_none()
+            if installation is None:
+                return None
+            return GitHubInstallationResponse.model_validate(installation)
+
+    async def list_installations(self, user_id: int) -> list[GitHubInstallationResponse]:
+        async with get_db() as db:
+            result = await db.execute(
+                select(GitHubInstallation)
+                .where(GitHubInstallation.user_id == user_id)
+                .order_by(GitHubInstallation.updated_at.desc(), GitHubInstallation.id.desc())
+            )
+            return [
+                GitHubInstallationResponse.model_validate(installation)
+                for installation in result.scalars().all()
+            ]
+
+    async def mark_installation_deleted(self, github_installation_id: int) -> bool:
+        async with get_db() as db:
+            result = await db.execute(
+                select(GitHubInstallation).where(
+                    GitHubInstallation.github_installation_id == github_installation_id
+                )
+            )
+            installation = result.scalar_one_or_none()
+            if installation is None:
+                return False
+            now = datetime.now(UTC)
+            installation.deleted_at = now
+            installation.updated_at = now
+            await db.commit()
+            return True
+
     async def upsert_repositories(
         self,
         repositories: list[GitHubRepositoryUpsert],
@@ -208,6 +349,7 @@ class GitHubProfileRepository:
                 if existing is None:
                     existing = GitHubRepository(
                         user_id=repository.user_id,
+                        github_installation_id=repository.github_installation_id,
                         github_repo_id=repository.github_repo_id,
                         owner_login=repository.owner_login,
                         name=repository.name,
@@ -222,6 +364,7 @@ class GitHubProfileRepository:
                     await db.flush()
                 else:
                     existing.user_id = repository.user_id
+                    existing.github_installation_id = repository.github_installation_id
                     existing.owner_login = repository.owner_login
                     existing.name = repository.name
                     existing.full_name = repository.full_name
@@ -266,6 +409,23 @@ class GitHubProfileRepository:
                 responses.append(_to_repository_response(repository, languages))
             return responses
 
+    async def remove_installation_repositories(
+        self,
+        *,
+        github_installation_id: int,
+        github_repo_ids: list[int],
+    ) -> None:
+        if not github_repo_ids:
+            return
+        async with get_db() as db:
+            await db.execute(
+                delete(GitHubRepository).where(
+                    GitHubRepository.github_installation_id == github_installation_id,
+                    GitHubRepository.github_repo_id.in_(github_repo_ids),
+                )
+            )
+            await db.commit()
+
     async def get_stack_summary(self, user_id: int) -> GitHubStackSummaryResponse:
         async with get_db() as db:
             result = await db.execute(
@@ -308,6 +468,7 @@ def _to_repository_response(
 ) -> GitHubRepositoryResponse:
     return GitHubRepositoryResponse(
         github_repo_id=repository.github_repo_id,
+        github_installation_id=repository.github_installation_id,
         owner_login=repository.owner_login,
         name=repository.name,
         full_name=repository.full_name,

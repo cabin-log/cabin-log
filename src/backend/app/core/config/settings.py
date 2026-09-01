@@ -116,6 +116,7 @@ class Settings(BaseModel):
     OAUTH_GITHUB_USERINFO_URL: str = os.getenv(
         "OAUTH_GITHUB_USERINFO_URL", "https://api.github.com/user"
     )
+    GITHUB_APP_SLUG: str = os.getenv("GITHUB_APP_SLUG", "")
     GITHUB_WEBHOOK_SECRET: str = os.getenv("GITHUB_WEBHOOK_SECRET", "")
     SSE_HEARTBEAT_SECONDS: int = int(os.getenv("SSE_HEARTBEAT_SECONDS", "20"))
     SSE_RETRY_MILLIS: int = int(os.getenv("SSE_RETRY_MILLIS", "5000"))

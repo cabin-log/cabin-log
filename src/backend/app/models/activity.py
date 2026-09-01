@@ -25,6 +25,9 @@ class Activity(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     type: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    github_installation_id: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True, index=True
+    )
     repository_github_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
     repository_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     github_delivery_id: Mapped[str | None] = mapped_column(
@@ -42,6 +45,7 @@ class Activity(Base):
 class ActivityCreate(BaseModel):
     user_id: int
     type: ActivityType
+    github_installation_id: int | None = None
     repository_github_id: int | None = None
     repository_full_name: str | None = None
     github_delivery_id: str | None = None
@@ -53,6 +57,7 @@ class ActivityResponse(BaseModel):
     id: int
     user_id: int
     type: ActivityType
+    github_installation_id: int | None = None
     repository_github_id: int | None = None
     repository_full_name: str | None = None
     github_delivery_id: str | None = None
@@ -74,6 +79,7 @@ def _to_response(activity: Activity) -> ActivityResponse:
         id=activity.id,
         user_id=activity.user_id,
         type=ActivityType(activity.type),
+        github_installation_id=activity.github_installation_id,
         repository_github_id=activity.repository_github_id,
         repository_full_name=activity.repository_full_name,
         github_delivery_id=activity.github_delivery_id,
@@ -99,6 +105,7 @@ class ActivityRepository:
             db_activity = Activity(
                 user_id=activity.user_id,
                 type=activity.type.value,
+                github_installation_id=activity.github_installation_id,
                 repository_github_id=activity.repository_github_id,
                 repository_full_name=activity.repository_full_name,
                 github_delivery_id=activity.github_delivery_id,
