@@ -61,21 +61,41 @@ Cabinlog auth defaults:
 - Password signup/login endpoints are disabled unless `PASSWORD_AUTH_ENABLED=true`.
 - GitHub is the only OAuth provider listed by default (`OAUTH_ALLOWED_PROVIDERS=github`).
 - Set `OAUTH_ENABLED=true` only after configuring `OAUTH_GITHUB_CLIENT_ID` and `OAUTH_GITHUB_CLIENT_SECRET`.
+- `OAUTH_GITHUB_SCOPES=read:user user:email repo` lets the OAuth callback snapshot private repositories, commits, PRs, issues, and language data. Use `read:user user:email` for public-only profile checks.
 - Use `OAUTH_CALLBACK_RESPONSE_MODE=json` for backend-only OAuth verification; it returns tokens and the linked GitHub profile directly from the callback.
 
 GitHub backend foundation:
 - `GET /api/v1/github/me` returns the GitHub profile linked during OAuth login for the current bearer/API-key user.
-- `GET /api/v1/github/app/install-url` returns the configured GitHub App installation URL.
-- `GET /api/v1/github/repositories` returns the repository/language snapshot collected during OAuth login.
+- GitHub OAuth login is the default data collection path. The callback stores the linked profile, repository/language snapshot, and OAuth API-derived commit, pull request, and issue activities.
+- `GET /api/v1/github/repositories` returns the repository/language snapshot collected from the OAuth API.
+- `GET /api/v1/github/stack-summary` returns language byte totals and ratios across the collected repositories.
+- `GET /api/v1/github/activities` returns the current user's persisted GitHub-derived activities, including OAuth API snapshot activities and optional webhook activities.
+- `GET /api/v1/github/app/install-url` returns the configured GitHub App installation URL for optional realtime/webhook setup.
 - `GET /api/v1/github/installations` returns GitHub App installations linked to the current user.
 - `POST /api/v1/github/installations/{github_installation_id}/sync-repositories` mints a GitHub App installation token, fetches installed repositories/languages, and updates the snapshot without storing the token.
-- `GET /api/v1/github/stack-summary` returns language byte totals and ratios across the collected repositories.
 - `POST /api/v1/webhooks/github` accepts GitHub webhooks signed with `GITHUB_WEBHOOK_SECRET`.
 - GitHub App `installation` and `installation_repositories` webhooks persist installation/repository selection state.
 - Activity webhooks prefer GitHub App `installation.id` for user/repository attribution, then fall back to the sender's linked GitHub profile.
 - Initial activity normalization supports `push` and `pull_request` events and persists them as Cabinlog activities.
-- `GET /api/v1/github/activities` returns the current user's persisted GitHub-derived activities.
 - Unsupported webhook events are acknowledged as ignored and do not create game activity.
+
+GitHub OAuth snapshot flow:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant GitHub
+    participant API as Cabinlog Backend
+    participant DB as PostgreSQL
+
+    User->>API: GET /api/v1/auth/oauth/github/start
+    API-->>GitHub: Redirect with configured OAuth scopes
+    GitHub-->>API: OAuth callback with code/state
+    API->>GitHub: Exchange code for OAuth access token
+    API->>GitHub: Fetch profile, repos, languages, commits, PRs, issues
+    API->>DB: Upsert profile/repositories and dedupe activities by external id
+    API-->>User: Login JSON or frontend redirect
+```
 
 GitHub App installation flow:
 
@@ -101,7 +121,7 @@ Backend-only OAuth check:
 3. After GitHub approval, the callback returns JSON with `access_token`, `refresh_token`, `user`, and `github_profile`.
 4. Use the `access_token` as a bearer token for `/api/v1/github/me`, `/api/v1/github/app/install-url`, `/api/v1/github/installations`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, and `/api/v1/github/activities`.
 
-GitHub App local setup:
+Optional GitHub App local setup:
 - Set `GITHUB_APP_ID` to the numeric GitHub App ID.
 - Set `GITHUB_APP_SLUG` to the slug from the GitHub App URL, for example `cabinlog-dev`.
 - Set either `GITHUB_APP_PRIVATE_KEY_PATH` or `GITHUB_APP_PRIVATE_KEY`. Prefer the path form locally.

@@ -153,7 +153,7 @@ class AuthService:
             query = {
                 "client_id": provider_config.client_id,
                 "redirect_uri": redirect_uri,
-                "scope": "read:user user:email",
+                "scope": SETTINGS.OAUTH_GITHUB_SCOPES,
                 "state": state,
             }
 
@@ -191,13 +191,14 @@ class AuthService:
         if provider == OAuthProvider.GITHUB:
             await self._upsert_github_profile(user_id=user.id, profile=profile)
             try:
-                await GitHubService().sync_user_repositories(
+                await GitHubService().sync_oauth_snapshot(
                     user_id=user.id,
                     access_token=access_token,
+                    github_login=profile.login,
                 )
             except Exception:
                 logger.warning(
-                    "GitHub repository sync failed after OAuth login (user_id=%s).",
+                    "GitHub OAuth snapshot sync failed after login (user_id=%s).",
                     user.id,
                     exc_info=True,
                 )

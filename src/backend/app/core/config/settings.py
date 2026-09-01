@@ -116,6 +116,7 @@ class Settings(BaseModel):
     OAUTH_GITHUB_USERINFO_URL: str = os.getenv(
         "OAUTH_GITHUB_USERINFO_URL", "https://api.github.com/user"
     )
+    OAUTH_GITHUB_SCOPES: str = os.getenv("OAUTH_GITHUB_SCOPES", "read:user user:email repo")
     GITHUB_APP_ID: str = os.getenv("GITHUB_APP_ID", "")
     GITHUB_APP_SLUG: str = os.getenv("GITHUB_APP_SLUG", "")
     GITHUB_APP_PRIVATE_KEY: str = os.getenv("GITHUB_APP_PRIVATE_KEY", "")

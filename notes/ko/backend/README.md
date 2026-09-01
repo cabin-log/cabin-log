@@ -59,21 +59,41 @@ Cabinlog 인증 기본값:
 - `PASSWORD_AUTH_ENABLED=true`가 아니면 비밀번호 기반 가입/로그인 엔드포인트는 비활성화됩니다.
 - 기본 OAuth provider 목록은 GitHub만 포함합니다(`OAUTH_ALLOWED_PROVIDERS=github`).
 - `OAUTH_ENABLED=true`는 `OAUTH_GITHUB_CLIENT_ID`, `OAUTH_GITHUB_CLIENT_SECRET` 설정 후 사용하세요.
+- `OAUTH_GITHUB_SCOPES=read:user user:email repo`는 OAuth callback에서 private repository, commit, PR, issue, language snapshot을 수집할 수 있게 합니다. public profile 확인만 필요하면 `read:user user:email`로 줄일 수 있습니다.
 - 백엔드 단독 OAuth 검증에는 `OAUTH_CALLBACK_RESPONSE_MODE=json`을 사용하세요. callback에서 token과 연결된 GitHub profile을 바로 반환합니다.
 
 GitHub 백엔드 기반:
 - `GET /api/v1/github/me`는 OAuth 로그인 중 연결된 현재 사용자의 GitHub profile을 반환합니다.
-- `GET /api/v1/github/app/install-url`은 설정된 GitHub App installation URL을 반환합니다.
-- `GET /api/v1/github/repositories`는 OAuth 로그인 중 수집된 repository/language snapshot을 반환합니다.
+- GitHub OAuth 로그인이 기본 데이터 수집 경로입니다. callback에서 연결 profile, repository/language snapshot, OAuth API 기반 commit, pull request, issue activity를 저장합니다.
+- `GET /api/v1/github/repositories`는 OAuth API로 수집된 repository/language snapshot을 반환합니다.
+- `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.
+- `GET /api/v1/github/activities`는 OAuth API snapshot activity와 선택적인 webhook activity를 포함해 현재 사용자의 저장된 GitHub 기반 activity를 반환합니다.
+- `GET /api/v1/github/app/install-url`은 선택적인 realtime/webhook 설정을 위한 GitHub App installation URL을 반환합니다.
 - `GET /api/v1/github/installations`는 현재 사용자와 연결된 GitHub App installation 상태를 반환합니다.
 - `POST /api/v1/github/installations/{github_installation_id}/sync-repositories`는 GitHub App installation token을 발급해 설치된 repository/language를 조회하고, token 저장 없이 snapshot을 갱신합니다.
-- `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.
 - `POST /api/v1/webhooks/github`는 `GITHUB_WEBHOOK_SECRET`으로 서명 검증된 GitHub webhook을 수신합니다.
 - GitHub App `installation`, `installation_repositories` webhook은 installation/repository selection 상태를 저장합니다.
 - Activity webhook은 GitHub App `installation.id`로 사용자/repository 귀속을 우선 처리하고, 없으면 sender의 연결된 GitHub profile로 fallback합니다.
 - 초기 activity 정규화는 `push`, `pull_request` 이벤트를 지원하고 Cabinlog activity로 저장합니다.
-- `GET /api/v1/github/activities`는 현재 사용자의 저장된 GitHub 기반 activity를 반환합니다.
 - 지원하지 않는 webhook 이벤트는 ignored 상태로 응답하며 게임 activity를 생성하지 않습니다.
+
+GitHub OAuth snapshot 흐름:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant GitHub
+    participant API as Cabinlog Backend
+    participant DB as PostgreSQL
+
+    User->>API: GET /api/v1/auth/oauth/github/start
+    API-->>GitHub: 설정된 OAuth scope로 redirect
+    GitHub-->>API: code/state 포함 OAuth callback
+    API->>GitHub: code를 OAuth access token으로 교환
+    API->>GitHub: profile, repos, languages, commits, PRs, issues 조회
+    API->>DB: profile/repositories upsert 및 external id 기준 activity dedupe
+    API-->>User: Login JSON 또는 frontend redirect
+```
 
 GitHub App installation 흐름:
 
@@ -99,7 +119,7 @@ sequenceDiagram
 3. GitHub 승인 후 callback이 `access_token`, `refresh_token`, `user`, `github_profile` JSON을 반환합니다.
 4. 반환된 `access_token`을 bearer token으로 사용해 `/api/v1/github/me`, `/api/v1/github/app/install-url`, `/api/v1/github/installations`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, `/api/v1/github/activities`를 호출합니다.
 
-GitHub App 로컬 설정:
+선택적 GitHub App 로컬 설정:
 - `GITHUB_APP_ID`에는 GitHub App의 numeric App ID를 설정합니다.
 - `GITHUB_APP_SLUG`에는 GitHub App URL의 slug를 설정합니다(예: `cabinlog-dev`).
 - `GITHUB_APP_PRIVATE_KEY_PATH` 또는 `GITHUB_APP_PRIVATE_KEY` 중 하나를 설정합니다. 로컬에서는 path 방식을 권장합니다.

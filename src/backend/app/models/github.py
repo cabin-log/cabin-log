@@ -192,6 +192,12 @@ class GitHubInstallationSyncResponse(BaseModel):
     repositories: list[GitHubRepositoryResponse] = Field(default_factory=list)
 
 
+class GitHubOAuthSyncResponse(BaseModel):
+    repository_count: int
+    created_activity_count: int
+    duplicate_activity_count: int
+
+
 class GitHubInstallationUpsert(BaseModel):
     user_id: int | None = None
     github_installation_id: int

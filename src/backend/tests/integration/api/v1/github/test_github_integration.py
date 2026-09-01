@@ -218,6 +218,200 @@ def test_github_app_install_url_uses_configured_slug(integration_client: TestCli
 
 
 @pytest.mark.primary_data
+def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
+    integration_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Scenario: OAuth API snapshot stores repos, languages, commits, PRs, and issues."""
+
+    async def fake_fetch_authenticated_user_repositories(
+        self: github_service_module.GitHubAPIClient,
+    ) -> list[dict]:
+        assert self.access_token == "oauth-token"
+        return [
+            {
+                "id": 111222,
+                "name": "cabin",
+                "full_name": "octodev/cabin",
+                "private": True,
+                "html_url": "https://github.com/octodev/cabin",
+                "default_branch": "main",
+                "language": "Python",
+                "owner": {"login": "octodev"},
+                "pushed_at": "2026-08-19T08:00:00Z",
+            }
+        ]
+
+    async def fake_fetch_repository_languages(
+        self: github_service_module.GitHubAPIClient,
+        full_name: str,
+    ) -> dict[str, int]:
+        assert self.access_token == "oauth-token"
+        assert full_name == "octodev/cabin"
+        return {"Python": 900, "TypeScript": 100}
+
+    async def fake_fetch_repository_commits_by_author(
+        self: github_service_module.GitHubAPIClient,
+        *,
+        full_name: str,
+        author_login: str,
+    ) -> list[dict]:
+        assert self.access_token == "oauth-token"
+        assert full_name == "octodev/cabin"
+        assert author_login == "octodev"
+        return [
+            {
+                "sha": "abc123",
+                "html_url": "https://github.com/octodev/cabin/commit/abc123",
+                "commit": {
+                    "message": "Add cabin activity",
+                    "author": {"date": "2026-08-19T09:00:00Z"},
+                },
+            }
+        ]
+
+    async def fake_search_user_pull_requests(
+        self: github_service_module.GitHubAPIClient,
+        *,
+        author_login: str,
+    ) -> list[dict]:
+        assert self.access_token == "oauth-token"
+        assert author_login == "octodev"
+        return [
+            {
+                "id": 444555,
+                "number": 42,
+                "title": "Open cabin PR",
+                "html_url": "https://github.com/octodev/cabin/pull/42",
+                "state": "open",
+                "created_at": "2026-08-19T10:00:00Z",
+                "repository": {"id": 111222, "full_name": "octodev/cabin"},
+            }
+        ]
+
+    async def fake_search_user_merged_pull_requests(
+        self: github_service_module.GitHubAPIClient,
+        *,
+        author_login: str,
+    ) -> list[dict]:
+        assert self.access_token == "oauth-token"
+        assert author_login == "octodev"
+        return [
+            {
+                "id": 666777,
+                "number": 43,
+                "title": "Merge cabin PR",
+                "html_url": "https://github.com/octodev/cabin/pull/43",
+                "state": "closed",
+                "closed_at": "2026-08-19T11:00:00Z",
+                "repository_url": "https://api.github.com/repos/octodev/cabin",
+            }
+        ]
+
+    async def fake_search_user_issues(
+        self: github_service_module.GitHubAPIClient,
+        *,
+        author_login: str,
+    ) -> list[dict]:
+        assert self.access_token == "oauth-token"
+        assert author_login == "octodev"
+        return [
+            {
+                "id": 888999,
+                "number": 7,
+                "title": "Track cabin issue",
+                "html_url": "https://github.com/octodev/cabin/issues/7",
+                "state": "open",
+                "created_at": "2026-08-19T12:00:00Z",
+                "repository_url": "https://api.github.com/repos/octodev/cabin",
+            }
+        ]
+
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "fetch_authenticated_user_repositories",
+        fake_fetch_authenticated_user_repositories,
+    )
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "fetch_repository_languages",
+        fake_fetch_repository_languages,
+    )
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "fetch_repository_commits_by_author",
+        fake_fetch_repository_commits_by_author,
+    )
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "search_user_pull_requests",
+        fake_search_user_pull_requests,
+    )
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "search_user_merged_pull_requests",
+        fake_search_user_merged_pull_requests,
+    )
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "search_user_issues",
+        fake_search_user_issues,
+    )
+
+    user_id, token = asyncio.run(_create_github_oauth_user())
+    service = github_service_module.GitHubService()
+
+    first_result = asyncio.run(
+        service.sync_oauth_snapshot(
+            user_id=user_id,
+            access_token="oauth-token",
+            github_login="octodev",
+        )
+    )
+    duplicate_result = asyncio.run(
+        service.sync_oauth_snapshot(
+            user_id=user_id,
+            access_token="oauth-token",
+            github_login="octodev",
+        )
+    )
+
+    assert first_result.repository_count == 1
+    assert first_result.created_activity_count == 4
+    assert first_result.duplicate_activity_count == 0
+    assert duplicate_result.repository_count == 1
+    assert duplicate_result.created_activity_count == 0
+    assert duplicate_result.duplicate_activity_count == 4
+
+    repositories_response = integration_client.get(
+        "/api/v1/github/repositories",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert repositories_response.status_code == 200
+    repositories = repositories_response.json()
+    assert repositories[0]["full_name"] == "octodev/cabin"
+    assert repositories[0]["languages"] == {"Python": 900, "TypeScript": 100}
+
+    activities_response = integration_client.get(
+        "/api/v1/github/activities",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert activities_response.status_code == 200
+    activities = activities_response.json()
+    assert len(activities) == 4
+    activity_types = {activity["type"] for activity in activities}
+    assert activity_types == {
+        "COMMIT",
+        "PULL_REQUEST_OPENED",
+        "PULL_REQUEST_MERGED",
+        "ISSUE",
+    }
+    assert {activity["source"] for activity in activities} == {"OAUTH_API"}
+    assert all(activity["github_external_id"] for activity in activities)
+    assert all(activity["repository_full_name"] == "octodev/cabin" for activity in activities)
+
+
+@pytest.mark.primary_data
 def test_github_push_webhook_creates_activity_once(integration_client: TestClient):
     """Scenario: signed push webhook creates one Cabinlog activity and deduplicates delivery id."""
     original_secret = SETTINGS.GITHUB_WEBHOOK_SECRET

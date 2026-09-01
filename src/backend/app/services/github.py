@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from urllib.request import Request as URLRequest, urlopen
 
 from jose import jwt
@@ -20,6 +20,7 @@ from app.models.github import (
     GitHubInstallationResponse,
     GitHubInstallationSyncResponse,
     GitHubInstallationUpsert,
+    GitHubOAuthSyncResponse,
     GitHubProfileResponse,
     GitHubProfiles,
     GitHubRepositoryResponse,
@@ -97,6 +98,79 @@ class GitHubService:
     async def get_current_stack_summary(self, user_id: int) -> GitHubStackSummaryResponse:
         return await GitHubProfiles.get_stack_summary(user_id=user_id)
 
+    async def sync_oauth_snapshot(
+        self,
+        *,
+        user_id: int,
+        access_token: str,
+        github_login: str | None,
+    ) -> GitHubOAuthSyncResponse:
+        client = GitHubAPIClient(access_token=access_token)
+        repositories = await client.fetch_authenticated_user_repositories()
+        upserts = await self._build_repository_upserts(
+            user_id=user_id,
+            repositories=repositories,
+            client=client,
+        )
+        persisted_repositories = await GitHubProfiles.upsert_repositories(upserts)
+
+        created_count = 0
+        duplicate_count = 0
+        if github_login:
+            repository_lookup = {
+                repository.github_repo_id: repository.full_name
+                for repository in persisted_repositories
+            }
+            activity_results: list[ActivityCreateResult] = []
+            for repository in persisted_repositories:
+                commits = await client.fetch_repository_commits_by_author(
+                    full_name=repository.full_name,
+                    author_login=github_login,
+                )
+                activity_results.extend(
+                    await self._persist_oauth_commit_activities(
+                        user_id=user_id,
+                        repository=repository,
+                        commits=commits,
+                    )
+                )
+
+            pull_requests = await client.search_user_pull_requests(author_login=github_login)
+            activity_results.extend(
+                await self._persist_oauth_pull_request_activities(
+                    user_id=user_id,
+                    pull_requests=pull_requests,
+                    repository_lookup=repository_lookup,
+                )
+            )
+            merged_pull_requests = await client.search_user_merged_pull_requests(
+                author_login=github_login
+            )
+            activity_results.extend(
+                await self._persist_oauth_merged_pull_request_activities(
+                    user_id=user_id,
+                    pull_requests=merged_pull_requests,
+                    repository_lookup=repository_lookup,
+                )
+            )
+            issues = await client.search_user_issues(author_login=github_login)
+            activity_results.extend(
+                await self._persist_oauth_issue_activities(
+                    user_id=user_id,
+                    issues=issues,
+                    repository_lookup=repository_lookup,
+                )
+            )
+
+            created_count = sum(1 for result in activity_results if not result.duplicate)
+            duplicate_count = sum(1 for result in activity_results if result.duplicate)
+
+        return GitHubOAuthSyncResponse(
+            repository_count=len(persisted_repositories),
+            created_activity_count=created_count,
+            duplicate_activity_count=duplicate_count,
+        )
+
     async def sync_user_repositories(
         self,
         *,
@@ -162,6 +236,179 @@ class GitHubService:
                 )
             )
         return upserts
+
+    async def _persist_oauth_commit_activities(
+        self,
+        *,
+        user_id: int,
+        repository: GitHubRepositoryResponse,
+        commits: list[dict[str, Any]],
+    ) -> list[ActivityCreateResult]:
+        results: list[ActivityCreateResult] = []
+        for commit_payload in commits:
+            sha = commit_payload.get("sha")
+            commit = commit_payload.get("commit")
+            if not isinstance(sha, str) or not isinstance(commit, dict):
+                continue
+            author = commit.get("author")
+            if not isinstance(author, dict):
+                author = {}
+            results.append(
+                await Activities.create_activity_once(
+                    ActivityCreate(
+                        user_id=user_id,
+                        type=ActivityType.COMMIT,
+                        source="OAUTH_API",
+                        repository_github_id=repository.github_repo_id,
+                        repository_full_name=repository.full_name,
+                        github_external_id=f"github:commit:{sha}",
+                        occurred_at=_parse_github_datetime(author.get("date")) or datetime.now(UTC),
+                        metadata={
+                            "sha": sha,
+                            "message": commit.get("message"),
+                            "html_url": commit_payload.get("html_url"),
+                        },
+                    )
+                )
+            )
+        return results
+
+    async def _persist_oauth_pull_request_activities(
+        self,
+        *,
+        user_id: int,
+        pull_requests: list[dict[str, Any]],
+        repository_lookup: dict[int, str],
+    ) -> list[ActivityCreateResult]:
+        results: list[ActivityCreateResult] = []
+        for pull_request in pull_requests:
+            github_id = pull_request.get("id")
+            if not isinstance(github_id, int):
+                continue
+            repository_github_id = self._extract_repository_id_from_search_item(pull_request)
+            repository_full_name = self._extract_repository_full_name_from_search_item(pull_request)
+            results.append(
+                await Activities.create_activity_once(
+                    ActivityCreate(
+                        user_id=user_id,
+                        type=ActivityType.PULL_REQUEST_OPENED,
+                        source="OAUTH_API",
+                        repository_github_id=repository_github_id,
+                        repository_full_name=repository_lookup.get(
+                            repository_github_id or -1,
+                            repository_full_name,
+                        ),
+                        github_external_id=f"github:pull_request:{github_id}:opened",
+                        occurred_at=_parse_github_datetime(pull_request.get("created_at"))
+                        or datetime.now(UTC),
+                        metadata={
+                            "number": pull_request.get("number"),
+                            "title": pull_request.get("title"),
+                            "html_url": pull_request.get("html_url"),
+                            "state": pull_request.get("state"),
+                        },
+                    )
+                )
+            )
+        return results
+
+    async def _persist_oauth_merged_pull_request_activities(
+        self,
+        *,
+        user_id: int,
+        pull_requests: list[dict[str, Any]],
+        repository_lookup: dict[int, str],
+    ) -> list[ActivityCreateResult]:
+        results: list[ActivityCreateResult] = []
+        for pull_request in pull_requests:
+            github_id = pull_request.get("id")
+            if not isinstance(github_id, int):
+                continue
+            repository_github_id = self._extract_repository_id_from_search_item(pull_request)
+            repository_full_name = self._extract_repository_full_name_from_search_item(pull_request)
+            results.append(
+                await Activities.create_activity_once(
+                    ActivityCreate(
+                        user_id=user_id,
+                        type=ActivityType.PULL_REQUEST_MERGED,
+                        source="OAUTH_API",
+                        repository_github_id=repository_github_id,
+                        repository_full_name=repository_lookup.get(
+                            repository_github_id or -1,
+                            repository_full_name,
+                        ),
+                        github_external_id=f"github:pull_request:{github_id}:merged",
+                        occurred_at=_parse_github_datetime(pull_request.get("closed_at"))
+                        or _parse_github_datetime(pull_request.get("updated_at"))
+                        or datetime.now(UTC),
+                        metadata={
+                            "number": pull_request.get("number"),
+                            "title": pull_request.get("title"),
+                            "html_url": pull_request.get("html_url"),
+                            "state": pull_request.get("state"),
+                        },
+                    )
+                )
+            )
+        return results
+
+    async def _persist_oauth_issue_activities(
+        self,
+        *,
+        user_id: int,
+        issues: list[dict[str, Any]],
+        repository_lookup: dict[int, str],
+    ) -> list[ActivityCreateResult]:
+        results: list[ActivityCreateResult] = []
+        for issue in issues:
+            github_id = issue.get("id")
+            if not isinstance(github_id, int):
+                continue
+            repository_github_id = self._extract_repository_id_from_search_item(issue)
+            repository_full_name = self._extract_repository_full_name_from_search_item(issue)
+            results.append(
+                await Activities.create_activity_once(
+                    ActivityCreate(
+                        user_id=user_id,
+                        type=ActivityType.ISSUE,
+                        source="OAUTH_API",
+                        repository_github_id=repository_github_id,
+                        repository_full_name=repository_lookup.get(
+                            repository_github_id or -1,
+                            repository_full_name,
+                        ),
+                        github_external_id=f"github:issue:{github_id}:opened",
+                        occurred_at=_parse_github_datetime(issue.get("created_at"))
+                        or datetime.now(UTC),
+                        metadata={
+                            "number": issue.get("number"),
+                            "title": issue.get("title"),
+                            "html_url": issue.get("html_url"),
+                            "state": issue.get("state"),
+                        },
+                    )
+                )
+            )
+        return results
+
+    def _extract_repository_id_from_search_item(self, item: dict[str, Any]) -> int | None:
+        repository = item.get("repository")
+        if isinstance(repository, Mapping) and isinstance(repository.get("id"), int):
+            return int(repository["id"])
+        return None
+
+    def _extract_repository_full_name_from_search_item(self, item: dict[str, Any]) -> str | None:
+        repository = item.get("repository")
+        if isinstance(repository, Mapping) and isinstance(repository.get("full_name"), str):
+            return str(repository["full_name"])
+        repository_url = item.get("repository_url")
+        if not isinstance(repository_url, str):
+            return None
+        prefix = "https://api.github.com/repos/"
+        if not repository_url.startswith(prefix):
+            return None
+        full_name = repository_url.removeprefix(prefix)
+        return full_name if "/" in full_name else None
 
     async def ingest_webhook(
         self,
@@ -631,12 +878,26 @@ class GitHubAPIClient:
         self.access_token = access_token
 
     async def fetch_authenticated_user_repositories(self) -> list[dict[str, Any]]:
-        payload = await self._request_json(
-            "https://api.github.com/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member"
-        )
-        if not isinstance(payload, list):
-            return []
-        return [item for item in payload if isinstance(item, dict)]
+        repositories: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            payload = await self._request_json(
+                "https://api.github.com/user/repos?"
+                + urlencode(
+                    {
+                        "per_page": "100",
+                        "page": str(page),
+                        "sort": "pushed",
+                        "affiliation": "owner,collaborator,organization_member",
+                    }
+                )
+            )
+            if not isinstance(payload, list):
+                return repositories
+            repositories.extend(item for item in payload if isinstance(item, dict))
+            if len(payload) < 100:
+                return repositories
+            page += 1
 
     async def fetch_installation_repositories(self) -> list[dict[str, Any]]:
         repositories: list[dict[str, Any]] = []
@@ -664,6 +925,54 @@ class GitHubAPIClient:
             if isinstance(language, str) and isinstance(byte_count, int):
                 languages[language] = byte_count
         return languages
+
+    async def fetch_repository_commits_by_author(
+        self,
+        *,
+        full_name: str,
+        author_login: str,
+    ) -> list[dict[str, Any]]:
+        payload = await self._request_json(
+            f"https://api.github.com/repos/{full_name}/commits?"
+            + urlencode({"author": author_login, "per_page": "100"})
+        )
+        if not isinstance(payload, list):
+            return []
+        return [item for item in payload if isinstance(item, dict)]
+
+    async def search_user_pull_requests(self, *, author_login: str) -> list[dict[str, Any]]:
+        return await self._search_issues(
+            query=f"type:pr author:{author_login}",
+        )
+
+    async def search_user_merged_pull_requests(self, *, author_login: str) -> list[dict[str, Any]]:
+        return await self._search_issues(
+            query=f"type:pr author:{author_login} is:merged",
+        )
+
+    async def search_user_issues(self, *, author_login: str) -> list[dict[str, Any]]:
+        return await self._search_issues(
+            query=f"type:issue author:{author_login}",
+        )
+
+    async def _search_issues(self, *, query: str) -> list[dict[str, Any]]:
+        payload = await self._request_json(
+            "https://api.github.com/search/issues?"
+            + urlencode(
+                {
+                    "q": query,
+                    "sort": "updated",
+                    "order": "desc",
+                    "per_page": "100",
+                }
+            )
+        )
+        if not isinstance(payload, dict):
+            return []
+        items = payload.get("items")
+        if not isinstance(items, list):
+            return []
+        return [item for item in items if isinstance(item, dict)]
 
     async def _request_json(self, url: str):
         def _do_request():
