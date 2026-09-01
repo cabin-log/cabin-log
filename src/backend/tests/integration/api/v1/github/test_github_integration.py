@@ -359,29 +359,29 @@ def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
     )
 
     user_id, token = asyncio.run(_create_github_oauth_user())
-    service = github_service_module.GitHubService()
-
-    first_result = asyncio.run(
-        service.sync_oauth_snapshot(
-            user_id=user_id,
-            access_token="oauth-token",
-            github_login="octodev",
-        )
+    first_response = integration_client.post(
+        "/api/v1/github/sync",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"access_token": "oauth-token"},
     )
-    duplicate_result = asyncio.run(
-        service.sync_oauth_snapshot(
-            user_id=user_id,
-            access_token="oauth-token",
-            github_login="octodev",
-        )
+    duplicate_response = integration_client.post(
+        "/api/v1/github/sync",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"access_token": "oauth-token"},
     )
 
-    assert first_result.repository_count == 1
-    assert first_result.created_activity_count == 4
-    assert first_result.duplicate_activity_count == 0
-    assert duplicate_result.repository_count == 1
-    assert duplicate_result.created_activity_count == 0
-    assert duplicate_result.duplicate_activity_count == 4
+    assert first_response.status_code == 200
+    assert duplicate_response.status_code == 200
+    assert first_response.json() == {
+        "repository_count": 1,
+        "created_activity_count": 4,
+        "duplicate_activity_count": 0,
+    }
+    assert duplicate_response.json() == {
+        "repository_count": 1,
+        "created_activity_count": 0,
+        "duplicate_activity_count": 4,
+    }
 
     repositories_response = integration_client.get(
         "/api/v1/github/repositories",

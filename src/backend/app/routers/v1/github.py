@@ -7,6 +7,8 @@ from app.models.github import (
     GitHubAppInstallUrlResponse,
     GitHubInstallationResponse,
     GitHubInstallationSyncResponse,
+    GitHubOAuthSyncRequest,
+    GitHubOAuthSyncResponse,
     GitHubProfileResponse,
     GitHubRepositoryResponse,
     GitHubStackSummaryResponse,
@@ -45,6 +47,25 @@ async def github_activities(
     service: GitHubService = Depends(GitHubService),
 ) -> list[ActivityResponse]:
     return await service.list_current_user_activities(user_id=current_user.id, limit=limit)
+
+
+@router.post(
+    "/sync",
+    response_model=GitHubOAuthSyncResponse,
+    responses=github_error_responses(
+        GitHubErrorCode.GITHUB_PROFILE_NOT_FOUND,
+        GitHubErrorCode.GITHUB_API_REQUEST_FAILED,
+    ),
+)
+async def github_oauth_sync(
+    form: GitHubOAuthSyncRequest,
+    current_user: UserResponse = Depends(get_current_user),
+    service: GitHubService = Depends(GitHubService),
+) -> GitHubOAuthSyncResponse:
+    return await service.sync_current_user_oauth_snapshot(
+        user_id=current_user.id,
+        access_token=form.access_token.get_secret_value(),
+    )
 
 
 @router.get("/repositories", response_model=list[GitHubRepositoryResponse])

@@ -98,6 +98,21 @@ class GitHubService:
     async def get_current_stack_summary(self, user_id: int) -> GitHubStackSummaryResponse:
         return await GitHubProfiles.get_stack_summary(user_id=user_id)
 
+    async def sync_current_user_oauth_snapshot(
+        self,
+        *,
+        user_id: int,
+        access_token: str,
+    ) -> GitHubOAuthSyncResponse:
+        profile = await GitHubProfiles.get_profile_by_user_id(user_id)
+        if profile is None:
+            raise GitHubException(code=GitHubErrorCode.GITHUB_PROFILE_NOT_FOUND)
+        return await self.sync_oauth_snapshot(
+            user_id=user_id,
+            access_token=access_token,
+            github_login=profile.login,
+        )
+
     async def sync_oauth_snapshot(
         self,
         *,

@@ -65,6 +65,7 @@ Cabinlog 인증 기본값:
 GitHub 백엔드 기반:
 - `GET /api/v1/github/me`는 OAuth 로그인 중 연결된 현재 사용자의 GitHub profile을 반환합니다.
 - GitHub OAuth 로그인이 기본 데이터 수집 경로입니다. callback에서 연결 profile, repository/language snapshot, OAuth API 기반 commit, pull request, issue activity를 저장합니다.
+- `POST /api/v1/github/sync`는 요청 단위 GitHub OAuth access token으로 현재 사용자의 OAuth API snapshot을 수동 갱신합니다. token은 갱신 요청 중에만 사용하고 저장하지 않습니다.
 - `GET /api/v1/github/repositories`는 OAuth API로 수집된 repository/language snapshot을 반환합니다.
 - `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.
 - `GET /api/v1/github/activities`는 OAuth API snapshot activity와 선택적인 webhook activity를 포함해 현재 사용자의 저장된 GitHub 기반 activity를 반환합니다.
@@ -93,6 +94,9 @@ sequenceDiagram
     API->>GitHub: profile, repos, languages, commits, PRs, issues 조회
     API->>DB: profile/repositories upsert 및 external id 기준 activity dedupe
     API-->>User: Login JSON 또는 frontend redirect
+    User->>API: GitHub OAuth access token으로 POST /api/v1/github/sync
+    API->>GitHub: OAuth API snapshot 재조회
+    API->>DB: 갱신 snapshot upsert 및 중복 activity 무시
 ```
 
 GitHub App installation 흐름:
@@ -118,6 +122,7 @@ sequenceDiagram
 2. 브라우저에서 `/api/v1/auth/oauth/github/start`를 엽니다.
 3. GitHub 승인 후 callback이 `access_token`, `refresh_token`, `user`, `github_profile` JSON을 반환합니다.
 4. 반환된 `access_token`을 bearer token으로 사용해 `/api/v1/github/me`, `/api/v1/github/app/install-url`, `/api/v1/github/installations`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, `/api/v1/github/activities`를 호출합니다.
+5. GitHub token을 저장하지 않고 OAuth API 데이터를 수동 갱신하려면 Cabinlog bearer token과 JSON body `{"access_token":"<github-oauth-access-token>"}`로 `POST /api/v1/github/sync`를 호출합니다.
 
 선택적 GitHub App 로컬 설정:
 - `GITHUB_APP_ID`에는 GitHub App의 numeric App ID를 설정합니다.
