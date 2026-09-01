@@ -15,6 +15,7 @@ Blueprint4FastAPI is a full-stack template with:
 4. Frontend engineering rules: `src/frontend/FRONTEND.md`
 5. Backend quick guide: `src/backend/README.md`
 6. Frontend quick guide: `src/frontend/README.md`
+7. Cabinlog game design foundation: `docs/CABINLOG_GAME_DESIGN.md`
 
 Localized documentation rule:
 
@@ -30,6 +31,7 @@ Current locale example (`ko`):
 5. Frontend engineering rules: `notes/ko/frontend/FRONTEND.md`
 6. Backend test guide: `notes/ko/backend/TEST.md`
 7. Frontend test guide: `notes/ko/frontend/TEST.md`
+8. Cabinlog game design foundation: `notes/ko/CABINLOG_GAME_DESIGN.md`
 
 ## Repository Layout
 
