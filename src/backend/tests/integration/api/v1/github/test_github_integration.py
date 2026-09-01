@@ -10,6 +10,7 @@ from app.core.config.settings import SETTINGS
 from app.models.github import GitHubProfiles, GitHubRepositoryUpsert
 from app.models.oauth import OAuthIdentityProfile, OAuthProvider
 from app.models.user import Users
+from app.services import github as github_service_module
 from app.services.auth import AuthService
 from app.utils.token import create_access_token
 
@@ -425,6 +426,100 @@ def test_github_app_installation_repositories_webhook_updates_selected_repos(
         assert repositories[0]["github_installation_id"] == 555666
     finally:
         object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", original_secret)
+
+
+@pytest.mark.primary_data
+def test_github_app_installation_sync_repositories_uses_installation_token(
+    integration_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Scenario: linked GitHub App installation can sync repositories using an installation token."""
+    original_secret = SETTINGS.GITHUB_WEBHOOK_SECRET
+    original_app_id = SETTINGS.GITHUB_APP_ID
+    original_private_key = SETTINGS.GITHUB_APP_PRIVATE_KEY
+    object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", "webhook-test-secret")
+    object.__setattr__(SETTINGS, "GITHUB_APP_ID", "123456")
+    object.__setattr__(SETTINGS, "GITHUB_APP_PRIVATE_KEY", "fake-private-key")
+
+    async def fake_create_installation_access_token(
+        self: github_service_module.GitHubAppClient,
+        github_installation_id: int,
+    ) -> str:
+        _ = self
+        assert github_installation_id == 555666
+        return "installation-token"
+
+    async def fake_fetch_installation_repositories(
+        self: github_service_module.GitHubAPIClient,
+    ) -> list[dict]:
+        assert self.access_token == "installation-token"
+        return [
+            {
+                "id": 777888,
+                "name": "installed-cabin",
+                "full_name": "octodev/installed-cabin",
+                "private": True,
+                "html_url": "https://github.com/octodev/installed-cabin",
+                "default_branch": "main",
+                "language": "Python",
+                "owner": {"login": "octodev"},
+                "pushed_at": "2026-08-20T09:00:00Z",
+            }
+        ]
+
+    async def fake_fetch_repository_languages(
+        self: github_service_module.GitHubAPIClient,
+        full_name: str,
+    ) -> dict[str, int]:
+        assert self.access_token == "installation-token"
+        assert full_name == "octodev/installed-cabin"
+        return {"Python": 700, "Shell": 300}
+
+    monkeypatch.setattr(
+        github_service_module.GitHubAppClient,
+        "create_installation_access_token",
+        fake_create_installation_access_token,
+    )
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "fetch_installation_repositories",
+        fake_fetch_installation_repositories,
+    )
+    monkeypatch.setattr(
+        github_service_module.GitHubAPIClient,
+        "fetch_repository_languages",
+        fake_fetch_repository_languages,
+    )
+
+    try:
+        _user_id, token = asyncio.run(_create_github_oauth_user())
+        installation_payload = _installation_payload()
+        integration_client.post(
+            "/api/v1/webhooks/github",
+            content=json.dumps(installation_payload),
+            headers=_signed_headers(
+                installation_payload,
+                delivery_id="delivery-installation-sync-seed",
+                event_name="installation",
+            ),
+        )
+
+        response = integration_client.post(
+            "/api/v1/github/installations/555666/sync-repositories",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["github_installation_id"] == 555666
+        assert payload["repository_count"] == 1
+        assert payload["repositories"][0]["full_name"] == "octodev/installed-cabin"
+        assert payload["repositories"][0]["github_installation_id"] == 555666
+        assert payload["repositories"][0]["languages"] == {"Python": 700, "Shell": 300}
+    finally:
+        object.__setattr__(SETTINGS, "GITHUB_WEBHOOK_SECRET", original_secret)
+        object.__setattr__(SETTINGS, "GITHUB_APP_ID", original_app_id)
+        object.__setattr__(SETTINGS, "GITHUB_APP_PRIVATE_KEY", original_private_key)
 
 
 @pytest.mark.primary_data

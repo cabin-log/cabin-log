@@ -116,7 +116,10 @@ class Settings(BaseModel):
     OAUTH_GITHUB_USERINFO_URL: str = os.getenv(
         "OAUTH_GITHUB_USERINFO_URL", "https://api.github.com/user"
     )
+    GITHUB_APP_ID: str = os.getenv("GITHUB_APP_ID", "")
     GITHUB_APP_SLUG: str = os.getenv("GITHUB_APP_SLUG", "")
+    GITHUB_APP_PRIVATE_KEY: str = os.getenv("GITHUB_APP_PRIVATE_KEY", "")
+    GITHUB_APP_PRIVATE_KEY_PATH: str = os.getenv("GITHUB_APP_PRIVATE_KEY_PATH", "")
     GITHUB_WEBHOOK_SECRET: str = os.getenv("GITHUB_WEBHOOK_SECRET", "")
     SSE_HEARTBEAT_SECONDS: int = int(os.getenv("SSE_HEARTBEAT_SECONDS", "20"))
     SSE_RETRY_MILLIS: int = int(os.getenv("SSE_RETRY_MILLIS", "5000"))
@@ -222,6 +225,23 @@ class Settings(BaseModel):
                 )
 
         return errors
+
+    def get_github_app_private_key(self) -> str:
+        private_key = self.GITHUB_APP_PRIVATE_KEY.strip()
+        if private_key:
+            return private_key.replace("\\n", "\n")
+
+        private_key_path = self.GITHUB_APP_PRIVATE_KEY_PATH.strip()
+        if not private_key_path:
+            return ""
+
+        path = Path(private_key_path).expanduser()
+        if not path.is_absolute():
+            path = self.ROOT_DIR / path
+        try:
+            return path.read_text(encoding="utf-8").strip()
+        except OSError:
+            return ""
 
 
 SETTINGS = Settings()

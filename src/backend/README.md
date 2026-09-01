@@ -68,6 +68,7 @@ GitHub backend foundation:
 - `GET /api/v1/github/app/install-url` returns the configured GitHub App installation URL.
 - `GET /api/v1/github/repositories` returns the repository/language snapshot collected during OAuth login.
 - `GET /api/v1/github/installations` returns GitHub App installations linked to the current user.
+- `POST /api/v1/github/installations/{github_installation_id}/sync-repositories` mints a GitHub App installation token, fetches installed repositories/languages, and updates the snapshot without storing the token.
 - `GET /api/v1/github/stack-summary` returns language byte totals and ratios across the collected repositories.
 - `POST /api/v1/webhooks/github` accepts GitHub webhooks signed with `GITHUB_WEBHOOK_SECRET`.
 - GitHub App `installation` and `installation_repositories` webhooks persist installation/repository selection state.
@@ -101,7 +102,9 @@ Backend-only OAuth check:
 4. Use the `access_token` as a bearer token for `/api/v1/github/me`, `/api/v1/github/app/install-url`, `/api/v1/github/installations`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, and `/api/v1/github/activities`.
 
 GitHub App local setup:
+- Set `GITHUB_APP_ID` to the numeric GitHub App ID.
 - Set `GITHUB_APP_SLUG` to the slug from the GitHub App URL, for example `cabinlog-dev`.
+- Set either `GITHUB_APP_PRIVATE_KEY_PATH` or `GITHUB_APP_PRIVATE_KEY`. Prefer the path form locally.
 - Set `GITHUB_WEBHOOK_SECRET` to the same secret configured in the GitHub App webhook settings.
 - Set the GitHub App Webhook URL to `${APP_BASE_URL}/api/v1/webhooks/github`.
 - Subscribe the GitHub App webhook to `installation`, `installation_repositories`, `push`, and `pull_request`.

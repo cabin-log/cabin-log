@@ -6,6 +6,7 @@ from app.models.activity import ActivityResponse
 from app.models.github import (
     GitHubAppInstallUrlResponse,
     GitHubInstallationResponse,
+    GitHubInstallationSyncResponse,
     GitHubProfileResponse,
     GitHubRepositoryResponse,
     GitHubStackSummaryResponse,
@@ -60,6 +61,26 @@ async def github_installations(
     service: GitHubService = Depends(GitHubService),
 ) -> list[GitHubInstallationResponse]:
     return await service.list_current_user_installations(user_id=current_user.id)
+
+
+@router.post(
+    "/installations/{github_installation_id}/sync-repositories",
+    response_model=GitHubInstallationSyncResponse,
+    responses=github_error_responses(
+        GitHubErrorCode.GITHUB_APP_CONFIG_INVALID,
+        GitHubErrorCode.GITHUB_API_REQUEST_FAILED,
+        GitHubErrorCode.GITHUB_INSTALLATION_NOT_FOUND,
+    ),
+)
+async def github_installation_sync_repositories(
+    github_installation_id: int,
+    current_user: UserResponse = Depends(get_current_user),
+    service: GitHubService = Depends(GitHubService),
+) -> GitHubInstallationSyncResponse:
+    return await service.sync_current_user_installation_repositories(
+        user_id=current_user.id,
+        github_installation_id=github_installation_id,
+    )
 
 
 @router.get("/stack-summary", response_model=GitHubStackSummaryResponse)

@@ -66,6 +66,7 @@ GitHub 백엔드 기반:
 - `GET /api/v1/github/app/install-url`은 설정된 GitHub App installation URL을 반환합니다.
 - `GET /api/v1/github/repositories`는 OAuth 로그인 중 수집된 repository/language snapshot을 반환합니다.
 - `GET /api/v1/github/installations`는 현재 사용자와 연결된 GitHub App installation 상태를 반환합니다.
+- `POST /api/v1/github/installations/{github_installation_id}/sync-repositories`는 GitHub App installation token을 발급해 설치된 repository/language를 조회하고, token 저장 없이 snapshot을 갱신합니다.
 - `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.
 - `POST /api/v1/webhooks/github`는 `GITHUB_WEBHOOK_SECRET`으로 서명 검증된 GitHub webhook을 수신합니다.
 - GitHub App `installation`, `installation_repositories` webhook은 installation/repository selection 상태를 저장합니다.
@@ -99,7 +100,9 @@ sequenceDiagram
 4. 반환된 `access_token`을 bearer token으로 사용해 `/api/v1/github/me`, `/api/v1/github/app/install-url`, `/api/v1/github/installations`, `/api/v1/github/repositories`, `/api/v1/github/stack-summary`, `/api/v1/github/activities`를 호출합니다.
 
 GitHub App 로컬 설정:
+- `GITHUB_APP_ID`에는 GitHub App의 numeric App ID를 설정합니다.
 - `GITHUB_APP_SLUG`에는 GitHub App URL의 slug를 설정합니다(예: `cabinlog-dev`).
+- `GITHUB_APP_PRIVATE_KEY_PATH` 또는 `GITHUB_APP_PRIVATE_KEY` 중 하나를 설정합니다. 로컬에서는 path 방식을 권장합니다.
 - `GITHUB_WEBHOOK_SECRET`은 GitHub App webhook 설정에 입력한 secret과 같은 값으로 설정합니다.
 - GitHub App Webhook URL은 `${APP_BASE_URL}/api/v1/webhooks/github`로 설정합니다.
 - GitHub App webhook event는 `installation`, `installation_repositories`, `push`, `pull_request`를 구독합니다.
