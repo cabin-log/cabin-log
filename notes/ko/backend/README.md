@@ -106,6 +106,14 @@ GitHub App 로컬 설정:
 - `GITHUB_WEBHOOK_SECRET`은 GitHub App webhook 설정에 입력한 secret과 같은 값으로 설정합니다.
 - GitHub App Webhook URL은 `${APP_BASE_URL}/api/v1/webhooks/github`로 설정합니다.
 - GitHub App webhook event는 `installation`, `installation_repositories`, `push`, `pull_request`를 구독합니다.
+- GitHub App 설정에서 private key를 다운로드한 뒤 다음 명령으로 로컬 파일을 구성합니다.
+
+```bash
+scripts/materialize-github-app-private-key.sh ~/Downloads/YOUR_GITHUB_APP_PRIVATE_KEY.pem
+```
+
+스크립트는 key를 `0600` 권한으로 `~/.config/cabinlog/cabin-log-github-app.private-key.pem`에 저장합니다.
+`GITHUB_APP_PRIVATE_KEY_PATH`는 이 파일을 참조하게 설정합니다.
 
 Prometheus metrics:
 - `http://localhost:8000/metrics`

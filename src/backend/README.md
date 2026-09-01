@@ -108,6 +108,14 @@ GitHub App local setup:
 - Set `GITHUB_WEBHOOK_SECRET` to the same secret configured in the GitHub App webhook settings.
 - Set the GitHub App Webhook URL to `${APP_BASE_URL}/api/v1/webhooks/github`.
 - Subscribe the GitHub App webhook to `installation`, `installation_repositories`, `push`, and `pull_request`.
+- After downloading a private key from GitHub App settings, materialize it locally:
+
+```bash
+scripts/materialize-github-app-private-key.sh ~/Downloads/YOUR_GITHUB_APP_PRIVATE_KEY.pem
+```
+
+The script writes the key to `~/.config/cabinlog/cabin-log-github-app.private-key.pem`
+with `0600` permissions. Point `GITHUB_APP_PRIVATE_KEY_PATH` at that file.
 
 Prometheus metrics:
 - `http://localhost:8000/metrics`
