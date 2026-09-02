@@ -13,14 +13,12 @@ import {
     MenuList,
     PrimaryCard,
     StatusBadge,
-    ThemeToggleButton,
     UserAvatar,
 } from "../../components/ui";
 import { useApiKeyApi, type APIKeyRecord } from "../../hooks/api/apiKey/useApiKeyApi";
 import { useApiKeyRealtimeSubscription } from "../../hooks/realtime/apiKey/useApiKeyRealtimeSubscription";
 import { useAuthContext } from "../../hooks/useAuth";
 import { useAppConfig } from "../../hooks/useFeatures";
-import { useTheme } from "../../hooks/useTheme";
 import { resolveAPIKeyExpiresAt, type APIKeyExpiryOption } from "../../utils/date";
 
 type SaveFeedback = {
@@ -47,7 +45,6 @@ export function SettingsPage() {
         resolveAPIKeyErrorMessage,
     } = useApiKeyApi();
     const { data: appConfig } = useAppConfig();
-    const { themeMode, setThemeMode } = useTheme();
     const [activeMenu, setActiveMenu] = useState<SettingsMenuKey>("profile");
     const [nameInput, setNameInput] = useState("");
     const [profileImageInput, setProfileImageInput] = useState<string | null>(null);
@@ -574,15 +571,6 @@ export function SettingsPage() {
                             className="settings-general-content"
                             aria-label={t("settings.general.title")}
                         >
-                            <article className="settings-profile-field-card">
-                                <h2>{t("settings.general.themeTitle")}</h2>
-                                <div className="settings-general-control">
-                                    <ThemeToggleButton
-                                        themeMode={themeMode}
-                                        onChangeTheme={setThemeMode}
-                                    />
-                                </div>
-                            </article>
                             <article className="settings-profile-field-card">
                                 <h2>{t("settings.general.languageTitle")}</h2>
                                 <div className="settings-general-control">

@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { ThemeToggle } from "../../components/ui/toggles/ThemeToggle";
 import { Button, PanelCard } from "../../components/ui";
 import { InfoCard, WarningCard } from "../../components/ui/status/StatusCard";
 import { useAppConfig } from "../../hooks/useFeatures";
@@ -22,7 +21,6 @@ export function ForgotPasswordEmailSentPage() {
 
     return (
         <main className="page auth-page">
-            <ThemeToggle />
             <PanelCard
                 className="auth-panel"
                 title={

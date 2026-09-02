@@ -2,7 +2,6 @@ import { FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
-import { ThemeToggle } from "../../components/ui/toggles/ThemeToggle";
 import { InlineMessage } from "../../components/ui/status/InlineMessage";
 import { ErrorCard, WarningCard } from "../../components/ui/status/StatusCard";
 import {
@@ -167,7 +166,6 @@ export function SignupPage() {
 
     return (
         <main className="page auth-page">
-            <ThemeToggle />
             <PanelCard
                 className="auth-panel"
                 title={t("signup.title")}

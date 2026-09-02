@@ -212,20 +212,20 @@ flowchart LR
 3. 브라우저 런타임에서는 데스크톱 readiness polling을 시작하면 안 됩니다.
 4. 데스크톱 readiness가 유효하지 않은 동안 실시간 구독을 중단하고 복구 후 다시 시작해야 합니다.
 5. `/config` 데이터가 없으면 fail-closed로 처리하며, 명시적인 `login_enabled=false` 응답만 로그인 비활성화 라우트를 열 수 있습니다.
-6. 데스크톱 연결 끊김 상태는 페이지 전체 overlay가 아니라 앱 Nav 프로필 또는 standalone/public Nav 테마 컨트롤 옆에 배치합니다.
+6. 데스크톱 연결 끊김 상태는 페이지 전체 overlay가 아니라 앱 Nav 프로필 또는 standalone/public Nav 도구 영역 옆에 배치합니다.
 7. 앱 및 public Nav는 대칭 외곽 column과 고정 compact 상태 폭을 사용해 상태 문구 변경 시 중앙 제목이 이동하지 않도록 합니다.
 8. 수동 재시도 UI는 순간적인 로딩 상태를 깜빡이지 않아야 하며, 연결 끊김 문구를 유지하고 무거운 로딩 표시는 짧은 지연 뒤에만 보여줍니다.
 9. 패키징된 데스크톱 연결 상태가 `online`이 아니면 프로필 메뉴 로그아웃을 비활성화하며, 서버 장애 중 로컬 사용자 상태를 지우거나 `/login`으로 이동하면 안 됩니다.
 
 - `pages/components`는 `src/api/*`를 직접 import하면 안 되고 도메인 훅만 소비해야 합니다.
 - API 훅은 `src/hooks/api/<domain>/*` 아래에 배치해야 합니다.
-- 비 API 훅(state/session/theme/feature/auth-context)은 `src/hooks/api/*` 바깥에 유지
+- 비 API 훅(state/session/i18n/feature/auth-context)은 `src/hooks/api/*` 바깥에 유지
 - page/hook 책임 규칙:
 
 1. 도메인 훅 호출 책임은 page 레이어가 가짐
 2. 페이지는 실제 페이지 그룹 단위(예: `pages/login`, `pages/settings`, `pages/main`)로 구성
 3. 도메인 feature 컴포넌트는 상태/액션을 props로 전달받고 도메인 API 훅을 직접 호출하지 않음
-4. 컴포넌트는 필요 시 비도메인 훅(UI state/theme/i18n 등)을 사용할 수 있음
+4. 컴포넌트는 필요 시 비도메인 훅(UI state/i18n 등)을 사용할 수 있음
 
 ## 5) 에러 코드 처리 규칙
 

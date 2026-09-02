@@ -13,10 +13,6 @@ vi.mock("../../hooks/useFeatures", () => ({
     useAppConfig: () => useAppConfigMock(),
 }));
 
-vi.mock("../../hooks/useTheme", () => ({
-    useTheme: () => ({ themeMode: "system", setThemeMode: vi.fn() }),
-}));
-
 vi.mock("../../hooks/connectivity/useServerConnectivity", () => ({
     useServerConnectivity: () => ({
         isDesktop: true,
@@ -54,9 +50,8 @@ describe("App configuration guard", () => {
         const publicNav = screen.getByRole("banner", {
             name: "Server connection navigation",
         });
-        expect(within(publicNav).getByText("Blueprint4FastAPI")).toBeInTheDocument();
+        expect(within(publicNav).getByText("Cabinlog")).toBeInTheDocument();
         expect(within(publicNav).getByRole("status")).toBeInTheDocument();
-        expect(within(publicNav).getByRole("group", { name: "Theme mode" })).toBeInTheDocument();
 
         // When: the user requests another connection attempt.
         const user = userEvent.setup();

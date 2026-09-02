@@ -7,7 +7,6 @@ import { useNavigate } from "react-router-dom";
 import { ErrorCard, InfoCard, WarningCard } from "../../components/ui/status/StatusCard";
 import { OAuthOptionsCard } from "../../components/features/auth/OAuthOptionsCard";
 import { OAuthProviderButton } from "../../components/features/auth/OAuthProviderButton";
-import { useTheme } from "../../hooks/useTheme";
 import {
     BrandMark,
     Button,
@@ -23,7 +22,6 @@ import {
     PanelCard,
     Spinner,
     StatusBadge,
-    ThemeToggleButton,
     Tooltip,
     ToggleSwitch,
     ValidationCard,
@@ -52,7 +50,6 @@ export function ShowCasePage() {
     const { t } = useTranslation();
     const { user } = useAuthContext();
     const navigate = useNavigate();
-    const { themeMode, setThemeMode } = useTheme();
     const [sampleInput, setSampleInput] = useState("");
     const [sampleChecked, setSampleChecked] = useState(true);
     const [sampleUnchecked, setSampleUnchecked] = useState(false);
@@ -90,16 +87,10 @@ export function ShowCasePage() {
                 <h2>Buttons & Components</h2>
                 <div className="showcase-catalog__components">
                     <div className="showcase-catalog__section-card">
-                        <h3>Brand & Theme</h3>
+                        <h3>Brand</h3>
                         <div className="showcase-catalog__row">
                             <ShowcaseItem component="BrandMark">
                                 <BrandMark />
-                            </ShowcaseItem>
-                            <ShowcaseItem component="ThemeToggleButton">
-                                <ThemeToggleButton
-                                    themeMode={themeMode}
-                                    onChangeTheme={setThemeMode}
-                                />
                             </ShowcaseItem>
                         </div>
                     </div>

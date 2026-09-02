@@ -74,17 +74,15 @@ describe("DesktopTitleBar", () => {
         const { container } = renderWithRouter(<DesktopTitleBar />, "/login");
 
         expect(container.querySelector(".desktop-titlebar--standalone")).toBeInTheDocument();
-        expect(screen.getByRole("group", { name: "Theme mode" })).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Close window" })).not.toBeInTheDocument();
     });
 
-    it("places disconnected status beside the standalone theme control", () => {
+    it("places disconnected status in standalone titlebar tools", () => {
         setTauriUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
         const { container } = renderWithRouter(<DesktopTitleBar />, "/login");
 
         const tools = container.querySelector(".desktop-titlebar__tools");
         expect(tools).toContainElement(screen.getByRole("status"));
-        expect(tools).toContainElement(screen.getByRole("group", { name: "Theme mode" }));
     });
 
     it("starts native dragging from a standalone navbar surface", () => {
@@ -98,11 +96,11 @@ describe("DesktopTitleBar", () => {
         expect(startDraggingMock).toHaveBeenCalledTimes(1);
     });
 
-    it("does not drag when a navbar control is pressed", () => {
+    it("does not drag when a titlebar control is pressed", () => {
         setTauriUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
         renderWithRouter(<DesktopTitleBar />, "/login");
 
-        fireEvent.mouseDown(screen.getByRole("button", { name: "Dark mode" }), { button: 0 });
+        fireEvent.mouseDown(screen.getByRole("button", { name: "Retry now" }), { button: 0 });
 
         expect(startDraggingMock).not.toHaveBeenCalled();
     });
@@ -119,10 +117,10 @@ describe("DesktopTitleBar", () => {
         expect(checkNowMock).toHaveBeenCalledTimes(1);
     });
 
-    it("keeps the theme control out of an integrated app navbar", () => {
+    it("keeps standalone tools out of an integrated app navbar", () => {
         setTauriUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)");
-        renderWithRouter(<DesktopTitleBar />, "/settings");
+        const { container } = renderWithRouter(<DesktopTitleBar />, "/settings");
 
-        expect(screen.queryByRole("group", { name: "Theme mode" })).not.toBeInTheDocument();
+        expect(container.querySelector(".desktop-titlebar__tools")).not.toBeInTheDocument();
     });
 });

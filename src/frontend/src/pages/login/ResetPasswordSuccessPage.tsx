@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
-import { ThemeToggle } from "../../components/ui/toggles/ThemeToggle";
 import { InfoCard } from "../../components/ui/status/StatusCard";
 import { Button, PanelCard } from "../../components/ui";
 
@@ -11,7 +10,6 @@ export function ResetPasswordSuccessPage() {
 
     return (
         <main className="page auth-page">
-            <ThemeToggle />
             <PanelCard
                 className="auth-panel"
                 title={t("resetPassword.successTitle")}

@@ -6,16 +6,9 @@ import { AppNavbar } from "./components/layout/AppNavbar";
 import { AppSidebar } from "./components/layout/AppSidebar";
 import { useAuthContext } from "./hooks/useAuth";
 import { useAppConfig } from "./hooks/useFeatures";
-import { useTheme } from "./hooks/useTheme";
 import { hasStartedFromLanding } from "./utils/landing";
-import { ForgotPasswordEmailSentPage } from "./pages/login/ForgotPasswordEmailSentPage";
-import { ForgotPasswordPage } from "./pages/login/ForgotPasswordPage";
 import { LoginPage } from "./pages/login/LoginPage";
-import { ResetPasswordPage } from "./pages/login/ResetPasswordPage";
-import { ResetPasswordSuccessPage } from "./pages/login/ResetPasswordSuccessPage";
-import { SignupEmailSentPage } from "./pages/login/SignupEmailSentPage";
-import { SignupPage } from "./pages/login/SignupPage";
-import { VerifyEmailPage } from "./pages/login/VerifyEmailPage";
+import { LoginSuccessPage } from "./pages/login/LoginSuccessPage";
 import { LoadingPage } from "./pages/main/LoadingPage";
 import { LandingPage } from "./pages/main/LandingPage";
 import { ShowCaseNotFoundPage } from "./pages/main/ShowCaseNotFoundPage";
@@ -108,7 +101,6 @@ function NotFoundRoute({
 }
 
 export function App() {
-    useTheme();
     const { t } = useTranslation();
     const {
         data: appConfig,
@@ -119,6 +111,10 @@ export function App() {
     const { checkNow, status: connectivityStatus } = useServerConnectivity();
     const [retryingConfig, setRetryingConfig] = useState(false);
     const landingStarted = hasStartedFromLanding();
+
+    useEffect(() => {
+        delete document.documentElement.dataset.theme;
+    }, []);
 
     if (configLoading) {
         return <LoadingPage message={t("app.loadingSession")} />;
@@ -162,58 +158,17 @@ export function App() {
                 element={loginEnabled ? <LoginPage /> : <Navigate to="/show-case" replace />}
             />
             <Route path="/loading" element={<LoadingPage />} />
-            <Route
-                path="/signup"
-                element={loginEnabled ? <SignupPage /> : <Navigate to="/show-case" replace />}
-            />
-            <Route
-                path="/signup/email-sent"
-                element={
-                    loginEnabled ? <SignupEmailSentPage /> : <Navigate to="/show-case" replace />
-                }
-            />
-            <Route
-                path="/forgot-password"
-                element={
-                    loginEnabled ? <ForgotPasswordPage /> : <Navigate to="/show-case" replace />
-                }
-            />
-            <Route
-                path="/forgot-password/email-sent"
-                element={
-                    loginEnabled ? (
-                        <ForgotPasswordEmailSentPage />
-                    ) : (
-                        <Navigate to="/show-case" replace />
-                    )
-                }
-            />
-            <Route
-                path="/reset-password"
-                element={
-                    loginEnabled ? <ResetPasswordPage /> : <Navigate to="/show-case" replace />
-                }
-            />
-            <Route
-                path="/reset-password/success"
-                element={
-                    loginEnabled ? (
-                        <ResetPasswordSuccessPage />
-                    ) : (
-                        <Navigate to="/show-case" replace />
-                    )
-                }
-            />
-            <Route
-                path="/verify-email"
-                element={loginEnabled ? <VerifyEmailPage /> : <Navigate to="/show-case" replace />}
-            />
+            <Route path="/signup/*" element={<Navigate to="/login" replace />} />
+            <Route path="/forgot-password/*" element={<Navigate to="/login" replace />} />
+            <Route path="/reset-password/*" element={<Navigate to="/login" replace />} />
+            <Route path="/verify-email" element={<Navigate to="/login" replace />} />
             <Route
                 element={
                     <ProtectedLayout loginEnabled={loginEnabled} configLoading={configLoading} />
                 }
             >
                 <Route path="/dashboard" element={<Navigate to="/show-case" replace />} />
+                <Route path="/login/success" element={<LoginSuccessPage />} />
                 <Route path="/show-case" element={<ShowCasePage />} />
                 <Route
                     path="/show-case/loading"
