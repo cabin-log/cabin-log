@@ -4,7 +4,9 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core.db.session import get_db
 from app.models.activity import Activities, ActivityCreate, ActivityType
+from app.models.game import StackRewardType, UserStackReward
 from app.models.github import GitHubProfiles, GitHubRepositoryUpsert
 from app.models.oauth import OAuthIdentityProfile, OAuthProvider
 from app.services.auth import AuthService
@@ -84,6 +86,21 @@ async def _seed_stack_activity(user_id: int) -> None:
                 metadata={"number": index + 1},
             )
         )
+
+
+async def _seed_owned_stack_reward(user_id: int) -> None:
+    async with get_db() as db:
+        db.add(
+            UserStackReward(
+                user_id=user_id,
+                reward_key="stack.python-serpent",
+                reward_type=StackRewardType.ANIMAL.value,
+                source_language="Python",
+                stage=1,
+                stack_reward_level=1,
+            )
+        )
+        await db.commit()
 
 
 @pytest.mark.primary_data
@@ -306,3 +323,127 @@ def test_game_settings_and_daily_activity_summary_use_timezone_cutoff(
     assert state_inventory["pet_exp"]["quantity"] == 172
     assert state_inventory["growth_crystal"]["quantity"] == 1
     assert state["pending_packages"] == []
+
+
+@pytest.mark.primary_data
+def test_cabin_placement_flow_persists_user_adjusted_positions(
+    integration_client: TestClient,
+):
+    """Scenario: players can place, move, and remove owned cabin objects."""
+    user_id, token = asyncio.run(_create_github_oauth_user())
+
+    cabin_response = integration_client.get(
+        "/api/v1/game/cabin",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert cabin_response.status_code == 200
+    cabin = cabin_response.json()
+    assert cabin["width"] == 18
+    assert cabin["depth"] == 12
+    assert cabin["tile_width"] == 64
+    assert cabin["tile_height"] == 32
+    assert cabin["tile_z_height"] == 32
+    assert cabin["placements"] == [
+        {
+            "id": cabin["placements"][0]["id"],
+            "object_type": "SYSTEM",
+            "object_key": "system.dev-board",
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "rotation": 0,
+            "width": 2,
+            "depth": 1,
+            "locked": True,
+            "updated_at": cabin["placements"][0]["updated_at"],
+        }
+    ]
+
+    unowned_response = integration_client.post(
+        "/api/v1/game/cabin/placements",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "object_type": "STACK_REWARD",
+            "object_key": "stack.python-serpent",
+            "x": 2,
+            "y": 2,
+            "z": 0,
+            "rotation": 0,
+            "width": 1,
+            "depth": 1,
+        },
+    )
+    assert unowned_response.status_code == 403
+    assert unowned_response.json()["detail"]["error"] == "CABIN_ITEM_NOT_OWNED"
+
+    asyncio.run(_seed_owned_stack_reward(user_id))
+    placement_response = integration_client.post(
+        "/api/v1/game/cabin/placements",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "object_type": "STACK_REWARD",
+            "object_key": "stack.python-serpent",
+            "x": 2,
+            "y": 2,
+            "z": 0,
+            "rotation": 90,
+            "width": 1,
+            "depth": 1,
+        },
+    )
+    assert placement_response.status_code == 201
+    placement = placement_response.json()
+    assert placement["object_key"] == "stack.python-serpent"
+    assert placement["x"] == 2
+    assert placement["y"] == 2
+    assert placement["rotation"] == 90
+    assert placement["locked"] is False
+
+    conflict_response = integration_client.post(
+        "/api/v1/game/cabin/placements",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "object_type": "STACK_REWARD",
+            "object_key": "stack.python-serpent",
+            "x": 2,
+            "y": 2,
+            "z": 0,
+            "rotation": 0,
+            "width": 1,
+            "depth": 1,
+        },
+    )
+    assert conflict_response.status_code == 409
+    assert conflict_response.json()["detail"]["error"] == "CABIN_PLACEMENT_CONFLICT"
+
+    moved_response = integration_client.patch(
+        f"/api/v1/game/cabin/placements/{placement['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"x": 3, "y": 4, "rotation": 180},
+    )
+    assert moved_response.status_code == 200
+    moved = moved_response.json()
+    assert moved["x"] == 3
+    assert moved["y"] == 4
+    assert moved["rotation"] == 180
+
+    state_response = integration_client.get(
+        "/api/v1/game/state",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert state_response.status_code == 200
+    state_placements = state_response.json()["cabin"]["placements"]
+    assert any(item["id"] == placement["id"] and item["x"] == 3 for item in state_placements)
+
+    delete_response = integration_client.delete(
+        f"/api/v1/game/cabin/placements/{placement['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert delete_response.status_code == 204
+
+    after_delete_response = integration_client.get(
+        "/api/v1/game/cabin",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert after_delete_response.status_code == 200
+    assert all(item["id"] != placement["id"] for item in after_delete_response.json()["placements"])

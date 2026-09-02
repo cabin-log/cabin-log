@@ -1,9 +1,14 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 
+from app.core.error import GameErrorCode, game_error_responses
 from app.deps import get_current_user
 from app.models.game import (
+    CabinPlacementCreate,
+    CabinPlacementResponse,
+    CabinPlacementUpdate,
+    CabinResponse,
     DailyActivitySummaryResponse,
     DailyRewardPackageResponse,
     GameStateResponse,
@@ -40,6 +45,73 @@ async def game_settings_update(
     service: GameService = Depends(GameService),
 ) -> UserGameSettingsResponse:
     return await service.update_user_settings(user_id=current_user.id, form=form)
+
+
+@router.get("/cabin", response_model=CabinResponse)
+async def game_cabin(
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> CabinResponse:
+    return await service.get_cabin(user_id=current_user.id)
+
+
+@router.post(
+    "/cabin/placements",
+    response_model=CabinPlacementResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses=game_error_responses(
+        GameErrorCode.CABIN_ITEM_NOT_OWNED,
+        GameErrorCode.CABIN_PLACEMENT_INVALID,
+        GameErrorCode.CABIN_PLACEMENT_CONFLICT,
+        GameErrorCode.CABIN_SYSTEM_PLACEMENT_LOCKED,
+    ),
+)
+async def game_cabin_placement_create(
+    form: CabinPlacementCreate,
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> CabinPlacementResponse:
+    return await service.create_cabin_placement(user_id=current_user.id, form=form)
+
+
+@router.patch(
+    "/cabin/placements/{placement_id}",
+    response_model=CabinPlacementResponse,
+    responses=game_error_responses(
+        GameErrorCode.CABIN_PLACEMENT_NOT_FOUND,
+        GameErrorCode.CABIN_PLACEMENT_INVALID,
+        GameErrorCode.CABIN_PLACEMENT_CONFLICT,
+        GameErrorCode.CABIN_SYSTEM_PLACEMENT_LOCKED,
+    ),
+)
+async def game_cabin_placement_update(
+    placement_id: int,
+    form: CabinPlacementUpdate,
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> CabinPlacementResponse:
+    return await service.update_cabin_placement(
+        user_id=current_user.id,
+        placement_id=placement_id,
+        form=form,
+    )
+
+
+@router.delete(
+    "/cabin/placements/{placement_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=game_error_responses(
+        GameErrorCode.CABIN_PLACEMENT_NOT_FOUND,
+        GameErrorCode.CABIN_SYSTEM_PLACEMENT_LOCKED,
+    ),
+)
+async def game_cabin_placement_delete(
+    placement_id: int,
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> Response:
+    await service.delete_cabin_placement(user_id=current_user.id, placement_id=placement_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/stacks", response_model=StackProfilesResponse)

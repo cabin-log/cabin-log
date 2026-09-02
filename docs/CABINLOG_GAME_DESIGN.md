@@ -48,11 +48,32 @@ Initial cabin grid:
 | Property | Value |
 | --- | --- |
 | Room shape | Isometric rectangle |
-| Logical size | `8 x 8` floor cells |
-| Placement coordinate | `x`, `y`, `z`, `rotation` |
+| Logical size | Fixed `18 x 12` floor cells |
+| Tile render size | `64 x 32 px` diamond |
+| Tile vertical height | `32 px` per `z` level |
+| Projected floor size | About `960 x 480 px` before wall/decor margins |
+| Placement coordinate | `x`, `y`, `z`, `rotation`, `width`, `depth` |
 | Wall zones | Back-left wall, back-right wall |
 | Floor zones | Floor base, carpet layer, furniture layer |
-| Dashboard object | `furniture.dev-board` |
+| Dashboard object | `system.dev-board` |
+
+Initial isometric projection contract:
+
+```text
+screen_x = (grid_x - grid_y) * (tile_width / 2)
+screen_y = (grid_x + grid_y) * (tile_height / 2) - grid_z * tile_z_height
+```
+
+Placement persistence rules:
+
+1. The backend stores every user-adjustable placement.
+2. User placements must fit within the fixed `18 x 12` logical cabin grid.
+3. Objects on the same `z` level cannot overlap by footprint.
+4. `rotation` is limited to `0`, `90`, `180`, or `270`.
+5. System placements such as the dashboard board are locked.
+6. Stack reward objects can only be placed after the reward is owned.
+7. Inventory/furniture objects can only be placed after the item exists in the
+   user's inventory.
 
 In-room dashboard board:
 
@@ -537,13 +558,14 @@ reward_package_items
 - metadata
 ```
 
-Later tables:
+Current game state tables:
 
 ```text
 user_wallets
 user_stack_rewards
-user_inventory
-cabin_items
+user_inventory_items
+cabins
+cabin_placements
 ```
 
 Initial `user_stack_rewards` shape:
@@ -559,6 +581,40 @@ user_stack_rewards
 - stack_reward_level
 - exp
 - is_featured
+- created_at
+- updated_at
+```
+
+Initial `cabins` shape:
+
+```text
+cabins
+- id
+- user_id
+- width
+- depth
+- tile_width
+- tile_height
+- tile_z_height
+- created_at
+- updated_at
+```
+
+Initial `cabin_placements` shape:
+
+```text
+cabin_placements
+- id
+- cabin_id
+- user_id
+- object_type
+- object_key
+- x
+- y
+- z
+- rotation
+- width
+- depth
 - created_at
 - updated_at
 ```

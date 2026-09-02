@@ -45,11 +45,32 @@ flowchart TD
 | Property | Value |
 | --- | --- |
 | Room shape | Isometric rectangle |
-| Logical size | `8 x 8` floor cells |
-| Placement coordinate | `x`, `y`, `z`, `rotation` |
+| Logical size | 고정 `18 x 12` floor cells |
+| Tile render size | `64 x 32 px` diamond |
+| Tile vertical height | `32 px` per `z` level |
+| Projected floor size | 벽/장식 여백 제외 약 `960 x 480 px` |
+| Placement coordinate | `x`, `y`, `z`, `rotation`, `width`, `depth` |
 | Wall zones | Back-left wall, back-right wall |
 | Floor zones | Floor base, carpet layer, furniture layer |
-| Dashboard object | `furniture.dev-board` |
+| Height placement | 선반, 벽걸이, dashboard처럼 `z > 0` 위치에도 배치 가능 |
+| Dashboard object | `system.dev-board` |
+
+초기 isometric projection 계약:
+
+```text
+screen_x = (grid_x - grid_y) * (tile_width / 2)
+screen_y = (grid_x + grid_y) * (tile_height / 2) - grid_z * tile_z_height
+```
+
+배치 저장 규칙:
+
+1. Backend가 사용자가 조정 가능한 모든 object placement를 저장합니다.
+2. User placement는 고정 `18 x 12` cabin grid 안에 있어야 합니다.
+3. 같은 `z` level의 object footprint는 서로 겹칠 수 없습니다.
+4. `rotation`은 `0`, `90`, `180`, `270`만 허용합니다.
+5. Dashboard board 같은 system placement는 locked 상태입니다.
+6. Stack reward object는 사용자가 해당 reward를 보유한 뒤에만 배치할 수 있습니다.
+7. Inventory/furniture object는 사용자의 inventory에 item이 존재한 뒤에만 배치할 수 있습니다.
 
 방 내부 dashboard board:
 
@@ -522,13 +543,14 @@ reward_package_items
 - metadata
 ```
 
-이후 table:
+현재 game state table:
 
 ```text
 user_wallets
 user_stack_rewards
-user_inventory
-cabin_items
+user_inventory_items
+cabins
+cabin_placements
 ```
 
 초기 `user_stack_rewards` 형태:
@@ -544,6 +566,40 @@ user_stack_rewards
 - stack_reward_level
 - exp
 - is_featured
+- created_at
+- updated_at
+```
+
+초기 `cabins` 형태:
+
+```text
+cabins
+- id
+- user_id
+- width
+- depth
+- tile_width
+- tile_height
+- tile_z_height
+- created_at
+- updated_at
+```
+
+초기 `cabin_placements` 형태:
+
+```text
+cabin_placements
+- id
+- cabin_id
+- user_id
+- object_type
+- object_key
+- x
+- y
+- z
+- rotation
+- width
+- depth
 - created_at
 - updated_at
 ```
