@@ -326,8 +326,12 @@ a {
     padding-top: clamp(6rem, 18vh, 11rem);
     background:
         linear-gradient(rgba(14, 19, 23, 0.08), rgba(14, 19, 23, 0.34)),
-        url("/sprites/img/init-page.gif") center / cover no-repeat;
+        url("/sprites/img/init-page.gif") center no-repeat;
+    background-size:
+        100% 100%,
+        max(100vw, 145dvh) auto;
     image-rendering: pixelated;
+    animation: auth-background-settle 900ms ease-out both;
 }
 
 .auth-page::before {
@@ -336,7 +340,10 @@ a {
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background: radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.18), transparent 42%);
+    background:
+        radial-gradient(circle at 50% 41%, rgba(255, 255, 255, 0.24), transparent 38%),
+        linear-gradient(rgba(24, 27, 28, 0.1), rgba(20, 24, 20, 0.22));
+    animation: auth-atmosphere-settle 1100ms ease-out 180ms both;
 }
 
 .app-shell {
@@ -2114,6 +2121,30 @@ a {
     image-rendering: pixelated;
     user-select: none;
     filter: drop-shadow(0 0.45rem 0.75rem rgba(22, 18, 14, 0.28));
+    animation: auth-title-arrive 720ms cubic-bezier(0.2, 0.9, 0.18, 1) 420ms both;
+}
+
+.auth-page--entering-cabin {
+    overflow: hidden;
+    animation: auth-cabin-entry 1150ms cubic-bezier(0.24, 0.72, 0.2, 1) both;
+}
+
+.auth-page--entering-cabin::before {
+    animation: auth-cabin-entry-atmosphere 1150ms ease both;
+}
+
+.auth-page--entering-cabin .auth-title-image {
+    animation: auth-title-descend 680ms cubic-bezier(0.2, 0.72, 0.24, 1) both;
+}
+
+.auth-page--entering-cabin .auth-panel--github-only {
+    pointer-events: none;
+    animation: auth-login-card-descend 720ms cubic-bezier(0.2, 0.72, 0.24, 1) 80ms both;
+}
+
+.auth-page--entering-cabin .auth-github-link {
+    pointer-events: none;
+    animation: auth-link-fade-out 320ms ease both;
 }
 
 .auth-github-link {
@@ -2593,6 +2624,7 @@ input:focus {
     border-color: rgba(248, 250, 242, 0.26);
     background: rgba(20, 27, 22, 0.3);
     backdrop-filter: blur(4px);
+    animation: auth-login-card-arrive 620ms cubic-bezier(0.2, 0.85, 0.22, 1) 1180ms both;
 }
 
 .auth-panel--github-only .oauth-options-card {
@@ -2893,6 +2925,135 @@ input:focus {
     }
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes auth-background-settle {
+    from {
+        filter: saturate(0.86) brightness(0.96);
+    }
+    to {
+        filter: saturate(1) brightness(1);
+    }
+}
+
+@keyframes auth-atmosphere-settle {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(1.5px);
+    }
+}
+
+@keyframes auth-title-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(1.4rem) scale(0.96);
+    }
+    70% {
+        opacity: 1;
+        transform: translateY(-0.18rem) scale(1.01);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes auth-login-card-arrive {
+    from {
+        opacity: 0;
+        transform: translateY(1rem) scale(0.98);
+        backdrop-filter: blur(0);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        backdrop-filter: blur(4px);
+    }
+}
+
+@keyframes auth-cabin-entry {
+    from {
+        background-position: center, center;
+        background-size:
+            100% 100%,
+            max(100vw, 145dvh) auto;
+        filter: saturate(1) brightness(1);
+    }
+    to {
+        background-position:
+            center,
+            47% 40%;
+        background-size:
+            100% 100%,
+            max(190vw, 276dvh) auto;
+        filter: saturate(1.06) brightness(0.92);
+    }
+}
+
+@keyframes auth-cabin-entry-atmosphere {
+    from {
+        opacity: 1;
+        backdrop-filter: blur(1.5px);
+        background:
+            radial-gradient(circle at 50% 41%, rgba(255, 255, 255, 0.24), transparent 38%),
+            linear-gradient(rgba(24, 27, 28, 0.1), rgba(20, 24, 20, 0.22));
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(2.5px);
+        background:
+            radial-gradient(circle at 47% 40%, rgba(255, 255, 255, 0.16), transparent 30%),
+            linear-gradient(rgba(18, 21, 18, 0.2), rgba(11, 14, 12, 0.52));
+    }
+}
+
+@keyframes auth-title-descend {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(4.5rem) scale(0.94);
+    }
+}
+
+@keyframes auth-login-card-descend {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        backdrop-filter: blur(4px);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(6.2rem) scale(0.92);
+        backdrop-filter: blur(0);
+    }
+}
+
+@keyframes auth-link-fade-out {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(0.6rem);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-page,
+    .auth-page::before,
+    .auth-title-image,
+    .auth-panel--github-only,
+    .auth-github-link {
+        animation: none;
     }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Github } from "lucide-react";
 
@@ -16,6 +16,8 @@ export function LoginPage() {
     >([]);
     const [oauthLoading, setOAuthLoading] = useState(false);
     const [oauthLoadFailed, setOAuthLoadFailed] = useState(false);
+    const [isEnteringCabin, setIsEnteringCabin] = useState(false);
+    const oauthRedirectTimerRef = useRef<number | null>(null);
     const loginEnabled = appConfig?.login_enabled === true;
     const oauthEnabled = appConfig?.oauth_enabled === true;
     const githubProvider = oauthProviders.find((item) => item.provider === "github");
@@ -42,6 +44,25 @@ export function LoginPage() {
         void run();
     }, [getOAuthProviders, oauthEnabled, loginEnabled]);
 
+    useEffect(() => {
+        return () => {
+            if (oauthRedirectTimerRef.current !== null) {
+                window.clearTimeout(oauthRedirectTimerRef.current);
+            }
+        };
+    }, []);
+
+    const beginCabinEntry = (oauthStartUrl: string) => {
+        if (isEnteringCabin) {
+            return false;
+        }
+        setIsEnteringCabin(true);
+        oauthRedirectTimerRef.current = window.setTimeout(() => {
+            window.location.assign(oauthStartUrl);
+        }, 1150);
+        return false;
+    };
+
     let message: string | null = null;
     if (!configLoading && !loginEnabled) {
         message = t("auth.errors.loginDisabled");
@@ -52,7 +73,9 @@ export function LoginPage() {
     }
 
     return (
-        <main className="page auth-page">
+        <main
+            className={`page auth-page auth-page--init${isEnteringCabin ? " auth-page--entering-cabin" : ""}`}
+        >
             <div className="auth-panel-stack auth-panel-stack--github-only">
                 <img
                     className="auth-title-image"
@@ -71,6 +94,8 @@ export function LoginPage() {
                                 provider="github"
                                 label={t("login.oauth.providers.github")}
                                 startPath={githubProvider.start_path}
+                                disabled={isEnteringCabin}
+                                onBeforeNavigate={beginCabinEntry}
                             />
                         </div>
                     ) : null}
