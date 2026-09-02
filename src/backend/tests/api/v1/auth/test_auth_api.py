@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime
 
 import pytest
@@ -35,6 +36,7 @@ pytestmark = pytest.mark.api_test
 
 class FakeAuthService:
     last_preferred_language: str | None = None
+    last_oauth_prompt: str | None = None
 
     def __init__(self, user: UserResponse):
         self._user = user
@@ -65,6 +67,18 @@ class FakeAuthService:
                 start_path="/api/v1/auth/oauth/google/start",
             )
         ]
+
+    async def build_oauth_authorization_url(
+        self,
+        provider: OAuthProvider,
+        redirect_uri: str,
+        prompt: str | None = None,
+    ) -> str:
+        FakeAuthService.last_oauth_prompt = prompt
+        return (
+            f"https://github.com/login/oauth/authorize"
+            f"?client_id=fake-client&redirect_uri={redirect_uri}"
+        )
 
     def require_oauth_callback_params(
         self,
@@ -259,6 +273,62 @@ def test_oauth_providers_success(sample_user: UserResponse):
     # Then: one provider from fake service is returned.
     assert response.status_code == 200
     assert response.json()["providers"][0]["provider"] == "google"
+
+
+def test_oauth_start_passes_select_account_prompt(sample_user: UserResponse):
+    """Scenario: GitHub OAuth start can request the GitHub account picker."""
+    FakeAuthService.last_oauth_prompt = None
+    client = create_auth_test_client(sample_user)
+
+    # Given/When: the frontend requests a GitHub account picker.
+    response = client.get(
+        "/api/v1/auth/oauth/github/start",
+        params={"prompt": "select_account"},
+        follow_redirects=False,
+    )
+
+    # Then: the prompt is passed to the authorization URL builder.
+    assert response.status_code == 307
+    assert FakeAuthService.last_oauth_prompt == "select_account"
+
+
+def test_github_oauth_authorization_url_includes_select_account_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Scenario: GitHub OAuth authorization URL can force the account picker."""
+    original_oauth_enabled = SETTINGS.OAUTH_ENABLED
+    original_allowed_providers = SETTINGS.OAUTH_ALLOWED_PROVIDERS
+    original_github_client_id = SETTINGS.OAUTH_GITHUB_CLIENT_ID
+    original_github_client_secret = SETTINGS.OAUTH_GITHUB_CLIENT_SECRET
+
+    object.__setattr__(SETTINGS, "OAUTH_ENABLED", True)
+    object.__setattr__(SETTINGS, "OAUTH_ALLOWED_PROVIDERS", "github")
+    object.__setattr__(SETTINGS, "OAUTH_GITHUB_CLIENT_ID", "github-client-id")
+    object.__setattr__(SETTINGS, "OAUTH_GITHUB_CLIENT_SECRET", "github-client-secret")
+
+    async def fake_create_oauth_state(self, provider: OAuthProvider) -> str:
+        _ = self
+        assert provider == OAuthProvider.GITHUB
+        return "github-state"
+
+    monkeypatch.setattr(AuthService, "create_oauth_state", fake_create_oauth_state)
+
+    try:
+        authorization_url = asyncio.run(
+            AuthService().build_oauth_authorization_url(
+                OAuthProvider.GITHUB,
+                "http://localhost:8000/api/v1/auth/oauth/github/callback",
+                prompt="select_account",
+            )
+        )
+    finally:
+        object.__setattr__(SETTINGS, "OAUTH_ENABLED", original_oauth_enabled)
+        object.__setattr__(SETTINGS, "OAUTH_ALLOWED_PROVIDERS", original_allowed_providers)
+        object.__setattr__(SETTINGS, "OAUTH_GITHUB_CLIENT_ID", original_github_client_id)
+        object.__setattr__(SETTINGS, "OAUTH_GITHUB_CLIENT_SECRET", original_github_client_secret)
+
+    assert "prompt=select_account" in authorization_url
+    assert "client_id=github-client-id" in authorization_url
 
 
 def test_oauth_callback_json_mode_returns_tokens_and_github_profile(

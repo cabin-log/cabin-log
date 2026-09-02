@@ -135,9 +135,11 @@ class AuthService:
         self,
         provider: OAuthProvider,
         redirect_uri: str,
+        prompt: str | None = None,
     ) -> str:
         provider_config = self._get_oauth_provider_config(provider)
         state = await self.create_oauth_state(provider)
+        normalized_prompt = prompt.strip() if prompt else None
 
         if provider == OAuthProvider.GOOGLE:
             query = {
@@ -156,6 +158,8 @@ class AuthService:
                 "scope": SETTINGS.OAUTH_GITHUB_SCOPES,
                 "state": state,
             }
+            if normalized_prompt == "select_account":
+                query["prompt"] = normalized_prompt
 
         return f"{provider_config.authorize_url}?{urlencode(query)}"
 
