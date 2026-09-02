@@ -149,6 +149,35 @@ describe("LoginPage", () => {
         expect(recentAccountButton).not.toBeDisabled();
     });
 
+    it("starts OAuth again from the recent GitHub account shortcut", async () => {
+        // Given: a remembered account is available but the login flow still requires OAuth callback.
+        window.localStorage.setItem(
+            "cabinlog:login:v1:recent-account",
+            JSON.stringify({
+                userId: 7,
+                email: "octo@example.com",
+                name: "Octo Dev",
+                profileImageUrl: null,
+                provider: "github",
+                updatedAt: "2026-09-02T00:00:00.000Z",
+            }),
+        );
+        getOAuthProvidersMock.mockResolvedValue({
+            providers: [{ provider: "github", start_path: "/api/v1/auth/oauth/github/start" }],
+        });
+
+        // When: the recent account shortcut is clicked.
+        const { container } = renderWithRouter(<LoginPage />, "/login");
+        const recentAccountButton = await screen.findByRole("button", {
+            name: "Start as Octo Dev",
+        });
+        fireEvent.click(recentAccountButton);
+
+        // Then: the same OAuth entry animation starts instead of navigating directly to the app.
+        expect(container.querySelector(".auth-page")).toHaveClass("auth-page--entering-cabin");
+        expect(recentAccountButton).toBeDisabled();
+    });
+
     it("shows an OAuth setup message when GitHub login is unavailable", async () => {
         // Given: OAuth is enabled but GitHub is not returned.
         getOAuthProvidersMock.mockResolvedValue({

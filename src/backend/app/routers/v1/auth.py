@@ -107,10 +107,15 @@ async def oauth_providers(service: AuthService = Depends(AuthService)) -> OAuthP
 async def oauth_start(
     provider: OAuthProvider,
     request: Request,
+    prompt: str | None = Query(default=None),
     service: AuthService = Depends(AuthService),
 ) -> RedirectResponse:
     redirect_uri = str(request.url_for("oauth_callback", provider=provider.value))
-    authorization_url = await service.build_oauth_authorization_url(provider, redirect_uri)
+    authorization_url = await service.build_oauth_authorization_url(
+        provider,
+        redirect_uri,
+        prompt=prompt,
+    )
     return RedirectResponse(url=authorization_url, status_code=307)
 
 

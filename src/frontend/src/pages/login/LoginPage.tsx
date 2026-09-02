@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Github } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 import { OAuthProviderButton } from "../../components/features/auth/OAuthProviderButton";
 import { InlineMessage, PanelCard, UserAvatar } from "../../components/ui";
@@ -17,7 +16,6 @@ import { getApiBase } from "../../utils/apiBase";
 
 export function LoginPage() {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const { getOAuthProviders } = useAuthApi();
     const { user, loading: authLoading } = useAuthContext();
     const { data: appConfig, loading: configLoading } = useAppConfig();
@@ -36,8 +34,6 @@ export function LoginPage() {
     const githubProvider = oauthProviders.find((item) => item.provider === "github");
     const activeGithubAccount = toRecentLoginAccount(user);
     const accountShortcut = activeGithubAccount ?? recentAccount;
-    const hasActiveAccountSession =
-        Boolean(activeGithubAccount) && activeGithubAccount?.userId === accountShortcut?.userId;
 
     useEffect(() => {
         const run = async () => {
@@ -107,11 +103,6 @@ export function LoginPage() {
 
         setIsEnteringCabin(true);
         oauthRedirectTimerRef.current = window.setTimeout(() => {
-            if (hasActiveAccountSession) {
-                navigate("/show-case");
-                return;
-            }
-
             if (githubProvider) {
                 const oauthStartUrl = new URL(
                     githubProvider.start_path,
@@ -147,9 +138,7 @@ export function LoginPage() {
                     {configLoading || oauthLoading ? (
                         <InlineMessage tone="info">{t("login.loadingGithub")}</InlineMessage>
                     ) : null}
-                    {loginEnabled &&
-                    accountShortcut &&
-                    (hasActiveAccountSession || githubProvider) ? (
+                    {loginEnabled && accountShortcut && githubProvider ? (
                         <button
                             type="button"
                             className="auth-recent-account-button"
@@ -186,6 +175,7 @@ export function LoginPage() {
                                 startPath={githubProvider.start_path}
                                 disabled={isEnteringCabin}
                                 onBeforeNavigate={beginCabinEntry}
+                                prompt={accountShortcut ? "select_account" : undefined}
                             />
                         </div>
                     ) : null}

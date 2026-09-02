@@ -8,6 +8,7 @@ type OAuthProviderButtonProps = {
     disabled?: boolean;
     hideLabel?: boolean;
     onBeforeNavigate?: (oauthStartUrl: string) => boolean | void;
+    prompt?: "select_account";
 };
 
 const PROVIDER_LOGOS: Record<
@@ -31,13 +32,18 @@ export function OAuthProviderButton({
     disabled = false,
     hideLabel = false,
     onBeforeNavigate,
+    prompt,
 }: OAuthProviderButtonProps) {
     const onClick = () => {
-        const oauthStartUrl = new URL(startPath, `${getApiBase()}/`).toString();
-        if (onBeforeNavigate?.(oauthStartUrl) === false) {
+        const oauthStartUrl = new URL(startPath, `${getApiBase()}/`);
+        if (prompt) {
+            oauthStartUrl.searchParams.set("prompt", prompt);
+        }
+        const oauthStartUrlValue = oauthStartUrl.toString();
+        if (onBeforeNavigate?.(oauthStartUrlValue) === false) {
             return;
         }
-        window.location.assign(oauthStartUrl);
+        window.location.assign(oauthStartUrlValue);
     };
     const logos = PROVIDER_LOGOS[provider];
 
