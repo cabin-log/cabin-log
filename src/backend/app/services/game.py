@@ -1,12 +1,17 @@
 import math
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import or_, select
 
 from app.core.db.session import get_db
-from app.models.activity import Activity
+from app.models.activity import Activity, ActivityType
 from app.models.game import (
+    DailyActivitySummaryCaps,
+    DailyActivitySummaryItem,
+    DailyActivitySummaryResponse,
+    DailyRewardPackageResponse,
     GameData,
     RewardPackageCreate,
     RewardPackageCreateItem,
@@ -17,10 +22,43 @@ from app.models.game import (
     StackProfilesResponse,
     StackProfileUpsert,
     StackRewardType,
+    UserGameSettingsResponse,
+    UserGameSettingsUpdate,
 )
 from app.models.github import GitHubRepository, GitHubRepositoryLanguage
 
 RECENT_ACTIVITY_WINDOW_DAYS = 30
+DAILY_CUTOFF_HOUR = 5
+
+ACTIVITY_POINT_WEIGHTS: dict[ActivityType, int] = {
+    ActivityType.COMMIT: 4,
+    ActivityType.PUSH: 6,
+    ActivityType.PULL_REQUEST_OPENED: 18,
+    ActivityType.PULL_REQUEST_MERGED: 35,
+    ActivityType.ISSUE: 10,
+    ActivityType.REVIEW: 22,
+    ActivityType.RELEASE: 45,
+}
+
+ACTIVITY_COIN_REWARDS: dict[ActivityType, int] = {
+    ActivityType.COMMIT: 3,
+    ActivityType.PUSH: 4,
+    ActivityType.PULL_REQUEST_OPENED: 18,
+    ActivityType.PULL_REQUEST_MERGED: 35,
+    ActivityType.ISSUE: 10,
+    ActivityType.REVIEW: 22,
+    ActivityType.RELEASE: 50,
+}
+
+ACTIVITY_DAILY_COIN_CAPS: dict[ActivityType, int] = {
+    ActivityType.COMMIT: 45,
+    ActivityType.PUSH: 24,
+    ActivityType.PULL_REQUEST_OPENED: 54,
+    ActivityType.PULL_REQUEST_MERGED: 70,
+    ActivityType.ISSUE: 40,
+    ActivityType.REVIEW: 66,
+    ActivityType.RELEASE: 100,
+}
 
 
 @dataclass(frozen=True)
@@ -44,6 +82,163 @@ STACK_REWARD_CATALOG: dict[str, StackRewardDefinition] = {
 
 
 class GameService:
+    async def get_user_settings(self, user_id: int) -> UserGameSettingsResponse:
+        return await GameData.get_or_create_user_settings(user_id=user_id)
+
+    async def update_user_settings(
+        self,
+        *,
+        user_id: int,
+        form: UserGameSettingsUpdate,
+    ) -> UserGameSettingsResponse:
+        return await GameData.update_user_settings(user_id=user_id, form=form)
+
+    async def get_daily_activity_summary(
+        self,
+        *,
+        user_id: int,
+        reward_date: date | None = None,
+    ) -> DailyActivitySummaryResponse:
+        settings = await self.get_user_settings(user_id=user_id)
+        timezone = ZoneInfo(settings.timezone)
+        resolved_reward_date = reward_date or self._resolve_reward_date(
+            now=datetime.now(UTC),
+            timezone=timezone,
+        )
+        window_start, window_end = self._resolve_daily_window(
+            reward_date=resolved_reward_date,
+            timezone=timezone,
+        )
+        counts = await GameData.list_daily_activity_counts(
+            user_id=user_id,
+            window_start=window_start,
+            window_end=window_end,
+        )
+        items = [
+            DailyActivitySummaryItem(
+                activity_type=activity_type,
+                count=count,
+                points=ACTIVITY_POINT_WEIGHTS[activity_type] * count,
+                raw_coins=ACTIVITY_COIN_REWARDS[activity_type] * count,
+                capped_coins=min(
+                    ACTIVITY_DAILY_COIN_CAPS[activity_type],
+                    ACTIVITY_COIN_REWARDS[activity_type] * count,
+                ),
+            )
+            for activity_type, count in sorted(counts.items(), key=lambda item: item[0].value)
+        ]
+        total_points = sum(item.points for item in items)
+        raw_coins = sum(item.raw_coins for item in items)
+        capped_type_coins = sum(item.capped_coins for item in items)
+        caps = DailyActivitySummaryCaps()
+        merged_pr_count = counts.get(ActivityType.PULL_REQUEST_MERGED, 0)
+        return DailyActivitySummaryResponse(
+            reward_date=resolved_reward_date,
+            timezone=settings.timezone,
+            daily_cutoff_hour=DAILY_CUTOFF_HOUR,
+            window_start=window_start,
+            window_end=window_end,
+            total_activity_count=sum(counts.values()),
+            total_points=total_points,
+            raw_coins=raw_coins,
+            coins=min(caps.coins, capped_type_coins),
+            food=min(caps.food, total_points // 12),
+            pet_exp=min(caps.pet_exp, total_points * 4),
+            growth_material=min(caps.growth_material, merged_pr_count),
+            caps=caps,
+            items=items,
+        )
+
+    async def create_daily_reward_package(
+        self,
+        *,
+        user_id: int,
+        reward_date: date | None = None,
+    ) -> DailyRewardPackageResponse:
+        summary = await self.get_daily_activity_summary(
+            user_id=user_id,
+            reward_date=reward_date,
+        )
+        if summary.total_activity_count <= 0:
+            return DailyRewardPackageResponse(
+                reward_date=summary.reward_date,
+                created=False,
+                package=None,
+                summary=summary,
+            )
+
+        grant_key = f"daily:{summary.reward_date.isoformat()}:github-activity"
+        grant, created = await GameData.create_grant_once(
+            user_id=user_id,
+            grant_key=grant_key,
+            source=RewardPackageSource.DAILY_REWARD,
+        )
+        if not created:
+            return DailyRewardPackageResponse(
+                reward_date=summary.reward_date,
+                created=False,
+                package=await GameData.get_package_by_grant_id(grant_id=grant.id),
+                summary=summary,
+            )
+
+        items: list[RewardPackageCreateItem] = []
+        if summary.coins > 0:
+            items.append(
+                RewardPackageCreateItem(
+                    item_type=RewardPackageItemType.CURRENCY,
+                    item_key="coins",
+                    quantity=summary.coins,
+                )
+            )
+        if summary.food > 0:
+            items.append(
+                RewardPackageCreateItem(
+                    item_type=RewardPackageItemType.FOOD,
+                    item_key="basic_feed",
+                    quantity=summary.food,
+                )
+            )
+        if summary.pet_exp > 0:
+            items.append(
+                RewardPackageCreateItem(
+                    item_type=RewardPackageItemType.PET_EXP,
+                    item_key="pet_exp",
+                    quantity=summary.pet_exp,
+                )
+            )
+        if summary.growth_material > 0:
+            items.append(
+                RewardPackageCreateItem(
+                    item_type=RewardPackageItemType.MATERIAL,
+                    item_key="growth_crystal",
+                    quantity=summary.growth_material,
+                )
+            )
+
+        package = await GameData.create_package_once(
+            RewardPackageCreate(
+                user_id=user_id,
+                grant_id=grant.id,
+                source=RewardPackageSource.DAILY_REWARD,
+                title=f"{summary.reward_date.isoformat()} activity package",
+                description="Daily GitHub activity rewards are ready.",
+                metadata={
+                    "reward_date": summary.reward_date.isoformat(),
+                    "timezone": summary.timezone,
+                    "daily_cutoff_hour": summary.daily_cutoff_hour,
+                    "total_activity_count": summary.total_activity_count,
+                    "total_points": summary.total_points,
+                },
+                items=items,
+            )
+        )
+        return DailyRewardPackageResponse(
+            reward_date=summary.reward_date,
+            created=package is not None,
+            package=package,
+            summary=summary,
+        )
+
     async def refresh_after_github_sync(self, user_id: int) -> list[RewardPackageResponse]:
         profiles = await self.recalculate_stack_profiles(user_id=user_id)
         return await self.generate_stack_reward_packages(
@@ -277,6 +472,24 @@ class GameService:
         if level == 3:
             return f"{language} evolution package"
         return f"{language} level {level} upgrade package"
+
+    def _resolve_reward_date(self, *, now: datetime, timezone: ZoneInfo) -> date:
+        local_time = now.astimezone(timezone)
+        return (local_time - timedelta(hours=DAILY_CUTOFF_HOUR)).date()
+
+    def _resolve_daily_window(
+        self,
+        *,
+        reward_date: date,
+        timezone: ZoneInfo,
+    ) -> tuple[datetime, datetime]:
+        local_start = datetime.combine(
+            reward_date,
+            time(hour=DAILY_CUTOFF_HOUR),
+            tzinfo=timezone,
+        )
+        local_end = local_start + timedelta(days=1)
+        return local_start.astimezone(UTC), local_end.astimezone(UTC)
 
 
 def _slugify_language(language: str) -> str:

@@ -130,7 +130,7 @@ daily:{yyyy-mm-dd}:github-activity
 2. Daily reward 구현 전에 사용자 timezone 설정을 추가합니다.
 3. `occurred_at`을 사용자 timezone으로 변환한 뒤 로컬 05:00 cutoff를 적용해
    reward date를 계산합니다.
-4. 사용자 timezone이 생기기 전까지는 backend-only reward grant에 UTC date를 사용합니다.
+4. 사용자가 timezone을 설정하지 않았다면 `UTC`를 사용합니다.
 
 05:00 cutoff는 자정 이후 이어지는 개발 세션이 두 reward day로 쪼개지는 문제를
 줄이면서도 규칙을 결정적으로 유지하기 위한 기준입니다. Grant key에 들어가는
@@ -261,14 +261,20 @@ stack_reward_upgrade:{language_slug}:level:{mastery_level}:{reward_key}
 
 현재 backend 구현 범위:
 
-1. `POST /api/v1/github/sync`가 GitHub repository, language, activity를 갱신한 뒤
+1. `GET /api/v1/game/settings`, `PATCH /api/v1/game/settings`로 daily reward window에
+   사용할 사용자 IANA timezone을 관리합니다.
+2. `GET /api/v1/game/activity/daily-summary`는 선택한 reward date의 activity count와
+   capped reward preview 값을 반환합니다.
+3. `POST /api/v1/game/activity/daily-reward`는 선택한 날짜의 daily activity reward
+   package를 한 번만 생성합니다.
+4. `POST /api/v1/github/sync`가 GitHub repository, language, activity를 갱신한 뒤
    stack profile을 재계산합니다.
-2. 새로 도달한 mastery level마다 stack reward package를 생성합니다.
-3. `GET /api/v1/game/stacks`로 계산된 stack profile을 조회합니다.
-4. `GET /api/v1/rewards/packages`로 도착한 package를 조회합니다.
-5. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
+5. 새로 도달한 mastery level마다 stack reward package를 생성합니다.
+6. `GET /api/v1/game/stacks`로 계산된 stack profile을 조회합니다.
+7. `GET /api/v1/rewards/packages`로 도착한 package를 조회합니다.
+8. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
    owned stack reward를 생성하거나 upgrade합니다.
-6. Daily activity reward package는 아직 구현하지 않았습니다.
+9. Claim 시 wallet/inventory balance를 변경하는 처리는 아직 구현하지 않았습니다.
 
 기본 language reward key:
 

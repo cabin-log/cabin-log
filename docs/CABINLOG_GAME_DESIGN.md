@@ -133,7 +133,7 @@ Recommended daily time basis:
 2. Add a user timezone setting before implementing daily rewards.
 3. Derive the daily reward date by converting `occurred_at` into the user's
    timezone and applying a 05:00 local-day cutoff.
-4. Until user timezone exists, use UTC dates for backend-only reward grants.
+4. If a user has not configured a timezone, use `UTC`.
 
 The 05:00 cutoff avoids splitting late-night coding sessions across two reward
 days while keeping the rule deterministic. The date embedded in the grant key
@@ -269,14 +269,20 @@ stack_reward_upgrade:{language_slug}:level:{mastery_level}:{reward_key}
 
 Current backend implementation:
 
-1. `POST /api/v1/github/sync` refreshes GitHub repositories, languages, and
+1. `GET /api/v1/game/settings` and `PATCH /api/v1/game/settings` manage the
+   user's IANA timezone for daily reward windows.
+2. `GET /api/v1/game/activity/daily-summary` exposes daily activity counts and
+   capped reward preview values for the selected reward date.
+3. `POST /api/v1/game/activity/daily-reward` creates the selected date's daily
+   activity reward package once.
+4. `POST /api/v1/github/sync` refreshes GitHub repositories, languages, and
    activities, then recalculates stack profiles.
-2. Stack reward packages are created for every newly reached mastery level.
-3. `GET /api/v1/game/stacks` exposes the calculated profiles.
-4. `GET /api/v1/rewards/packages` exposes delivered packages.
-5. `POST /api/v1/rewards/packages/{package_id}/claim` claims a package and
+5. Stack reward packages are created for every newly reached mastery level.
+6. `GET /api/v1/game/stacks` exposes the calculated profiles.
+7. `GET /api/v1/rewards/packages` exposes delivered packages.
+8. `POST /api/v1/rewards/packages/{package_id}/claim` claims a package and
    creates or upgrades the owned stack reward.
-6. Daily activity reward packages are not implemented yet.
+9. Wallet and inventory balance mutation during claim is not implemented yet.
 
 Default language reward keys:
 

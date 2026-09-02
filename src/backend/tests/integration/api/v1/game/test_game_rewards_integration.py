@@ -142,3 +142,139 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     )
     assert duplicate_claim_response.status_code == 409
     assert duplicate_claim_response.json()["detail"]["error"] == "REWARD_PACKAGE_ALREADY_CLAIMED"
+
+
+@pytest.mark.primary_data
+def test_game_settings_and_daily_activity_summary_use_timezone_cutoff(
+    integration_client: TestClient,
+):
+    """Scenario: daily summaries use the user's timezone and 05:00 local cutoff."""
+    user_id, token = asyncio.run(_create_github_oauth_user())
+
+    settings_response = integration_client.get(
+        "/api/v1/game/settings",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert settings_response.status_code == 200
+    assert settings_response.json()["timezone"] == "UTC"
+    assert settings_response.json()["daily_cutoff_hour"] == 5
+
+    invalid_settings_response = integration_client.patch(
+        "/api/v1/game/settings",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"timezone": "Not/AZone"},
+    )
+    assert invalid_settings_response.status_code == 422
+
+    updated_settings_response = integration_client.patch(
+        "/api/v1/game/settings",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"timezone": "Asia/Seoul"},
+    )
+    assert updated_settings_response.status_code == 200
+    assert updated_settings_response.json()["timezone"] == "Asia/Seoul"
+
+    activities = [
+        (
+            "excluded-before-cutoff",
+            ActivityType.COMMIT,
+            datetime(2026, 9, 1, 19, 59, tzinfo=UTC),
+        ),
+        (
+            "included-cutoff-start",
+            ActivityType.COMMIT,
+            datetime(2026, 9, 1, 20, 0, tzinfo=UTC),
+        ),
+        (
+            "included-before-next-cutoff",
+            ActivityType.COMMIT,
+            datetime(2026, 9, 2, 19, 59, tzinfo=UTC),
+        ),
+        (
+            "included-merged-pr",
+            ActivityType.PULL_REQUEST_MERGED,
+            datetime(2026, 9, 2, 12, 0, tzinfo=UTC),
+        ),
+        (
+            "excluded-next-cutoff",
+            ActivityType.ISSUE,
+            datetime(2026, 9, 2, 20, 0, tzinfo=UTC),
+        ),
+    ]
+    for external_id, activity_type, occurred_at in activities:
+        asyncio.run(
+            Activities.create_activity_once(
+                ActivityCreate(
+                    user_id=user_id,
+                    type=activity_type,
+                    source="OAUTH_API",
+                    github_external_id=f"github:test:{external_id}",
+                    occurred_at=occurred_at,
+                    metadata={"external_id": external_id},
+                )
+            )
+        )
+
+    summary_response = integration_client.get(
+        "/api/v1/game/activity/daily-summary?reward_date=2026-09-02",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert summary["reward_date"] == "2026-09-02"
+    assert summary["timezone"] == "Asia/Seoul"
+    assert summary["daily_cutoff_hour"] == 5
+    assert summary["window_start"] == "2026-09-01T20:00:00Z"
+    assert summary["window_end"] == "2026-09-02T20:00:00Z"
+    assert summary["total_activity_count"] == 3
+    assert summary["total_points"] == 43
+    assert summary["raw_coins"] == 41
+    assert summary["coins"] == 41
+    assert summary["food"] == 3
+    assert summary["pet_exp"] == 172
+    assert summary["growth_material"] == 1
+    items = {item["activity_type"]: item for item in summary["items"]}
+    assert items["COMMIT"] == {
+        "activity_type": "COMMIT",
+        "count": 2,
+        "points": 8,
+        "raw_coins": 6,
+        "capped_coins": 6,
+    }
+    assert items["PULL_REQUEST_MERGED"] == {
+        "activity_type": "PULL_REQUEST_MERGED",
+        "count": 1,
+        "points": 35,
+        "raw_coins": 35,
+        "capped_coins": 35,
+    }
+
+    reward_response = integration_client.post(
+        "/api/v1/game/activity/daily-reward?reward_date=2026-09-02",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert reward_response.status_code == 200
+    reward = reward_response.json()
+    assert reward["reward_date"] == "2026-09-02"
+    assert reward["created"] is True
+    assert reward["package"]["source"] == "DAILY_REWARD"
+    assert reward["package"]["status"] == "PENDING"
+    assert reward["package"]["metadata"]["reward_date"] == "2026-09-02"
+    reward_items = {item["item_type"]: item for item in reward["package"]["items"]}
+    assert reward_items["CURRENCY"]["item_key"] == "coins"
+    assert reward_items["CURRENCY"]["quantity"] == 41
+    assert reward_items["FOOD"]["item_key"] == "basic_feed"
+    assert reward_items["FOOD"]["quantity"] == 3
+    assert reward_items["PET_EXP"]["item_key"] == "pet_exp"
+    assert reward_items["PET_EXP"]["quantity"] == 172
+    assert reward_items["MATERIAL"]["item_key"] == "growth_crystal"
+    assert reward_items["MATERIAL"]["quantity"] == 1
+
+    duplicate_reward_response = integration_client.post(
+        "/api/v1/game/activity/daily-reward?reward_date=2026-09-02",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert duplicate_reward_response.status_code == 200
+    duplicate_reward = duplicate_reward_response.json()
+    assert duplicate_reward["created"] is False
+    assert duplicate_reward["package"]["id"] == reward["package"]["id"]
