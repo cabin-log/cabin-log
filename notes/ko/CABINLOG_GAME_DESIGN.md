@@ -273,8 +273,9 @@ stack_reward_upgrade:{language_slug}:level:{mastery_level}:{reward_key}
 6. `GET /api/v1/game/stacks`로 계산된 stack profile을 조회합니다.
 7. `GET /api/v1/rewards/packages`로 도착한 package를 조회합니다.
 8. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
-   owned stack reward를 생성하거나 upgrade합니다.
-9. Claim 시 wallet/inventory balance를 변경하는 처리는 아직 구현하지 않았습니다.
+   wallet coin 증가, inventory item 적재, owned stack reward 생성/upgrade를 처리합니다.
+9. `GET /api/v1/game/state`는 첫 playable cabin screen에 필요한 backend state를
+   반환합니다.
 
 기본 language reward key:
 

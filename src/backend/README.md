@@ -81,6 +81,7 @@ GitHub backend foundation:
 - Unsupported webhook events are acknowledged as ignored and do not create game activity.
 
 Game foundation:
+- `GET /api/v1/game/state` returns the current game state for the playable cabin view: settings, today's activity summary, wallet, inventory, stack profiles, owned stack rewards, and pending packages.
 - `GET /api/v1/game/settings` returns the current user's game settings, including timezone and the daily cutoff hour.
 - `PATCH /api/v1/game/settings` updates the current user's IANA timezone, for example `{"timezone":"Asia/Seoul"}`.
 - `GET /api/v1/game/stacks` returns the current user's calculated stack profiles.
@@ -88,7 +89,7 @@ Game foundation:
 - `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD` returns daily activity counts, points, capped coins, food, pet EXP, and growth material for the selected reward date.
 - `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD` creates the selected date's daily activity reward package once.
 - `GET /api/v1/rewards/packages` returns pending and claimed reward packages for the current user.
-- `POST /api/v1/rewards/packages/{package_id}/claim` claims a reward package and creates or upgrades the owned stack reward.
+- `POST /api/v1/rewards/packages/{package_id}/claim` claims a reward package, creates or upgrades the owned stack reward, adds coins to the wallet, and stacks food/material/PET_EXP items in inventory.
 - Stack reward packages are idempotent through `reward_grants.grant_key`; sync can be repeated without duplicate packages.
 - Stack profiles can go down when GitHub data changes, but claimed stack rewards keep their highest claimed level.
 - Daily activity summaries use the user's timezone with a 05:00 local cutoff. Activity timestamps remain stored in UTC.

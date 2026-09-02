@@ -13,17 +13,21 @@ from app.models.game import (
     DailyActivitySummaryResponse,
     DailyRewardPackageResponse,
     GameData,
+    GameStateResponse,
     RewardPackageCreate,
     RewardPackageCreateItem,
     RewardPackageItemType,
     RewardPackageResponse,
     RewardPackageSource,
+    RewardPackageStatus,
     StackProfileResponse,
     StackProfilesResponse,
     StackProfileUpsert,
     StackRewardType,
     UserGameSettingsResponse,
     UserGameSettingsUpdate,
+    UserInventoryItemResponse,
+    UserWalletResponse,
 )
 from app.models.github import GitHubRepository, GitHubRepositoryLanguage
 
@@ -92,6 +96,33 @@ class GameService:
         form: UserGameSettingsUpdate,
     ) -> UserGameSettingsResponse:
         return await GameData.update_user_settings(user_id=user_id, form=form)
+
+    async def get_wallet(self, user_id: int) -> UserWalletResponse:
+        return await GameData.get_or_create_wallet(user_id=user_id)
+
+    async def list_inventory_items(self, user_id: int) -> list[UserInventoryItemResponse]:
+        return await GameData.list_inventory_items(user_id=user_id)
+
+    async def get_game_state(self, user_id: int) -> GameStateResponse:
+        settings = await self.get_user_settings(user_id=user_id)
+        today = await self.get_daily_activity_summary(user_id=user_id)
+        wallet = await self.get_wallet(user_id=user_id)
+        inventory = await self.list_inventory_items(user_id=user_id)
+        stack_profiles = await self.get_stack_profiles(user_id=user_id)
+        stack_rewards = await GameData.list_stack_rewards(user_id=user_id)
+        pending_packages = await GameData.list_reward_packages(
+            user_id=user_id,
+            status=RewardPackageStatus.PENDING,
+        )
+        return GameStateResponse(
+            settings=settings,
+            today=today,
+            wallet=wallet,
+            inventory=inventory,
+            stack_profiles=stack_profiles,
+            stack_rewards=stack_rewards,
+            pending_packages=pending_packages,
+        )
 
     async def get_daily_activity_summary(
         self,

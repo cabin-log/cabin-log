@@ -6,6 +6,7 @@ from app.deps import get_current_user
 from app.models.game import (
     DailyActivitySummaryResponse,
     DailyRewardPackageResponse,
+    GameStateResponse,
     StackProfilesResponse,
     UserGameSettingsResponse,
     UserGameSettingsUpdate,
@@ -14,6 +15,14 @@ from app.models.user import UserResponse
 from app.services.game import GameService
 
 router = APIRouter()
+
+
+@router.get("/state", response_model=GameStateResponse)
+async def game_state(
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> GameStateResponse:
+    return await service.get_game_state(user_id=current_user.id)
 
 
 @router.get("/settings", response_model=UserGameSettingsResponse)
