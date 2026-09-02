@@ -8,6 +8,10 @@ from sqlalchemy import or_, select
 from app.core.db.session import get_db
 from app.models.activity import Activity, ActivityType
 from app.models.game import (
+    CabinPlacementCreate,
+    CabinPlacementResponse,
+    CabinPlacementUpdate,
+    CabinResponse,
     DailyActivitySummaryCaps,
     DailyActivitySummaryItem,
     DailyActivitySummaryResponse,
@@ -103,11 +107,39 @@ class GameService:
     async def list_inventory_items(self, user_id: int) -> list[UserInventoryItemResponse]:
         return await GameData.list_inventory_items(user_id=user_id)
 
+    async def get_cabin(self, user_id: int) -> CabinResponse:
+        return await GameData.get_or_create_cabin(user_id=user_id)
+
+    async def create_cabin_placement(
+        self,
+        *,
+        user_id: int,
+        form: CabinPlacementCreate,
+    ) -> CabinPlacementResponse:
+        return await GameData.create_cabin_placement(user_id=user_id, form=form)
+
+    async def update_cabin_placement(
+        self,
+        *,
+        user_id: int,
+        placement_id: int,
+        form: CabinPlacementUpdate,
+    ) -> CabinPlacementResponse:
+        return await GameData.update_cabin_placement(
+            user_id=user_id,
+            placement_id=placement_id,
+            form=form,
+        )
+
+    async def delete_cabin_placement(self, *, user_id: int, placement_id: int) -> None:
+        await GameData.delete_cabin_placement(user_id=user_id, placement_id=placement_id)
+
     async def get_game_state(self, user_id: int) -> GameStateResponse:
         settings = await self.get_user_settings(user_id=user_id)
         today = await self.get_daily_activity_summary(user_id=user_id)
         wallet = await self.get_wallet(user_id=user_id)
         inventory = await self.list_inventory_items(user_id=user_id)
+        cabin = await self.get_cabin(user_id=user_id)
         stack_profiles = await self.get_stack_profiles(user_id=user_id)
         stack_rewards = await GameData.list_stack_rewards(user_id=user_id)
         pending_packages = await GameData.list_reward_packages(
@@ -119,6 +151,7 @@ class GameService:
             today=today,
             wallet=wallet,
             inventory=inventory,
+            cabin=cabin,
             stack_profiles=stack_profiles,
             stack_rewards=stack_rewards,
             pending_packages=pending_packages,

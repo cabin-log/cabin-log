@@ -21,6 +21,31 @@ class GameErrorCode(Enum):
         "Reward package has already been claimed.",
         status.HTTP_409_CONFLICT,
     )
+    CABIN_PLACEMENT_NOT_FOUND = ServiceErrorCode(
+        "CABIN_PLACEMENT_NOT_FOUND",
+        "Cabin placement was not found.",
+        status.HTTP_404_NOT_FOUND,
+    )
+    CABIN_PLACEMENT_INVALID = ServiceErrorCode(
+        "CABIN_PLACEMENT_INVALID",
+        "Cabin placement is outside the cabin grid.",
+        status.HTTP_400_BAD_REQUEST,
+    )
+    CABIN_PLACEMENT_CONFLICT = ServiceErrorCode(
+        "CABIN_PLACEMENT_CONFLICT",
+        "Cabin placement overlaps an existing object.",
+        status.HTTP_409_CONFLICT,
+    )
+    CABIN_ITEM_NOT_OWNED = ServiceErrorCode(
+        "CABIN_ITEM_NOT_OWNED",
+        "Cabin object is not owned by the user.",
+        status.HTTP_403_FORBIDDEN,
+    )
+    CABIN_SYSTEM_PLACEMENT_LOCKED = ServiceErrorCode(
+        "CABIN_SYSTEM_PLACEMENT_LOCKED",
+        "System cabin placements cannot be changed.",
+        status.HTTP_403_FORBIDDEN,
+    )
 
     @property
     def code(self) -> ServiceErrorCode:

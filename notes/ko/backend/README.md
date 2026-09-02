@@ -79,9 +79,13 @@ GitHub 백엔드 기반:
 - 지원하지 않는 webhook 이벤트는 ignored 상태로 응답하며 게임 activity를 생성하지 않습니다.
 
 Game 기반:
-- `GET /api/v1/game/state`는 playable cabin view가 사용할 현재 game state를 반환합니다. settings, today activity summary, wallet, inventory, stack profiles, owned stack rewards, pending packages를 포함합니다.
+- `GET /api/v1/game/state`는 playable cabin view가 사용할 현재 game state를 반환합니다. settings, today activity summary, wallet, inventory, 고정 크기 cabin layout, stack profiles, owned stack rewards, pending packages를 포함합니다.
 - `GET /api/v1/game/settings`는 timezone과 daily cutoff hour를 포함한 현재 사용자의 game settings를 반환합니다.
 - `PATCH /api/v1/game/settings`는 현재 사용자의 IANA timezone을 갱신합니다(예: `{"timezone":"Asia/Seoul"}`).
+- `GET /api/v1/game/cabin`은 현재 사용자의 고정 `18 x 12` isometric cabin, `64 x 32 px` tile 계약, 저장된 placement를 반환합니다.
+- `POST /api/v1/game/cabin/placements`는 사용자가 보유한 stack reward 또는 inventory item을 cabin grid에 배치합니다.
+- `PATCH /api/v1/game/cabin/placements/{placement_id}`는 사용자가 조정 가능한 placement의 `x`, `y`, `z`, `rotation`, `width`, `depth`를 갱신합니다.
+- `DELETE /api/v1/game/cabin/placements/{placement_id}`는 사용자가 조정 가능한 placement를 제거합니다.
 - `GET /api/v1/game/stacks`는 현재 사용자의 계산된 stack profile을 반환합니다.
 - `POST /api/v1/game/stacks/recalculate`는 저장된 GitHub repository language와 최근 activity를 기준으로 stack profile을 재계산합니다.
 - `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD`는 선택한 reward date의 activity count, point, capped coin, food, pet EXP, growth material을 반환합니다.

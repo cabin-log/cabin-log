@@ -31,6 +31,13 @@ class StackRewardType(StrEnum):
     FURNITURE = "FURNITURE"
 
 
+class CabinObjectType(StrEnum):
+    SYSTEM = "SYSTEM"
+    STACK_REWARD = "STACK_REWARD"
+    INVENTORY_ITEM = "INVENTORY_ITEM"
+    FURNITURE = "FURNITURE"
+
+
 class RewardPackageSource(StrEnum):
     GITHUB_SYNC = "GITHUB_SYNC"
     DAILY_REWARD = "DAILY_REWARD"
@@ -53,6 +60,12 @@ class RewardPackageItemType(StrEnum):
 
 
 DEFAULT_USER_TIMEZONE = "UTC"
+DEFAULT_CABIN_WIDTH = 18
+DEFAULT_CABIN_DEPTH = 12
+DEFAULT_TILE_WIDTH = 64
+DEFAULT_TILE_HEIGHT = 32
+DEFAULT_TILE_Z_HEIGHT = 32
+DEFAULT_DASHBOARD_OBJECT_KEY = "system.dev-board"
 
 
 class UserGameSettings(Base):
@@ -240,6 +253,66 @@ class UserInventoryItem(Base):
     user = relationship("User")
 
 
+class Cabin(Base):
+    __tablename__ = "cabins"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    width: Mapped[int] = mapped_column(Integer, default=DEFAULT_CABIN_WIDTH, nullable=False)
+    depth: Mapped[int] = mapped_column(Integer, default=DEFAULT_CABIN_DEPTH, nullable=False)
+    tile_width: Mapped[int] = mapped_column(Integer, default=DEFAULT_TILE_WIDTH, nullable=False)
+    tile_height: Mapped[int] = mapped_column(Integer, default=DEFAULT_TILE_HEIGHT, nullable=False)
+    tile_z_height: Mapped[int] = mapped_column(
+        Integer, default=DEFAULT_TILE_Z_HEIGHT, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    user = relationship("User")
+    placements = relationship(
+        "CabinPlacement",
+        back_populates="cabin",
+        cascade="all, delete-orphan",
+    )
+
+
+class CabinPlacement(Base):
+    __tablename__ = "cabin_placements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    cabin_id: Mapped[int] = mapped_column(
+        ForeignKey("cabins.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    object_type: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    object_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    x: Mapped[int] = mapped_column(Integer, nullable=False)
+    y: Mapped[int] = mapped_column(Integer, nullable=False)
+    z: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    rotation: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    width: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    depth: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    cabin = relationship("Cabin", back_populates="placements")
+    user = relationship("User")
+
+
 class StackProfileUpsert(BaseModel):
     user_id: int
     language: str
@@ -381,6 +454,68 @@ class UserInventoryItemResponse(BaseModel):
     updated_at: datetime
 
 
+class CabinPlacementBase(BaseModel):
+    x: int = Field(ge=0)
+    y: int = Field(ge=0)
+    z: int = Field(default=0, ge=0, le=3)
+    rotation: int = 0
+    width: int = Field(default=1, ge=1, le=4)
+    depth: int = Field(default=1, ge=1, le=4)
+
+    @field_validator("rotation")
+    @classmethod
+    def validate_rotation(cls, value: int) -> int:
+        if value not in {0, 90, 180, 270}:
+            raise ValueError("rotation must be one of 0, 90, 180, or 270.")
+        return value
+
+
+class CabinPlacementCreate(CabinPlacementBase):
+    object_type: CabinObjectType
+    object_key: str = Field(min_length=1, max_length=255)
+
+
+class CabinPlacementUpdate(BaseModel):
+    x: int | None = Field(default=None, ge=0)
+    y: int | None = Field(default=None, ge=0)
+    z: int | None = Field(default=None, ge=0, le=3)
+    rotation: int | None = None
+    width: int | None = Field(default=None, ge=1, le=4)
+    depth: int | None = Field(default=None, ge=1, le=4)
+
+    @field_validator("rotation")
+    @classmethod
+    def validate_rotation(cls, value: int | None) -> int | None:
+        if value is not None and value not in {0, 90, 180, 270}:
+            raise ValueError("rotation must be one of 0, 90, 180, or 270.")
+        return value
+
+
+class CabinPlacementResponse(BaseModel):
+    id: int
+    object_type: CabinObjectType
+    object_key: str
+    x: int
+    y: int
+    z: int
+    rotation: int
+    width: int
+    depth: int
+    locked: bool = False
+    updated_at: datetime
+
+
+class CabinResponse(BaseModel):
+    id: int
+    width: int
+    depth: int
+    tile_width: int
+    tile_height: int
+    tile_z_height: int
+    placements: list[CabinPlacementResponse] = Field(default_factory=list)
+    updated_at: datetime
+
+
 class RewardPackageClaimResponse(BaseModel):
     package: RewardPackageResponse
     stack_rewards: list[UserStackRewardResponse] = Field(default_factory=list)
@@ -393,6 +528,7 @@ class GameStateResponse(BaseModel):
     today: DailyActivitySummaryResponse
     wallet: UserWalletResponse
     inventory: list[UserInventoryItemResponse] = Field(default_factory=list)
+    cabin: CabinResponse
     stack_profiles: StackProfilesResponse
     stack_rewards: list[UserStackRewardResponse] = Field(default_factory=list)
     pending_packages: list[RewardPackageResponse] = Field(default_factory=list)
@@ -478,6 +614,36 @@ def _to_inventory_item_response(item: UserInventoryItem) -> UserInventoryItemRes
         quantity=item.quantity,
         metadata=item.item_metadata or {},
         updated_at=item.updated_at,
+    )
+
+
+def _to_cabin_placement_response(placement: CabinPlacement) -> CabinPlacementResponse:
+    return CabinPlacementResponse(
+        id=placement.id,
+        object_type=CabinObjectType(placement.object_type),
+        object_key=placement.object_key,
+        x=placement.x,
+        y=placement.y,
+        z=placement.z,
+        rotation=placement.rotation,
+        width=placement.width,
+        depth=placement.depth,
+        locked=placement.object_type == CabinObjectType.SYSTEM.value,
+        updated_at=placement.updated_at,
+    )
+
+
+def _to_cabin_response(cabin: Cabin) -> CabinResponse:
+    placements = sorted(cabin.placements, key=lambda item: (item.z, item.y, item.x, item.id))
+    return CabinResponse(
+        id=cabin.id,
+        width=cabin.width,
+        depth=cabin.depth,
+        tile_width=cabin.tile_width,
+        tile_height=cabin.tile_height,
+        tile_z_height=cabin.tile_z_height,
+        placements=[_to_cabin_placement_response(placement) for placement in placements],
+        updated_at=cabin.updated_at,
     )
 
 
@@ -717,6 +883,135 @@ class GameRepository:
             )
             return [_to_inventory_item_response(item) for item in result.scalars().all()]
 
+    async def get_or_create_cabin(self, user_id: int) -> CabinResponse:
+        async with get_db() as db:
+            cabin = await self._get_or_create_cabin_in_session(db, user_id=user_id)
+            cabin_id = cabin.id
+            await db.commit()
+            return await self._load_cabin_response(db, cabin_id=cabin_id, user_id=user_id)
+
+    async def create_cabin_placement(
+        self,
+        *,
+        user_id: int,
+        form: CabinPlacementCreate,
+    ) -> CabinPlacementResponse:
+        async with get_db() as db:
+            cabin = await self._get_or_create_cabin_in_session(db, user_id=user_id)
+            await self._validate_placeable_object(db, user_id=user_id, form=form)
+            self._validate_cabin_bounds(
+                cabin=cabin,
+                x=form.x,
+                y=form.y,
+                z=form.z,
+                width=form.width,
+                depth=form.depth,
+            )
+            await self._ensure_no_cabin_collision(
+                db,
+                cabin_id=cabin.id,
+                x=form.x,
+                y=form.y,
+                z=form.z,
+                width=form.width,
+                depth=form.depth,
+            )
+            placement = CabinPlacement(
+                cabin_id=cabin.id,
+                user_id=user_id,
+                object_type=form.object_type.value,
+                object_key=form.object_key,
+                x=form.x,
+                y=form.y,
+                z=form.z,
+                rotation=form.rotation,
+                width=form.width,
+                depth=form.depth,
+            )
+            db.add(placement)
+            await db.commit()
+            await db.refresh(placement)
+            return _to_cabin_placement_response(placement)
+
+    async def update_cabin_placement(
+        self,
+        *,
+        user_id: int,
+        placement_id: int,
+        form: CabinPlacementUpdate,
+    ) -> CabinPlacementResponse:
+        async with get_db() as db:
+            cabin = await self._get_or_create_cabin_in_session(db, user_id=user_id)
+            result = await db.execute(
+                select(CabinPlacement).where(
+                    CabinPlacement.id == placement_id,
+                    CabinPlacement.cabin_id == cabin.id,
+                    CabinPlacement.user_id == user_id,
+                )
+            )
+            placement = result.scalar_one_or_none()
+            if placement is None:
+                raise GameException(code=GameErrorCode.CABIN_PLACEMENT_NOT_FOUND)
+            if placement.object_type == CabinObjectType.SYSTEM.value:
+                raise GameException(code=GameErrorCode.CABIN_SYSTEM_PLACEMENT_LOCKED)
+
+            x = placement.x if form.x is None else form.x
+            y = placement.y if form.y is None else form.y
+            z = placement.z if form.z is None else form.z
+            rotation = placement.rotation if form.rotation is None else form.rotation
+            width = placement.width if form.width is None else form.width
+            depth = placement.depth if form.depth is None else form.depth
+            self._validate_cabin_bounds(
+                cabin=cabin,
+                x=x,
+                y=y,
+                z=z,
+                width=width,
+                depth=depth,
+            )
+            await self._ensure_no_cabin_collision(
+                db,
+                cabin_id=cabin.id,
+                x=x,
+                y=y,
+                z=z,
+                width=width,
+                depth=depth,
+                exclude_placement_id=placement.id,
+            )
+
+            now = datetime.now(UTC)
+            placement.x = x
+            placement.y = y
+            placement.z = z
+            placement.rotation = rotation
+            placement.width = width
+            placement.depth = depth
+            placement.updated_at = now
+            cabin.updated_at = now
+            await db.commit()
+            await db.refresh(placement)
+            return _to_cabin_placement_response(placement)
+
+    async def delete_cabin_placement(self, *, user_id: int, placement_id: int) -> None:
+        async with get_db() as db:
+            cabin = await self._get_or_create_cabin_in_session(db, user_id=user_id)
+            result = await db.execute(
+                select(CabinPlacement).where(
+                    CabinPlacement.id == placement_id,
+                    CabinPlacement.cabin_id == cabin.id,
+                    CabinPlacement.user_id == user_id,
+                )
+            )
+            placement = result.scalar_one_or_none()
+            if placement is None:
+                raise GameException(code=GameErrorCode.CABIN_PLACEMENT_NOT_FOUND)
+            if placement.object_type == CabinObjectType.SYSTEM.value:
+                raise GameException(code=GameErrorCode.CABIN_SYSTEM_PLACEMENT_LOCKED)
+            await db.delete(placement)
+            cabin.updated_at = datetime.now(UTC)
+            await db.commit()
+
     async def list_stack_rewards(self, user_id: int) -> list[UserStackRewardResponse]:
         async with get_db() as db:
             result = await db.execute(
@@ -916,6 +1211,138 @@ class GameRepository:
             stack_reward.updated_at = now
         return stack_reward
 
+    async def _get_or_create_cabin_in_session(
+        self,
+        db: AsyncSession,
+        /,
+        *,
+        user_id: int,
+    ) -> Cabin:
+        result = await db.execute(select(Cabin).where(Cabin.user_id == user_id))
+        cabin = result.scalar_one_or_none()
+        if cabin is None:
+            cabin = Cabin(user_id=user_id)
+            db.add(cabin)
+            await db.flush()
+            db.add(
+                CabinPlacement(
+                    cabin_id=cabin.id,
+                    user_id=user_id,
+                    object_type=CabinObjectType.SYSTEM.value,
+                    object_key=DEFAULT_DASHBOARD_OBJECT_KEY,
+                    x=0,
+                    y=0,
+                    z=1,
+                    rotation=0,
+                    width=2,
+                    depth=1,
+                )
+            )
+            await db.flush()
+        return cabin
+
+    async def _load_cabin_response(
+        self,
+        db: AsyncSession,
+        /,
+        *,
+        cabin_id: int,
+        user_id: int,
+    ) -> CabinResponse:
+        result = await db.execute(
+            select(Cabin)
+            .options(selectinload(Cabin.placements))
+            .where(Cabin.id == cabin_id, Cabin.user_id == user_id)
+        )
+        return _to_cabin_response(result.scalar_one())
+
+    async def _validate_placeable_object(
+        self,
+        db: AsyncSession,
+        /,
+        *,
+        user_id: int,
+        form: CabinPlacementCreate,
+    ) -> None:
+        if form.object_type == CabinObjectType.SYSTEM:
+            raise GameException(code=GameErrorCode.CABIN_SYSTEM_PLACEMENT_LOCKED)
+        if form.object_type == CabinObjectType.STACK_REWARD:
+            result = await db.execute(
+                select(UserStackReward.id).where(
+                    UserStackReward.user_id == user_id,
+                    UserStackReward.reward_key == form.object_key,
+                )
+            )
+            if result.scalar_one_or_none() is None:
+                raise GameException(code=GameErrorCode.CABIN_ITEM_NOT_OWNED)
+            return
+        result = await db.execute(
+            select(UserInventoryItem.id).where(
+                UserInventoryItem.user_id == user_id,
+                UserInventoryItem.item_key == form.object_key,
+                UserInventoryItem.quantity > 0,
+            )
+        )
+        if result.scalar_one_or_none() is None:
+            raise GameException(code=GameErrorCode.CABIN_ITEM_NOT_OWNED)
+
+    def _validate_cabin_bounds(
+        self,
+        *,
+        cabin: Cabin,
+        x: int,
+        y: int,
+        z: int,
+        width: int,
+        depth: int,
+    ) -> None:
+        if x + width > cabin.width or y + depth > cabin.depth or z > 3:
+            raise GameException(
+                code=GameErrorCode.CABIN_PLACEMENT_INVALID,
+                details={
+                    "cabin_width": cabin.width,
+                    "cabin_depth": cabin.depth,
+                    "max_z": 3,
+                },
+            )
+
+    async def _ensure_no_cabin_collision(
+        self,
+        db: AsyncSession,
+        /,
+        *,
+        cabin_id: int,
+        x: int,
+        y: int,
+        z: int,
+        width: int,
+        depth: int,
+        exclude_placement_id: int | None = None,
+    ) -> None:
+        result = await db.execute(
+            select(CabinPlacement).where(
+                CabinPlacement.cabin_id == cabin_id,
+                CabinPlacement.z == z,
+            )
+        )
+        for placement in result.scalars().all():
+            if exclude_placement_id is not None and placement.id == exclude_placement_id:
+                continue
+            if _footprints_overlap(
+                left_x=x,
+                left_y=y,
+                left_width=width,
+                left_depth=depth,
+                right_x=placement.x,
+                right_y=placement.y,
+                right_width=placement.width,
+                right_depth=placement.depth,
+            ):
+                raise GameException(
+                    code=GameErrorCode.CABIN_PLACEMENT_CONFLICT,
+                    details={"conflicting_placement_id": placement.id},
+                )
+
 
 def _resolve_reward_stage(reward_type: StackRewardType, level: int) -> int:
     if reward_type == StackRewardType.ANIMAL:
@@ -929,6 +1356,25 @@ def _resolve_reward_stage(reward_type: StackRewardType, level: int) -> int:
     if level >= 3:
         return 2
     return 1
+
+
+def _footprints_overlap(
+    *,
+    left_x: int,
+    left_y: int,
+    left_width: int,
+    left_depth: int,
+    right_x: int,
+    right_y: int,
+    right_width: int,
+    right_depth: int,
+) -> bool:
+    return (
+        left_x < right_x + right_width
+        and left_x + left_width > right_x
+        and left_y < right_y + right_depth
+        and left_y + left_depth > right_y
+    )
 
 
 GameData = GameRepository()
