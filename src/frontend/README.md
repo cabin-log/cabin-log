@@ -42,10 +42,10 @@ API key management, realtime events, and server data require FastAPI connectivit
 data caching and synchronization are separate features and are not provided by the shell.
 The packaged desktop runtime actively checks `GET /health/ready` on startup and every 30 seconds.
 Failed checks use exponential backoff with jitter (up to 30 seconds), and the desktop UI shows an
-offline status beside the app-navbar profile control or standalone titlebar theme control. The
+offline status beside the app-navbar profile control or standalone titlebar tools. The
 compact status provides an immediate retry action. Browser builds do not run this desktop probe.
-Landing and server-unavailable pages share the same public navbar with a centered title and theme
-control. Symmetric navbar columns and a reserved connectivity-status width keep the title fixed
+Landing and server-unavailable pages share the same public navbar with a centered title.
+Symmetric navbar columns and a reserved connectivity-status width keep the title fixed
 when retry changes the status label. Manual retry clicks keep the compact disconnected label in
 place and delay heavier loading affordances so short server checks do not flicker.
 When connectivity returns, the app revalidates its authentication session and configuration, and

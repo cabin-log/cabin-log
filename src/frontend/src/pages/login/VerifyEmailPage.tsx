@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { ThemeToggle } from "../../components/ui/toggles/ThemeToggle";
 import { ErrorCard } from "../../components/ui/status/StatusCard";
 import { Button, PanelCard } from "../../components/ui";
 import { useAuthApi } from "../../hooks/api/auth/useAuthApi";
@@ -46,7 +45,6 @@ export function VerifyEmailPage() {
     if (status === "loading") {
         return (
             <main className="page auth-page">
-                <ThemeToggle />
                 <PanelCard
                     className="auth-panel"
                     title={t("verifyEmail.loadingTitle")}
@@ -61,7 +59,6 @@ export function VerifyEmailPage() {
     if (status === "error") {
         return (
             <main className="page auth-page">
-                <ThemeToggle />
                 <PanelCard
                     className="auth-panel"
                     title={t("verifyEmail.errorTitle")}
@@ -83,7 +80,6 @@ export function VerifyEmailPage() {
 
     return (
         <main className="page auth-page">
-            <ThemeToggle />
             <PanelCard
                 className="auth-panel"
                 title={t("verifyEmail.successTitle")}

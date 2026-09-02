@@ -20,10 +20,6 @@ vi.mock("../../../../hooks/useFeatures", () => ({
     useAppConfig: () => ({ data: { login_enabled: true } }),
 }));
 
-vi.mock("../../../../hooks/useTheme", () => ({
-    useTheme: () => ({ themeMode: "system", setThemeMode: vi.fn() }),
-}));
-
 vi.mock("../../../../hooks/connectivity/useServerConnectivity", () => ({
     useServerConnectivity: () => ({
         isDesktop: true,

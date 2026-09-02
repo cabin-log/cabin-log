@@ -5,7 +5,7 @@ type PanelCardProps = {
     className?: string;
     subtitle?: string;
     top?: ReactNode;
-    title: string;
+    title?: string;
 };
 
 export function PanelCard({ children, className, subtitle, top, title }: PanelCardProps) {
@@ -14,7 +14,7 @@ export function PanelCard({ children, className, subtitle, top, title }: PanelCa
     return (
         <section className={nextClassName}>
             {top ? <div className="panel-card__top">{top}</div> : null}
-            <h1>{title}</h1>
+            {title ? <h1>{title}</h1> : null}
             {subtitle ? <p className="muted">{subtitle}</p> : null}
             {children}
         </section>

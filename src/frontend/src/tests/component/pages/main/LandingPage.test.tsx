@@ -26,8 +26,7 @@ describe("LandingPage", () => {
         renderLanding(true);
 
         const nav = screen.getByRole("banner", { name: "Landing navigation" });
-        expect(within(nav).getByText("Blueprint4FastAPI")).toBeInTheDocument();
-        expect(within(nav).getByRole("group", { name: "Theme mode" })).toBeInTheDocument();
+        expect(within(nav).getByText("Cabinlog")).toBeInTheDocument();
     });
 
     it("marks landing as started and routes to login when login is enabled", async () => {

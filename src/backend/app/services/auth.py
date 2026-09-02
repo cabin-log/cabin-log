@@ -190,18 +190,19 @@ class AuthService:
         user = await self._resolve_oauth_user(profile)
         if provider == OAuthProvider.GITHUB:
             await self._upsert_github_profile(user_id=user.id, profile=profile)
-            try:
-                await GitHubService().sync_oauth_snapshot(
-                    user_id=user.id,
-                    access_token=access_token,
-                    github_login=profile.login,
-                )
-            except Exception:
-                logger.warning(
-                    "GitHub OAuth snapshot sync failed after login (user_id=%s).",
-                    user.id,
-                    exc_info=True,
-                )
+            if SETTINGS.OAUTH_GITHUB_SYNC_ON_LOGIN:
+                try:
+                    await GitHubService().sync_oauth_snapshot(
+                        user_id=user.id,
+                        access_token=access_token,
+                        github_login=profile.login,
+                    )
+                except Exception:
+                    logger.warning(
+                        "GitHub OAuth snapshot sync failed after login (user_id=%s).",
+                        user.id,
+                        exc_info=True,
+                    )
         user_ip = self._get_client_ip(request)
         await Users.update_login_metadata(
             user_id=user.id,

@@ -5,7 +5,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuthContext } from "../../hooks/useAuth";
 import { useServerConnectivity } from "../../hooks/connectivity/useServerConnectivity";
 import { useAppConfig } from "../../hooks/useFeatures";
-import { useTheme } from "../../hooks/useTheme";
 import { startDesktopWindowDrag } from "../../utils/desktopWindow";
 import { BrandMark, Tooltip } from "../ui";
 import { ConnectivityStatus } from "./ConnectivityStatus";
@@ -18,7 +17,6 @@ export function AppNavbar() {
     const { user, logout } = useAuthContext();
     const { data: appConfig } = useAppConfig();
     const { checkNow, isDesktop, status: connectivityStatus } = useServerConnectivity();
-    const { themeMode, setThemeMode } = useTheme();
     const [busy, setBusy] = useState(false);
     const loginEnabled = appConfig?.login_enabled === true;
     const logoutBlockedByConnectivity = isDesktop && connectivityStatus !== "online";
@@ -75,11 +73,9 @@ export function AppNavbar() {
                             displayName={displayName}
                             email={user.email}
                             onLogout={() => void onLogout()}
-                            onChangeTheme={setThemeMode}
                             logoutDisabled={logoutBlockedByConnectivity}
                             logoutDisabledTitle={t("nav.logoutUnavailable")}
                             showLogout={loginEnabled}
-                            themeMode={themeMode}
                         />
                     ) : null}
                 </div>

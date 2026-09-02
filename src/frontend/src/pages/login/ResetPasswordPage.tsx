@@ -2,7 +2,6 @@ import { FormEvent, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { ThemeToggle } from "../../components/ui/toggles/ThemeToggle";
 import { ErrorCard, WarningCard } from "../../components/ui/status/StatusCard";
 import {
     Button,
@@ -131,7 +130,6 @@ export function ResetPasswordPage() {
 
     return (
         <main className="page auth-page">
-            <ThemeToggle />
             <PanelCard
                 className="auth-panel"
                 title={t("resetPassword.title")}

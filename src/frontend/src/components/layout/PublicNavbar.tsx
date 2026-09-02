@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 
 import { startDesktopWindowDrag } from "../../utils/desktopWindow";
 import { BrandMark } from "../ui";
-import { ThemeToggle } from "../ui/toggles/ThemeToggle";
 import { ConnectivityStatus } from "./ConnectivityStatus";
 
 type PublicNavbarProps = {
@@ -26,7 +25,6 @@ export function PublicNavbar({ ariaLabel }: PublicNavbarProps) {
                 <p className="public-nav__title">{t("landing.eyebrow")}</p>
                 <div className="public-nav__actions">
                     <ConnectivityStatus placement="navbar" />
-                    <ThemeToggle />
                 </div>
             </div>
         </header>

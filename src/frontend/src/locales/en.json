@@ -28,7 +28,7 @@
     },
     "landing": {
         "navAria": "Landing navigation",
-        "eyebrow": "Blueprint4FastAPI",
+        "eyebrow": "Cabinlog",
         "title": "Customize this landing page for your service.",
         "subtitle": "This template includes a small landing page, auth-ready routing, API keys, realtime events, task queues, metrics, tracing, and a React showcase.",
         "note": "Replace this copy with your product message, connect the button to the flow you need, and keep the rest of the starter as your baseline.",
@@ -72,10 +72,12 @@
         "infoTitle": "Info"
     },
     "login": {
-        "title": "Login",
-        "subtitle": "Sign in to access the template dashboard.",
+        "title": "Log in to Cabinlog",
+        "subtitle": "Enter your cabin powered by your GitHub activity.",
+        "githubUnavailable": "GitHub login is unavailable. Check the server OAuth settings.",
+        "loadingGithub": "Checking GitHub login settings...",
         "oauth": {
-            "divider": "Sign in with a social account",
+            "divider": "Start with your GitHub account",
             "providers": {
                 "google": "Continue with Google",
                 "github": "Continue with GitHub"
@@ -93,6 +95,14 @@
         "signupLink": "Create an account",
         "forgotPasswordPrompt": "Forgot your password?",
         "forgotPasswordLink": "Find your password"
+    },
+    "loginSuccess": {
+        "title": "GitHub login complete",
+        "subtitle": "Your Cabinlog account is connected to GitHub.",
+        "unknownUser": "Cabinlog user",
+        "githubConnected": "GitHub account connected",
+        "sessionConnected": "Session connected",
+        "continue": "Continue"
     },
     "signup": {
         "title": "Sign up",
@@ -270,8 +280,7 @@
         },
         "general": {
             "title": "General",
-            "subtitle": "Language and theme preferences.",
-            "themeTitle": "Theme",
+            "subtitle": "Language preferences.",
             "languageTitle": "Language",
             "languages": {
                 "en": "English",
@@ -357,12 +366,5 @@
                 "next": "Next API key page"
             }
         }
-    },
-    "theme": {
-        "label": "Theme",
-        "select": "Theme mode",
-        "system": "System",
-        "light": "Light mode",
-        "dark": "Dark mode"
     }
 }

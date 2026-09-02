@@ -60,11 +60,12 @@ Cabinlog 인증 기본값:
 - 기본 OAuth provider 목록은 GitHub만 포함합니다(`OAUTH_ALLOWED_PROVIDERS=github`).
 - `OAUTH_ENABLED=true`는 `OAUTH_GITHUB_CLIENT_ID`, `OAUTH_GITHUB_CLIENT_SECRET` 설정 후 사용하세요.
 - `OAUTH_GITHUB_SCOPES=read:user user:email repo`는 OAuth callback에서 private repository, commit, PR, issue, language snapshot을 수집할 수 있게 합니다. public profile 확인만 필요하면 `read:user user:email`로 줄일 수 있습니다.
+- 브라우저 로그인에서는 `OAUTH_GITHUB_SYNC_ON_LOGIN=false`를 유지해 OAuth가 identity/profile만 빠르게 저장하도록 합니다. repository, commit, PR, issue, language 데이터는 로그인 후 `POST /api/v1/github/sync`로 수집합니다.
 - 백엔드 단독 OAuth 검증에는 `OAUTH_CALLBACK_RESPONSE_MODE=json`을 사용하세요. callback에서 token과 연결된 GitHub profile을 바로 반환합니다.
 
 GitHub 백엔드 기반:
 - `GET /api/v1/github/me`는 OAuth 로그인 중 연결된 현재 사용자의 GitHub profile을 반환합니다.
-- GitHub OAuth 로그인이 기본 데이터 수집 경로입니다. callback에서 연결 profile, repository/language snapshot, OAuth API 기반 commit, pull request, issue activity를 저장합니다.
+- GitHub OAuth 로그인은 연결 profile을 저장합니다. repository/language snapshot과 OAuth API 기반 commit, pull request, issue activity는 기본적으로 `POST /api/v1/github/sync`에서 수집합니다.
 - `POST /api/v1/github/sync`는 요청 단위 GitHub OAuth access token으로 현재 사용자의 OAuth API snapshot을 수동 갱신합니다. token은 갱신 요청 중에만 사용하고 저장하지 않습니다. 저장 후 stack profile을 재계산하고 threshold를 넘은 신규 stack reward package를 생성합니다.
 - `GET /api/v1/github/repositories`는 OAuth API로 수집된 repository/language snapshot을 반환합니다.
 - `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.

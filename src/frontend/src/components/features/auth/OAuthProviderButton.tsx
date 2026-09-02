@@ -6,6 +6,7 @@ type OAuthProviderButtonProps = {
     label: string;
     startPath: string;
     disabled?: boolean;
+    hideLabel?: boolean;
 };
 
 const PROVIDER_LOGOS: Record<
@@ -27,6 +28,7 @@ export function OAuthProviderButton({
     label,
     startPath,
     disabled = false,
+    hideLabel = false,
 }: OAuthProviderButtonProps) {
     const onClick = () => {
         const oauthStartUrl = new URL(startPath, `${getApiBase()}/`).toString();
@@ -35,7 +37,7 @@ export function OAuthProviderButton({
     const logos = PROVIDER_LOGOS[provider];
 
     return (
-        <Button type="button" disabled={disabled} onClick={onClick}>
+        <Button type="button" disabled={disabled} onClick={onClick} aria-label={label}>
             <span className="oauth-provider-button__content">
                 <span className="oauth-provider-button__logo-wrap" aria-hidden="true">
                     <img
@@ -49,7 +51,7 @@ export function OAuthProviderButton({
                         className={`oauth-provider-button__logo oauth-provider-button__logo--light oauth-provider-button__logo--${provider}`}
                     />
                 </span>
-                <span className="oauth-provider-button__label">{label}</span>
+                {hideLabel ? null : <span className="oauth-provider-button__label">{label}</span>}
             </span>
         </Button>
     );

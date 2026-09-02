@@ -62,11 +62,12 @@ Cabinlog auth defaults:
 - GitHub is the only OAuth provider listed by default (`OAUTH_ALLOWED_PROVIDERS=github`).
 - Set `OAUTH_ENABLED=true` only after configuring `OAUTH_GITHUB_CLIENT_ID` and `OAUTH_GITHUB_CLIENT_SECRET`.
 - `OAUTH_GITHUB_SCOPES=read:user user:email repo` lets the OAuth callback snapshot private repositories, commits, PRs, issues, and language data. Use `read:user user:email` for public-only profile checks.
+- Keep `OAUTH_GITHUB_SYNC_ON_LOGIN=false` for browser login so OAuth stores identity/profile quickly. Use `POST /api/v1/github/sync` to collect repositories, commits, PRs, issues, and language data after login.
 - Use `OAUTH_CALLBACK_RESPONSE_MODE=json` for backend-only OAuth verification; it returns tokens and the linked GitHub profile directly from the callback.
 
 GitHub backend foundation:
 - `GET /api/v1/github/me` returns the GitHub profile linked during OAuth login for the current bearer/API-key user.
-- GitHub OAuth login is the default data collection path. The callback stores the linked profile, repository/language snapshot, and OAuth API-derived commit, pull request, and issue activities.
+- GitHub OAuth login stores the linked profile. Repository/language snapshots and OAuth API-derived commit, pull request, and issue activities are collected by `POST /api/v1/github/sync` by default.
 - `POST /api/v1/github/sync` manually refreshes the OAuth API snapshot for the current user with a request-scoped GitHub OAuth access token. The token is used for the sync request and is not stored. After persistence, it recalculates stack profiles and creates new stack reward packages when thresholds are crossed.
 - `GET /api/v1/github/repositories` returns the repository/language snapshot collected from the OAuth API.
 - `GET /api/v1/github/stack-summary` returns language byte totals and ratios across the collected repositories.

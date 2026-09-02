@@ -90,7 +90,7 @@ class Settings(BaseModel):
     OAUTH_CALLBACK_RESPONSE_MODE: str = os.getenv(
         "OAUTH_CALLBACK_RESPONSE_MODE", "redirect"
     ).lower()
-    OAUTH_FRONTEND_SUCCESS_PATH: str = os.getenv("OAUTH_FRONTEND_SUCCESS_PATH", "/dashboard")
+    OAUTH_FRONTEND_SUCCESS_PATH: str = os.getenv("OAUTH_FRONTEND_SUCCESS_PATH", "/login/success")
     OAUTH_FRONTEND_FAILURE_PATH: str = os.getenv("OAUTH_FRONTEND_FAILURE_PATH", "/login")
 
     OAUTH_GOOGLE_CLIENT_ID: str = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "")
@@ -117,6 +117,9 @@ class Settings(BaseModel):
         "OAUTH_GITHUB_USERINFO_URL", "https://api.github.com/user"
     )
     OAUTH_GITHUB_SCOPES: str = os.getenv("OAUTH_GITHUB_SCOPES", "read:user user:email repo")
+    OAUTH_GITHUB_SYNC_ON_LOGIN: bool = (
+        os.getenv("OAUTH_GITHUB_SYNC_ON_LOGIN", "false").lower() == "true"
+    )
     GITHUB_APP_ID: str = os.getenv("GITHUB_APP_ID", "")
     GITHUB_APP_SLUG: str = os.getenv("GITHUB_APP_SLUG", "")
     GITHUB_APP_PRIVATE_KEY: str = os.getenv("GITHUB_APP_PRIVATE_KEY", "")

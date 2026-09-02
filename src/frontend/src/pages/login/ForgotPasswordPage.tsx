@@ -2,7 +2,6 @@ import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 
-import { ThemeToggle } from "../../components/ui/toggles/ThemeToggle";
 import { Button, InlineMessage, InputField, PanelCard } from "../../components/ui";
 import { useAuthApi } from "../../hooks/api/auth/useAuthApi";
 import { useAppConfig } from "../../hooks/useFeatures";
@@ -68,7 +67,6 @@ export function ForgotPasswordPage() {
 
     return (
         <main className="page auth-page">
-            <ThemeToggle />
             <PanelCard
                 className="auth-panel"
                 title={t("forgotPassword.title")}

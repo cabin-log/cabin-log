@@ -5,7 +5,6 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { detectDesktopPlatform, isTauriRuntime } from "../../utils/desktopRuntime";
 import { startDesktopWindowDrag } from "../../utils/desktopWindow";
-import { ThemeToggle } from "../ui/toggles/ThemeToggle";
 import { ConnectivityStatus } from "./ConnectivityStatus";
 
 const STANDALONE_TITLEBAR_PATHS = [
@@ -51,9 +50,6 @@ export function DesktopTitleBar() {
             {standalone ? (
                 <div className="desktop-titlebar__tools">
                     <ConnectivityStatus placement="titlebar" />
-                    <div className="desktop-titlebar__theme">
-                        <ThemeToggle />
-                    </div>
                 </div>
             ) : null}
             {platform !== "macos" ? (
