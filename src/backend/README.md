@@ -81,12 +81,17 @@ GitHub backend foundation:
 - Unsupported webhook events are acknowledged as ignored and do not create game activity.
 
 Game foundation:
+- `GET /api/v1/game/settings` returns the current user's game settings, including timezone and the daily cutoff hour.
+- `PATCH /api/v1/game/settings` updates the current user's IANA timezone, for example `{"timezone":"Asia/Seoul"}`.
 - `GET /api/v1/game/stacks` returns the current user's calculated stack profiles.
 - `POST /api/v1/game/stacks/recalculate` recalculates stack profiles from stored GitHub repository language data and recent activities.
+- `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD` returns daily activity counts, points, capped coins, food, pet EXP, and growth material for the selected reward date.
+- `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD` creates the selected date's daily activity reward package once.
 - `GET /api/v1/rewards/packages` returns pending and claimed reward packages for the current user.
 - `POST /api/v1/rewards/packages/{package_id}/claim` claims a reward package and creates or upgrades the owned stack reward.
 - Stack reward packages are idempotent through `reward_grants.grant_key`; sync can be repeated without duplicate packages.
 - Stack profiles can go down when GitHub data changes, but claimed stack rewards keep their highest claimed level.
+- Daily activity summaries use the user's timezone with a 05:00 local cutoff. Activity timestamps remain stored in UTC.
 
 GitHub OAuth snapshot flow:
 

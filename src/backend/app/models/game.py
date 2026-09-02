@@ -1,8 +1,9 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from enum import StrEnum
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     delete,
+    func,
     select,
 )
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 
 from app.core.db.session import Base, get_db
 from app.core.error import GameErrorCode, GameException
+from app.models.activity import Activity, ActivityType
 
 
 class StackRewardType(StrEnum):
@@ -44,8 +47,32 @@ class RewardPackageItemType(StrEnum):
     STACK_REWARD_UPGRADE = "STACK_REWARD_UPGRADE"
     CURRENCY = "CURRENCY"
     FOOD = "FOOD"
+    PET_EXP = "PET_EXP"
     MATERIAL = "MATERIAL"
     COSMETIC = "COSMETIC"
+
+
+DEFAULT_USER_TIMEZONE = "UTC"
+
+
+class UserGameSettings(Base):
+    __tablename__ = "user_game_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    timezone: Mapped[str] = mapped_column(String(64), default=DEFAULT_USER_TIMEZONE, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    user = relationship("User")
 
 
 class UserStackProfile(Base):
@@ -178,6 +205,29 @@ class StackProfileUpsert(BaseModel):
     calculated_at: datetime
 
 
+class UserGameSettingsUpdate(BaseModel):
+    timezone: str = Field(min_length=1, max_length=64)
+
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, value: str) -> str:
+        normalized = value.strip()
+        try:
+            ZoneInfo(normalized)
+        except ZoneInfoNotFoundError:
+            raise ValueError("timezone must be a valid IANA timezone name.") from None
+        return normalized
+
+
+class UserGameSettingsResponse(BaseModel):
+    timezone: str
+    daily_cutoff_hour: int = 5
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class StackProfileResponse(BaseModel):
     language: str
     total_bytes: int
@@ -196,6 +246,46 @@ class StackProfileResponse(BaseModel):
 
 class StackProfilesResponse(BaseModel):
     items: list[StackProfileResponse] = Field(default_factory=list)
+
+
+class DailyActivitySummaryItem(BaseModel):
+    activity_type: ActivityType
+    count: int
+    points: int
+    raw_coins: int
+    capped_coins: int
+
+
+class DailyActivitySummaryCaps(BaseModel):
+    food: int = 10
+    coins: int = 150
+    pet_exp: int = 300
+    growth_material: int = 3
+    package_count: int = 1
+
+
+class DailyActivitySummaryResponse(BaseModel):
+    reward_date: date
+    timezone: str
+    daily_cutoff_hour: int
+    window_start: datetime
+    window_end: datetime
+    total_activity_count: int
+    total_points: int
+    raw_coins: int
+    coins: int
+    food: int
+    pet_exp: int
+    growth_material: int
+    caps: DailyActivitySummaryCaps = Field(default_factory=DailyActivitySummaryCaps)
+    items: list[DailyActivitySummaryItem] = Field(default_factory=list)
+
+
+class DailyRewardPackageResponse(BaseModel):
+    reward_date: date
+    created: bool
+    package: "RewardPackageResponse | None" = None
+    summary: DailyActivitySummaryResponse
 
 
 class RewardPackageItemResponse(BaseModel):
@@ -263,6 +353,10 @@ def _to_stack_profile_response(profile: UserStackProfile) -> StackProfileRespons
     return StackProfileResponse.model_validate(profile)
 
 
+def _to_user_game_settings_response(settings: UserGameSettings) -> UserGameSettingsResponse:
+    return UserGameSettingsResponse.model_validate(settings)
+
+
 def _to_package_response(package: RewardPackage) -> RewardPackageResponse:
     return RewardPackageResponse(
         id=package.id,
@@ -300,6 +394,67 @@ def _to_stack_reward_response(stack_reward: UserStackReward) -> UserStackRewardR
 
 
 class GameRepository:
+    async def get_or_create_user_settings(self, user_id: int) -> UserGameSettingsResponse:
+        async with get_db() as db:
+            result = await db.execute(
+                select(UserGameSettings).where(UserGameSettings.user_id == user_id)
+            )
+            settings = result.scalar_one_or_none()
+            if settings is None:
+                settings = UserGameSettings(user_id=user_id, timezone=DEFAULT_USER_TIMEZONE)
+                db.add(settings)
+                await db.commit()
+                await db.refresh(settings)
+            return _to_user_game_settings_response(settings)
+
+    async def update_user_settings(
+        self,
+        *,
+        user_id: int,
+        form: UserGameSettingsUpdate,
+    ) -> UserGameSettingsResponse:
+        async with get_db() as db:
+            result = await db.execute(
+                select(UserGameSettings).where(UserGameSettings.user_id == user_id)
+            )
+            settings = result.scalar_one_or_none()
+            now = datetime.now(UTC)
+            if settings is None:
+                settings = UserGameSettings(
+                    user_id=user_id,
+                    timezone=form.timezone,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(settings)
+            else:
+                settings.timezone = form.timezone
+                settings.updated_at = now
+            await db.commit()
+            await db.refresh(settings)
+            return _to_user_game_settings_response(settings)
+
+    async def list_daily_activity_counts(
+        self,
+        *,
+        user_id: int,
+        window_start: datetime,
+        window_end: datetime,
+    ) -> dict[ActivityType, int]:
+        async with get_db() as db:
+            result = await db.execute(
+                select(Activity.type, func.count(Activity.id))
+                .where(
+                    Activity.user_id == user_id,
+                    Activity.occurred_at >= window_start,
+                    Activity.occurred_at < window_end,
+                )
+                .group_by(Activity.type)
+            )
+            return {
+                ActivityType(activity_type): int(count) for activity_type, count in result.all()
+            }
+
     async def upsert_stack_profiles(
         self,
         *,
@@ -428,6 +583,18 @@ class GameRepository:
                 .where(RewardPackage.id == db_package.id)
             )
             return _to_package_response(result.scalar_one())
+
+    async def get_package_by_grant_id(self, grant_id: int) -> RewardPackageResponse | None:
+        async with get_db() as db:
+            result = await db.execute(
+                select(RewardPackage)
+                .options(selectinload(RewardPackage.items))
+                .where(RewardPackage.grant_id == grant_id)
+            )
+            package = result.scalar_one_or_none()
+            if package is None:
+                return None
+            return _to_package_response(package)
 
     async def list_reward_packages(
         self,
