@@ -92,11 +92,16 @@ class FakeAuthService:
         _ = state
         _ = redirect_uri
         _ = request
+        profile_image_url = (
+            "https://avatars.githubusercontent.com/u/987654?v=4"
+            if provider == OAuthProvider.GITHUB
+            else self._user.profile_image_url
+        )
         return LoginResponse(
             access_token=f"oauth-access-token-for-{self._user.id}",
             refresh_token=f"oauth-refresh-token-for-{refresh_session_id}",
             token_type="bearer",
-            user=self._user,
+            user=self._user.model_copy(update={"profile_image_url": profile_image_url}),
         )
 
     async def refresh_with_request_context(
@@ -292,6 +297,9 @@ def test_oauth_callback_json_mode_returns_tokens_and_github_profile(
     assert payload["access_token"] == f"oauth-access-token-for-{sample_user.id}"
     assert payload["refresh_token"]
     assert payload["user"]["id"] == sample_user.id
+    assert payload["user"]["profile_image_url"].startswith(
+        "https://avatars.githubusercontent.com/u/987654"
+    )
     assert payload["github_profile"]["login"] == "octodev"
 
 

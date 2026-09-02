@@ -107,6 +107,34 @@ describe("useAuth bootstrap and exception flows", () => {
         expect(sessionStorage.getItem("template_access_token")).toBe("existing-token");
     });
 
+    it("remembers a GitHub account when session revalidation succeeds", async () => {
+        // Given: an existing token resolves to a GitHub-connected user.
+        sessionStorage.setItem("template_access_token", "existing-token");
+        getConfigMock.mockResolvedValue({ login_enabled: true });
+        meMock.mockResolvedValue({
+            ...FULL_SYSTEM_SCENARIO.principal,
+            id: 7,
+            email: "octo@example.com",
+            name: "Octo Dev",
+            oauth_providers: ["github"],
+        });
+
+        // When: auth provider initializes.
+        render(
+            <AuthProvider>
+                <AuthProbe />
+            </AuthProvider>,
+        );
+
+        // Then: the session user is stored as the recent login account without storing tokens.
+        await waitFor(() => {
+            expect(screen.getByTestId("loading").textContent).toBe("false");
+        });
+        expect(window.localStorage.getItem("cabinlog:login:v1:recent-account")).toContain(
+            "octo@example.com",
+        );
+    });
+
     it("clears session when /me fails and refresh also fails", async () => {
         // Given: existing token but both /me and refresh paths fail.
         sessionStorage.setItem("template_access_token", "stale-token");

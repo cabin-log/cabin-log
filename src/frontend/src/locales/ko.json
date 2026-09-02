@@ -76,11 +76,15 @@
         "subtitle": "GitHub 활동으로 성장하는 나만의 오두막에 들어갑니다.",
         "githubUnavailable": "GitHub 로그인을 사용할 수 없습니다. 서버 OAuth 설정을 확인해주세요.",
         "loadingGithub": "GitHub 로그인 설정을 확인하는 중...",
+        "recentAccount": {
+            "startAria": "{{name}} 계정으로 시작"
+        },
         "oauth": {
             "divider": "GitHub 계정으로 시작",
             "providers": {
                 "google": "Google로 계속하기",
-                "github": "GitHub로 계속하기"
+                "github": "GitHub로 계속하기",
+                "githubDifferent": "GitHub로 다시 로그인"
             }
         },
         "fields": {

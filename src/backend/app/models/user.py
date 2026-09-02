@@ -316,13 +316,20 @@ class UserRepository:
         identifier: str,
         is_verified: bool = True,
         role: UserRole = UserRole.USER,
+        profile_image_url: str | None = None,
     ) -> UserResponse:
         async with get_db() as db:
             existing = await db.execute(select(User.id).where(User.email == email).limit(1))
             if existing.first() is not None:
                 raise AuthException(code=AuthErrorCode.EMAIL_ALREADY_EXISTS)
 
-            user = User(email=email, name=name, role=role.value, is_verified=is_verified)
+            user = User(
+                email=email,
+                name=name,
+                role=role.value,
+                profile_image_url=profile_image_url,
+                is_verified=is_verified,
+            )
             user.auth_identities = [AuthIdentity(provider=provider, identifier=identifier)]
             db.add(user)
 
@@ -334,6 +341,25 @@ class UserRepository:
                 raise
 
             return UserResponse.model_validate(user)
+
+    async def update_profile_image_url_if_empty(
+        self, user_id: int, profile_image_url: str
+    ) -> AuthUserDTO | None:
+        async with get_db() as db:
+            result = await db.execute(
+                select(User).where(User.id == user_id, User.is_active.is_(True))
+            )
+            user = result.scalar_one_or_none()
+            if user is None:
+                return None
+            if user.profile_image_url:
+                return None
+
+            user.profile_image_url = profile_image_url
+            user.updated_at = datetime.now(UTC)
+            await db.commit()
+
+        return await self.get_auth_user_by_id(user_id)
 
     async def get_auth_user_by_identity(self, provider: str, identifier: str) -> AuthUserDTO | None:
         async with get_db() as db:
