@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginPage } from "../../../../pages/login/LoginPage";
@@ -43,6 +43,10 @@ describe("LoginPage", () => {
         renderWithRouter(<LoginPage />, "/login");
 
         // Then: only the GitHub login action is available.
+        expect(screen.getByRole("img", { name: "Cabin Log" })).toBeVisible();
+        expect(
+            screen.getByRole("link", { name: "Open Cabinlog GitHub repository" }),
+        ).toHaveAttribute("href", "https://github.com/cabin-log/cabin-log");
         expect(await screen.findByRole("button", { name: "Continue with GitHub" })).toBeVisible();
         expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
         expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
@@ -52,6 +56,24 @@ describe("LoginPage", () => {
         expect(
             screen.queryByRole("button", { name: "Continue with Google" }),
         ).not.toBeInTheDocument();
+    });
+
+    it("starts the cabin entry sequence before GitHub OAuth navigation", async () => {
+        // Given: GitHub login is ready.
+        getOAuthProvidersMock.mockResolvedValue({
+            providers: [{ provider: "github", start_path: "/api/v1/auth/oauth/github/start" }],
+        });
+
+        // When: the GitHub login action is clicked.
+        const { container } = renderWithRouter(<LoginPage />, "/login");
+        const githubLoginButton = await screen.findByRole("button", {
+            name: "Continue with GitHub",
+        });
+        fireEvent.click(githubLoginButton);
+
+        // Then: the page starts the cabin entry animation and prevents duplicate clicks.
+        expect(container.querySelector(".auth-page")).toHaveClass("auth-page--entering-cabin");
+        expect(githubLoginButton).toBeDisabled();
     });
 
     it("shows an OAuth setup message when GitHub login is unavailable", async () => {

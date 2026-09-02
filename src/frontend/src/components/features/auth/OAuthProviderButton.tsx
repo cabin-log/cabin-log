@@ -7,6 +7,7 @@ type OAuthProviderButtonProps = {
     startPath: string;
     disabled?: boolean;
     hideLabel?: boolean;
+    onBeforeNavigate?: (oauthStartUrl: string) => boolean | void;
 };
 
 const PROVIDER_LOGOS: Record<
@@ -29,9 +30,13 @@ export function OAuthProviderButton({
     startPath,
     disabled = false,
     hideLabel = false,
+    onBeforeNavigate,
 }: OAuthProviderButtonProps) {
     const onClick = () => {
         const oauthStartUrl = new URL(startPath, `${getApiBase()}/`).toString();
+        if (onBeforeNavigate?.(oauthStartUrl) === false) {
+            return;
+        }
         window.location.assign(oauthStartUrl);
     };
     const logos = PROVIDER_LOGOS[provider];
