@@ -376,11 +376,13 @@ def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
         "repository_count": 1,
         "created_activity_count": 4,
         "duplicate_activity_count": 0,
+        "created_package_count": 0,
     }
     assert duplicate_response.json() == {
         "repository_count": 1,
         "created_activity_count": 0,
         "duplicate_activity_count": 4,
+        "created_package_count": 0,
     }
 
     repositories_response = integration_client.get(
@@ -409,6 +411,17 @@ def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
     assert {activity["source"] for activity in activities} == {"OAUTH_API"}
     assert all(activity["github_external_id"] for activity in activities)
     assert all(activity["repository_full_name"] == "octodev/cabin" for activity in activities)
+
+    stacks_response = integration_client.get(
+        "/api/v1/game/stacks",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert stacks_response.status_code == 200
+    stacks = {item["language"]: item for item in stacks_response.json()["items"]}
+    assert stacks["Python"]["total_bytes"] == 900
+    assert stacks["Python"]["recent_activity_count"] == 4
+    assert stacks["TypeScript"]["total_bytes"] == 100
+    assert stacks["TypeScript"]["recent_activity_count"] == 4
 
 
 @pytest.mark.primary_data

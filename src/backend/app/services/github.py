@@ -180,10 +180,14 @@ class GitHubService:
             created_count = sum(1 for result in activity_results if not result.duplicate)
             duplicate_count = sum(1 for result in activity_results if result.duplicate)
 
+        from app.services.game import GameService
+
+        created_packages = await GameService().refresh_after_github_sync(user_id=user_id)
         return GitHubOAuthSyncResponse(
             repository_count=len(persisted_repositories),
             created_activity_count=created_count,
             duplicate_activity_count=duplicate_count,
+            created_package_count=len(created_packages),
         )
 
     async def sync_user_repositories(

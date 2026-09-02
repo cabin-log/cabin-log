@@ -24,6 +24,13 @@ from .error import (
     select_error_responses,
     service_exception_to_http,
 )
+from .game_exception import (
+    GameErrorCode,
+    GameErrorDetail,
+    GameErrorResponse,
+    GameException,
+    game_error_responses,
+)
 from .github_exception import (
     GitHubErrorCode,
     GitHubErrorDetail,
@@ -48,6 +55,11 @@ __all__ = [
     "GitHubErrorResponse",
     "GitHubException",
     "github_error_responses",
+    "GameErrorCode",
+    "GameErrorDetail",
+    "GameErrorResponse",
+    "GameException",
+    "game_error_responses",
     "ErrorDetail",
     "ErrorResponse",
     "ServiceErrorCode",
