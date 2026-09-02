@@ -27,7 +27,7 @@ from app.core.observability.request_context import (
 from app.core.observability.tracing import setup_tracing
 from app.core.task_queue.services import TASK_QUEUE_BOOTSTRAP
 from app.models.user import UserResponse, UserRole, Users
-from app.routers.v1 import api_key, auth, events, github, webhooks
+from app.routers.v1 import api_key, auth, events, game, github, rewards, webhooks
 from app.utils.token import create_access_token
 
 logger = get_logger("app.main")
@@ -251,7 +251,9 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
     app.include_router(api_key.router, prefix="/api/v1/api-keys", tags=["API Keys"])
     app.include_router(events.router, prefix="/api/v1/events", tags=["Events"])
+    app.include_router(game.router, prefix="/api/v1/game", tags=["Game"])
     app.include_router(github.router, prefix="/api/v1/github", tags=["GitHub"])
+    app.include_router(rewards.router, prefix="/api/v1/rewards", tags=["Rewards"])
     app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 
     if static_dist_dir.exists():

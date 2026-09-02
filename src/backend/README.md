@@ -67,7 +67,7 @@ Cabinlog auth defaults:
 GitHub backend foundation:
 - `GET /api/v1/github/me` returns the GitHub profile linked during OAuth login for the current bearer/API-key user.
 - GitHub OAuth login is the default data collection path. The callback stores the linked profile, repository/language snapshot, and OAuth API-derived commit, pull request, and issue activities.
-- `POST /api/v1/github/sync` manually refreshes the OAuth API snapshot for the current user with a request-scoped GitHub OAuth access token. The token is used for the sync request and is not stored.
+- `POST /api/v1/github/sync` manually refreshes the OAuth API snapshot for the current user with a request-scoped GitHub OAuth access token. The token is used for the sync request and is not stored. After persistence, it recalculates stack profiles and creates new stack reward packages when thresholds are crossed.
 - `GET /api/v1/github/repositories` returns the repository/language snapshot collected from the OAuth API.
 - `GET /api/v1/github/stack-summary` returns language byte totals and ratios across the collected repositories.
 - `GET /api/v1/github/activities` returns the current user's persisted GitHub-derived activities, including OAuth API snapshot activities and optional webhook activities.
@@ -79,6 +79,14 @@ GitHub backend foundation:
 - Activity webhooks prefer GitHub App `installation.id` for user/repository attribution, then fall back to the sender's linked GitHub profile.
 - Initial activity normalization supports `push` and `pull_request` events and persists them as Cabinlog activities.
 - Unsupported webhook events are acknowledged as ignored and do not create game activity.
+
+Game foundation:
+- `GET /api/v1/game/stacks` returns the current user's calculated stack profiles.
+- `POST /api/v1/game/stacks/recalculate` recalculates stack profiles from stored GitHub repository language data and recent activities.
+- `GET /api/v1/rewards/packages` returns pending and claimed reward packages for the current user.
+- `POST /api/v1/rewards/packages/{package_id}/claim` claims a reward package and creates or upgrades the owned stack reward.
+- Stack reward packages are idempotent through `reward_grants.grant_key`; sync can be repeated without duplicate packages.
+- Stack profiles can go down when GitHub data changes, but claimed stack rewards keep their highest claimed level.
 
 GitHub OAuth snapshot flow:
 
@@ -99,6 +107,7 @@ sequenceDiagram
     User->>API: POST /api/v1/github/sync with GitHub OAuth access token
     API->>GitHub: Refresh OAuth API snapshot
     API->>DB: Upsert refreshed snapshot and ignore duplicate activities
+    API->>DB: Recalculate stack profiles and create stack reward packages
 ```
 
 GitHub App installation flow:

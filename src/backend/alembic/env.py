@@ -14,6 +14,7 @@ from app.core.db.session import Base
 from app.models import (
     activity,  # noqa: F401
     api_key,  # noqa: F401
+    game,  # noqa: F401
     github,  # noqa: F401
     user,  # noqa: F401
 )

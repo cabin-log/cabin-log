@@ -124,6 +124,18 @@ Daily reward grant key:
 daily:{yyyy-mm-dd}:github-activity
 ```
 
+권장 일일 시간 기준:
+
+1. 모든 activity timestamp는 UTC로 저장합니다.
+2. Daily reward 구현 전에 사용자 timezone 설정을 추가합니다.
+3. `occurred_at`을 사용자 timezone으로 변환한 뒤 로컬 05:00 cutoff를 적용해
+   reward date를 계산합니다.
+4. 사용자 timezone이 생기기 전까지는 backend-only reward grant에 UTC date를 사용합니다.
+
+05:00 cutoff는 자정 이후 이어지는 개발 세션이 두 reward day로 쪼개지는 문제를
+줄이면서도 규칙을 결정적으로 유지하기 위한 기준입니다. Grant key에 들어가는
+날짜는 DB 원본 날짜가 아니라 계산된 reward date여야 합니다.
+
 하루 중 reward를 다시 계산할 수는 있지만 package 생성은 idempotent해야 합니다.
 추후 일일 reward를 누적 보정해야 한다면 package를 중복 생성하지 말고 bucket별
 ledger를 따로 둡니다.
@@ -246,6 +258,17 @@ Stack unlock grant key:
 ```text
 stack_reward_upgrade:{language_slug}:level:{mastery_level}:{reward_key}
 ```
+
+현재 backend 구현 범위:
+
+1. `POST /api/v1/github/sync`가 GitHub repository, language, activity를 갱신한 뒤
+   stack profile을 재계산합니다.
+2. 새로 도달한 mastery level마다 stack reward package를 생성합니다.
+3. `GET /api/v1/game/stacks`로 계산된 stack profile을 조회합니다.
+4. `GET /api/v1/rewards/packages`로 도착한 package를 조회합니다.
+5. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
+   owned stack reward를 생성하거나 upgrade합니다.
+6. Daily activity reward package는 아직 구현하지 않았습니다.
 
 기본 language reward key:
 

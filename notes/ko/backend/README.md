@@ -65,7 +65,7 @@ Cabinlog 인증 기본값:
 GitHub 백엔드 기반:
 - `GET /api/v1/github/me`는 OAuth 로그인 중 연결된 현재 사용자의 GitHub profile을 반환합니다.
 - GitHub OAuth 로그인이 기본 데이터 수집 경로입니다. callback에서 연결 profile, repository/language snapshot, OAuth API 기반 commit, pull request, issue activity를 저장합니다.
-- `POST /api/v1/github/sync`는 요청 단위 GitHub OAuth access token으로 현재 사용자의 OAuth API snapshot을 수동 갱신합니다. token은 갱신 요청 중에만 사용하고 저장하지 않습니다.
+- `POST /api/v1/github/sync`는 요청 단위 GitHub OAuth access token으로 현재 사용자의 OAuth API snapshot을 수동 갱신합니다. token은 갱신 요청 중에만 사용하고 저장하지 않습니다. 저장 후 stack profile을 재계산하고 threshold를 넘은 신규 stack reward package를 생성합니다.
 - `GET /api/v1/github/repositories`는 OAuth API로 수집된 repository/language snapshot을 반환합니다.
 - `GET /api/v1/github/stack-summary`는 수집된 repository 전체의 언어 byte 총합과 비율을 반환합니다.
 - `GET /api/v1/github/activities`는 OAuth API snapshot activity와 선택적인 webhook activity를 포함해 현재 사용자의 저장된 GitHub 기반 activity를 반환합니다.
@@ -77,6 +77,14 @@ GitHub 백엔드 기반:
 - Activity webhook은 GitHub App `installation.id`로 사용자/repository 귀속을 우선 처리하고, 없으면 sender의 연결된 GitHub profile로 fallback합니다.
 - 초기 activity 정규화는 `push`, `pull_request` 이벤트를 지원하고 Cabinlog activity로 저장합니다.
 - 지원하지 않는 webhook 이벤트는 ignored 상태로 응답하며 게임 activity를 생성하지 않습니다.
+
+Game 기반:
+- `GET /api/v1/game/stacks`는 현재 사용자의 계산된 stack profile을 반환합니다.
+- `POST /api/v1/game/stacks/recalculate`는 저장된 GitHub repository language와 최근 activity를 기준으로 stack profile을 재계산합니다.
+- `GET /api/v1/rewards/packages`는 현재 사용자의 pending/claimed reward package를 반환합니다.
+- `POST /api/v1/rewards/packages/{package_id}/claim`은 reward package를 수령하고 owned stack reward를 생성하거나 upgrade합니다.
+- Stack reward package는 `reward_grants.grant_key`로 idempotent하게 생성되어 sync를 반복해도 중복 생성되지 않습니다.
+- Stack profile은 GitHub 데이터 변화에 따라 내려갈 수 있지만, 이미 claim한 stack reward는 최고 claim level을 유지합니다.
 
 GitHub OAuth snapshot 흐름:
 
@@ -97,6 +105,7 @@ sequenceDiagram
     User->>API: GitHub OAuth access token으로 POST /api/v1/github/sync
     API->>GitHub: OAuth API snapshot 재조회
     API->>DB: 갱신 snapshot upsert 및 중복 activity 무시
+    API->>DB: stack profile 재계산 및 stack reward package 생성
 ```
 
 GitHub App installation 흐름:

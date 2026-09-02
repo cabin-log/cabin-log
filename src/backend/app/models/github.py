@@ -196,6 +196,7 @@ class GitHubOAuthSyncResponse(BaseModel):
     repository_count: int
     created_activity_count: int
     duplicate_activity_count: int
+    created_package_count: int = 0
 
 
 class GitHubOAuthSyncRequest(BaseModel):

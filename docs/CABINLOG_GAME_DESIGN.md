@@ -127,6 +127,18 @@ Daily reward grant key:
 daily:{yyyy-mm-dd}:github-activity
 ```
 
+Recommended daily time basis:
+
+1. Store all activity timestamps in UTC.
+2. Add a user timezone setting before implementing daily rewards.
+3. Derive the daily reward date by converting `occurred_at` into the user's
+   timezone and applying a 05:00 local-day cutoff.
+4. Until user timezone exists, use UTC dates for backend-only reward grants.
+
+The 05:00 cutoff avoids splitting late-night coding sessions across two reward
+days while keeping the rule deterministic. The date embedded in the grant key
+must be the derived reward date, not the raw database date.
+
 The daily reward can be recalculated during the day, but package creation must
 remain idempotent. If incremental daily top-ups are needed later, use a separate
 ledger entry per bucket, not duplicate packages.
@@ -254,6 +266,17 @@ Stack unlock grant key:
 ```text
 stack_reward_upgrade:{language_slug}:level:{mastery_level}:{reward_key}
 ```
+
+Current backend implementation:
+
+1. `POST /api/v1/github/sync` refreshes GitHub repositories, languages, and
+   activities, then recalculates stack profiles.
+2. Stack reward packages are created for every newly reached mastery level.
+3. `GET /api/v1/game/stacks` exposes the calculated profiles.
+4. `GET /api/v1/rewards/packages` exposes delivered packages.
+5. `POST /api/v1/rewards/packages/{package_id}/claim` claims a package and
+   creates or upgrades the owned stack reward.
+6. Daily activity reward packages are not implemented yet.
 
 Default language reward keys:
 
