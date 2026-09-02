@@ -1,15 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Github } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { OAuthProviderButton } from "../../components/features/auth/OAuthProviderButton";
-import { InlineMessage, PanelCard } from "../../components/ui";
+import { InlineMessage, PanelCard, UserAvatar } from "../../components/ui";
 import { useAuthApi, type OAuthProvider } from "../../hooks/api/auth/useAuthApi";
+import { useAuthContext } from "../../hooks/useAuth";
 import { useAppConfig } from "../../hooks/useFeatures";
+import {
+    getRecentLoginAccount,
+    toRecentLoginAccount,
+    type RecentLoginAccount,
+} from "../../utils/loginHistory";
+import { getApiBase } from "../../utils/apiBase";
 
 export function LoginPage() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { getOAuthProviders } = useAuthApi();
+    const { user, loading: authLoading } = useAuthContext();
     const { data: appConfig, loading: configLoading } = useAppConfig();
     const [oauthProviders, setOAuthProviders] = useState<
         Array<{ provider: OAuthProvider; start_path: string }>
@@ -17,10 +27,17 @@ export function LoginPage() {
     const [oauthLoading, setOAuthLoading] = useState(false);
     const [oauthLoadFailed, setOAuthLoadFailed] = useState(false);
     const [isEnteringCabin, setIsEnteringCabin] = useState(false);
+    const [recentAccount, setRecentAccount] = useState<RecentLoginAccount | null>(() =>
+        getRecentLoginAccount(),
+    );
     const oauthRedirectTimerRef = useRef<number | null>(null);
     const loginEnabled = appConfig?.login_enabled === true;
     const oauthEnabled = appConfig?.oauth_enabled === true;
     const githubProvider = oauthProviders.find((item) => item.provider === "github");
+    const activeGithubAccount = toRecentLoginAccount(user);
+    const accountShortcut = activeGithubAccount ?? recentAccount;
+    const hasActiveAccountSession =
+        Boolean(activeGithubAccount) && activeGithubAccount?.userId === accountShortcut?.userId;
 
     useEffect(() => {
         const run = async () => {
@@ -45,12 +62,32 @@ export function LoginPage() {
     }, [getOAuthProviders, oauthEnabled, loginEnabled]);
 
     useEffect(() => {
-        return () => {
+        const clearOauthRedirectTimer = () => {
             if (oauthRedirectTimerRef.current !== null) {
                 window.clearTimeout(oauthRedirectTimerRef.current);
+                oauthRedirectTimerRef.current = null;
             }
         };
+
+        const resetRestoredEntryState = (event: PageTransitionEvent) => {
+            if (event.persisted) {
+                clearOauthRedirectTimer();
+                setIsEnteringCabin(false);
+            }
+        };
+
+        window.addEventListener("pageshow", resetRestoredEntryState);
+        return () => {
+            window.removeEventListener("pageshow", resetRestoredEntryState);
+            clearOauthRedirectTimer();
+        };
     }, []);
+
+    useEffect(() => {
+        if (activeGithubAccount) {
+            setRecentAccount(activeGithubAccount);
+        }
+    }, [activeGithubAccount]);
 
     const beginCabinEntry = (oauthStartUrl: string) => {
         if (isEnteringCabin) {
@@ -61,6 +98,28 @@ export function LoginPage() {
             window.location.assign(oauthStartUrl);
         }, 1150);
         return false;
+    };
+
+    const startRecentAccount = () => {
+        if (isEnteringCabin) {
+            return;
+        }
+
+        setIsEnteringCabin(true);
+        oauthRedirectTimerRef.current = window.setTimeout(() => {
+            if (hasActiveAccountSession) {
+                navigate("/show-case");
+                return;
+            }
+
+            if (githubProvider) {
+                const oauthStartUrl = new URL(
+                    githubProvider.start_path,
+                    `${getApiBase()}/`,
+                ).toString();
+                window.location.assign(oauthStartUrl);
+            }
+        }, 1150);
     };
 
     let message: string | null = null;
@@ -88,11 +147,42 @@ export function LoginPage() {
                     {configLoading || oauthLoading ? (
                         <InlineMessage tone="info">{t("login.loadingGithub")}</InlineMessage>
                     ) : null}
+                    {loginEnabled &&
+                    accountShortcut &&
+                    (hasActiveAccountSession || githubProvider) ? (
+                        <button
+                            type="button"
+                            className="auth-recent-account-button"
+                            disabled={isEnteringCabin || authLoading}
+                            onClick={startRecentAccount}
+                            aria-label={t("login.recentAccount.startAria", {
+                                name: accountShortcut.name,
+                            })}
+                        >
+                            <UserAvatar
+                                className="auth-recent-account-button__avatar"
+                                imageUrl={accountShortcut.profileImageUrl}
+                                label={accountShortcut.name || accountShortcut.email}
+                            />
+                            <span className="auth-recent-account-button__body">
+                                <span className="auth-recent-account-button__name">
+                                    {accountShortcut.name}
+                                </span>
+                                <span className="auth-recent-account-button__email">
+                                    {accountShortcut.email}
+                                </span>
+                            </span>
+                        </button>
+                    ) : null}
                     {loginEnabled && githubProvider ? (
                         <div className="oauth-provider-list oauth-provider-list--icon-only">
                             <OAuthProviderButton
                                 provider="github"
-                                label={t("login.oauth.providers.github")}
+                                label={t(
+                                    accountShortcut
+                                        ? "login.oauth.providers.githubDifferent"
+                                        : "login.oauth.providers.github",
+                                )}
                                 startPath={githubProvider.start_path}
                                 disabled={isEnteringCabin}
                                 onBeforeNavigate={beginCabinEntry}

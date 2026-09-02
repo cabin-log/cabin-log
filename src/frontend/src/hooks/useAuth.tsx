@@ -13,6 +13,7 @@ import type { AppConfig } from "../api/config/configApi";
 import { useAuthApi } from "./api/auth/useAuthApi";
 import { useConfigApi } from "./api/config/useConfigApi";
 import { clearAccessToken, getAccessToken, setAccessToken } from "../store/session";
+import { rememberRecentLoginAccount } from "../utils/loginHistory";
 
 type AuthContextValue = {
     user: RoleAwareUser | null;
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setAccessToken(refreshResult.access_token);
             const nextUser = await me();
             setUser(nextUser);
+            rememberRecentLoginAccount(nextUser);
         })();
 
         refreshInFlightRef.current = refreshTask;
@@ -72,7 +74,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     clearAccessToken();
                 }
-                setUser(config.bootstrap_user ?? null);
+                const nextUser = config.bootstrap_user ?? null;
+                setUser(nextUser);
+                rememberRecentLoginAccount(nextUser);
                 return;
             }
 
@@ -81,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 try {
                     const nextUser = await me();
                     setUser(nextUser);
+                    rememberRecentLoginAccount(nextUser);
                     return;
                 } catch {
                     clearAccessToken();
@@ -116,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const payload = await loginAuth(input);
                 setAccessToken(payload.access_token);
                 setUser(payload.user);
+                rememberRecentLoginAccount(payload.user);
             },
             signup: async (input) => {
                 await signupAuth(input);
@@ -123,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             updateProfile: async (input) => {
                 const nextUser = await updateMe(input);
                 setUser(nextUser);
+                rememberRecentLoginAccount(nextUser);
             },
             logout: async () => {
                 try {

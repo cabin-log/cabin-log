@@ -189,6 +189,13 @@ class AuthService:
 
         user = await self._resolve_oauth_user(profile)
         if provider == OAuthProvider.GITHUB:
+            if profile.avatar_url and not user.profile_image_url:
+                user_with_avatar = await Users.update_profile_image_url_if_empty(
+                    user_id=user.id,
+                    profile_image_url=profile.avatar_url,
+                )
+                if user_with_avatar is not None:
+                    user = user_with_avatar
             await self._upsert_github_profile(user_id=user.id, profile=profile)
             if SETTINGS.OAUTH_GITHUB_SYNC_ON_LOGIN:
                 try:
@@ -632,6 +639,7 @@ class AuthService:
                 provider=profile.provider.value,
                 identifier=profile.provider_user_id,
                 is_verified=profile.email_verified,
+                profile_image_url=profile.avatar_url,
             )
         except IntegrityError as error:
             logger.debug(

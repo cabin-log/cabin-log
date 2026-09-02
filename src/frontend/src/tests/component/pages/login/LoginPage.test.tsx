@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginPage } from "../../../../pages/login/LoginPage";
@@ -6,6 +6,7 @@ import { renderWithRouter } from "../../../utils/renderWithRouter";
 
 const getOAuthProvidersMock = vi.fn();
 const useAppConfigMock = vi.fn();
+const useAuthContextMock = vi.fn();
 
 vi.mock("../../../../hooks/useFeatures", () => ({
     useAppConfig: () => useAppConfigMock(),
@@ -17,6 +18,10 @@ vi.mock("../../../../hooks/api/auth/useAuthApi", () => ({
     }),
 }));
 
+vi.mock("../../../../hooks/useAuth", () => ({
+    useAuthContext: () => useAuthContextMock(),
+}));
+
 describe("LoginPage", () => {
     beforeEach(() => {
         getOAuthProvidersMock.mockReset();
@@ -26,6 +31,10 @@ describe("LoginPage", () => {
                 email_enabled: false,
                 oauth_enabled: true,
             },
+            loading: false,
+        });
+        useAuthContextMock.mockReturnValue({
+            user: null,
             loading: false,
         });
     });
@@ -58,6 +67,32 @@ describe("LoginPage", () => {
         ).not.toBeInTheDocument();
     });
 
+    it("shows a recent GitHub account shortcut and a GitHub re-login action", async () => {
+        // Given: a previous GitHub login account was remembered in this browser.
+        window.localStorage.setItem(
+            "cabinlog:login:v1:recent-account",
+            JSON.stringify({
+                userId: 7,
+                email: "octo@example.com",
+                name: "Octo Dev",
+                profileImageUrl: null,
+                provider: "github",
+                updatedAt: "2026-09-02T00:00:00.000Z",
+            }),
+        );
+        getOAuthProvidersMock.mockResolvedValue({
+            providers: [{ provider: "github", start_path: "/api/v1/auth/oauth/github/start" }],
+        });
+
+        // When: login page is rendered.
+        renderWithRouter(<LoginPage />, "/login");
+
+        // Then: the remembered account is available and the default OAuth button becomes re-login.
+        expect(await screen.findByRole("button", { name: "Start as Octo Dev" })).toBeVisible();
+        expect(screen.getByText("octo@example.com")).toBeVisible();
+        expect(screen.getByRole("button", { name: "Sign in with GitHub again" })).toBeVisible();
+    });
+
     it("starts the cabin entry sequence before GitHub OAuth navigation", async () => {
         // Given: GitHub login is ready.
         getOAuthProvidersMock.mockResolvedValue({
@@ -74,6 +109,44 @@ describe("LoginPage", () => {
         // Then: the page starts the cabin entry animation and prevents duplicate clicks.
         expect(container.querySelector(".auth-page")).toHaveClass("auth-page--entering-cabin");
         expect(githubLoginButton).toBeDisabled();
+    });
+
+    it("resets the cabin entry sequence when the login page is restored from browser history", async () => {
+        // Given: a recent GitHub account is shown on the login page.
+        window.localStorage.setItem(
+            "cabinlog:login:v1:recent-account",
+            JSON.stringify({
+                userId: 7,
+                email: "octo@example.com",
+                name: "Octo Dev",
+                profileImageUrl: null,
+                provider: "github",
+                updatedAt: "2026-09-02T00:00:00.000Z",
+            }),
+        );
+        getOAuthProvidersMock.mockResolvedValue({
+            providers: [{ provider: "github", start_path: "/api/v1/auth/oauth/github/start" }],
+        });
+
+        // When: entry starts and the page is restored from the browser back-forward cache.
+        const { container } = renderWithRouter(<LoginPage />, "/login");
+        const recentAccountButton = await screen.findByRole("button", {
+            name: "Start as Octo Dev",
+        });
+        fireEvent.click(recentAccountButton);
+        const pageshowEvent = new Event("pageshow") as PageTransitionEvent;
+        Object.defineProperty(pageshowEvent, "persisted", { value: true });
+        act(() => {
+            window.dispatchEvent(pageshowEvent);
+        });
+
+        // Then: the animated entry state is cleared so the login page is usable again.
+        await waitFor(() => {
+            expect(container.querySelector(".auth-page")).not.toHaveClass(
+                "auth-page--entering-cabin",
+            );
+        });
+        expect(recentAccountButton).not.toBeDisabled();
     });
 
     it("shows an OAuth setup message when GitHub login is unavailable", async () => {
