@@ -278,3 +278,31 @@ def test_game_settings_and_daily_activity_summary_use_timezone_cutoff(
     duplicate_reward = duplicate_reward_response.json()
     assert duplicate_reward["created"] is False
     assert duplicate_reward["package"]["id"] == reward["package"]["id"]
+
+    claim_response = integration_client.post(
+        f"/api/v1/rewards/packages/{reward['package']['id']}/claim",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert claim_response.status_code == 200
+    claimed = claim_response.json()
+    assert claimed["package"]["status"] == "CLAIMED"
+    assert claimed["wallet"]["coins"] == 41
+    claimed_inventory = {item["item_key"]: item for item in claimed["inventory"]}
+    assert claimed_inventory["basic_feed"]["quantity"] == 3
+    assert claimed_inventory["pet_exp"]["quantity"] == 172
+    assert claimed_inventory["growth_crystal"]["quantity"] == 1
+
+    state_response = integration_client.get(
+        "/api/v1/game/state",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert state_response.status_code == 200
+    state = state_response.json()
+    assert state["settings"]["timezone"] == "Asia/Seoul"
+    assert state["today"]["timezone"] == "Asia/Seoul"
+    assert state["wallet"]["coins"] == 41
+    state_inventory = {item["item_key"]: item for item in state["inventory"]}
+    assert state_inventory["basic_feed"]["quantity"] == 3
+    assert state_inventory["pet_exp"]["quantity"] == 172
+    assert state_inventory["growth_crystal"]["quantity"] == 1
+    assert state["pending_packages"] == []

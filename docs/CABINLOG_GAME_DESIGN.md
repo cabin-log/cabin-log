@@ -280,9 +280,11 @@ Current backend implementation:
 5. Stack reward packages are created for every newly reached mastery level.
 6. `GET /api/v1/game/stacks` exposes the calculated profiles.
 7. `GET /api/v1/rewards/packages` exposes delivered packages.
-8. `POST /api/v1/rewards/packages/{package_id}/claim` claims a package and
-   creates or upgrades the owned stack reward.
-9. Wallet and inventory balance mutation during claim is not implemented yet.
+8. `POST /api/v1/rewards/packages/{package_id}/claim` claims a package, updates
+   wallet coins, stacks inventory items, and creates or upgrades owned stack
+   rewards.
+9. `GET /api/v1/game/state` exposes the backend state needed by the first
+   playable cabin screen.
 
 Default language reward keys:
 

@@ -191,6 +191,55 @@ class UserStackReward(Base):
     user = relationship("User")
 
 
+class UserWallet(Base):
+    __tablename__ = "user_wallets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+    coins: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    user = relationship("User")
+
+
+class UserInventoryItem(Base):
+    __tablename__ = "user_inventory_items"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "item_type",
+            "item_key",
+            name="uq_user_inventory_items_user_type_key",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    item_type: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    item_key: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    item_metadata: Mapped[dict[str, Any]] = mapped_column("metadata", JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    user = relationship("User")
+
+
 class StackProfileUpsert(BaseModel):
     user_id: int
     language: str
@@ -319,9 +368,34 @@ class UserStackRewardResponse(BaseModel):
     updated_at: datetime
 
 
+class UserWalletResponse(BaseModel):
+    coins: int
+    updated_at: datetime
+
+
+class UserInventoryItemResponse(BaseModel):
+    item_type: RewardPackageItemType
+    item_key: str
+    quantity: int
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    updated_at: datetime
+
+
 class RewardPackageClaimResponse(BaseModel):
     package: RewardPackageResponse
     stack_rewards: list[UserStackRewardResponse] = Field(default_factory=list)
+    wallet: UserWalletResponse | None = None
+    inventory: list[UserInventoryItemResponse] = Field(default_factory=list)
+
+
+class GameStateResponse(BaseModel):
+    settings: UserGameSettingsResponse
+    today: DailyActivitySummaryResponse
+    wallet: UserWalletResponse
+    inventory: list[UserInventoryItemResponse] = Field(default_factory=list)
+    stack_profiles: StackProfilesResponse
+    stack_rewards: list[UserStackRewardResponse] = Field(default_factory=list)
+    pending_packages: list[RewardPackageResponse] = Field(default_factory=list)
 
 
 class RewardPackageCreateItem(BaseModel):
@@ -390,6 +464,20 @@ def _to_stack_reward_response(stack_reward: UserStackReward) -> UserStackRewardR
         exp=stack_reward.exp,
         is_featured=stack_reward.is_featured,
         updated_at=stack_reward.updated_at,
+    )
+
+
+def _to_wallet_response(wallet: UserWallet) -> UserWalletResponse:
+    return UserWalletResponse(coins=wallet.coins, updated_at=wallet.updated_at)
+
+
+def _to_inventory_item_response(item: UserInventoryItem) -> UserInventoryItemResponse:
+    return UserInventoryItemResponse(
+        item_type=RewardPackageItemType(item.item_type),
+        item_key=item.item_key,
+        quantity=item.quantity,
+        metadata=item.item_metadata or {},
+        updated_at=item.updated_at,
     )
 
 
@@ -613,6 +701,31 @@ class GameRepository:
             result = await db.execute(query)
             return [_to_package_response(package) for package in result.scalars().unique().all()]
 
+    async def get_or_create_wallet(self, user_id: int) -> UserWalletResponse:
+        async with get_db() as db:
+            wallet = await self._get_or_create_wallet_in_session(db, user_id=user_id)
+            await db.commit()
+            await db.refresh(wallet)
+            return _to_wallet_response(wallet)
+
+    async def list_inventory_items(self, user_id: int) -> list[UserInventoryItemResponse]:
+        async with get_db() as db:
+            result = await db.execute(
+                select(UserInventoryItem)
+                .where(UserInventoryItem.user_id == user_id)
+                .order_by(UserInventoryItem.item_type, UserInventoryItem.item_key)
+            )
+            return [_to_inventory_item_response(item) for item in result.scalars().all()]
+
+    async def list_stack_rewards(self, user_id: int) -> list[UserStackRewardResponse]:
+        async with get_db() as db:
+            result = await db.execute(
+                select(UserStackReward)
+                .where(UserStackReward.user_id == user_id)
+                .order_by(UserStackReward.source_language, UserStackReward.reward_key)
+            )
+            return [_to_stack_reward_response(reward) for reward in result.scalars().all()]
+
     async def claim_reward_package(
         self,
         *,
@@ -635,9 +748,37 @@ class GameRepository:
                 raise GameException(code=GameErrorCode.REWARD_PACKAGE_ALREADY_CLAIMED)
 
             stack_rewards: list[UserStackReward] = []
+            inventory_items: list[UserInventoryItem] = []
+            wallet: UserWallet | None = None
             for item in package.items:
+                if (
+                    item.item_type == RewardPackageItemType.CURRENCY.value
+                    and item.item_key == "coins"
+                ):
+                    wallet = await self._get_or_create_wallet_in_session(db, user_id=user_id)
+                    wallet.coins += item.quantity
+                    wallet.updated_at = datetime.now(UTC)
+                    continue
+                if item.item_type in {
+                    RewardPackageItemType.FOOD.value,
+                    RewardPackageItemType.PET_EXP.value,
+                    RewardPackageItemType.MATERIAL.value,
+                    RewardPackageItemType.COSMETIC.value,
+                }:
+                    inventory_items.append(
+                        await self._upsert_inventory_item_in_session(
+                            db,
+                            user_id=user_id,
+                            item_type=RewardPackageItemType(item.item_type),
+                            item_key=item.item_key,
+                            quantity=item.quantity,
+                            metadata=item.item_metadata or {},
+                        )
+                    )
+                    continue
                 if item.item_type != RewardPackageItemType.STACK_REWARD_UPGRADE.value:
                     continue
+
                 metadata = item.item_metadata or {}
                 reward_key = item.item_key
                 reward_type = metadata.get("reward_type")
@@ -662,6 +803,10 @@ class GameRepository:
             package.claimed_at = now
             await db.commit()
             await db.refresh(package)
+            if wallet is not None:
+                await db.refresh(wallet)
+            for inventory_item in inventory_items:
+                await db.refresh(inventory_item)
             result = await db.execute(
                 select(RewardPackage)
                 .options(selectinload(RewardPackage.items))
@@ -673,7 +818,63 @@ class GameRepository:
                 stack_rewards=[
                     _to_stack_reward_response(stack_reward) for stack_reward in stack_rewards
                 ],
+                wallet=_to_wallet_response(wallet) if wallet is not None else None,
+                inventory=[
+                    _to_inventory_item_response(inventory_item)
+                    for inventory_item in inventory_items
+                ],
             )
+
+    async def _get_or_create_wallet_in_session(
+        self,
+        db: AsyncSession,
+        /,
+        *,
+        user_id: int,
+    ) -> UserWallet:
+        result = await db.execute(select(UserWallet).where(UserWallet.user_id == user_id))
+        wallet = result.scalar_one_or_none()
+        if wallet is None:
+            wallet = UserWallet(user_id=user_id, coins=0)
+            db.add(wallet)
+            await db.flush()
+        return wallet
+
+    async def _upsert_inventory_item_in_session(
+        self,
+        db: AsyncSession,
+        /,
+        *,
+        user_id: int,
+        item_type: RewardPackageItemType,
+        item_key: str,
+        quantity: int,
+        metadata: dict[str, Any],
+    ) -> UserInventoryItem:
+        result = await db.execute(
+            select(UserInventoryItem).where(
+                UserInventoryItem.user_id == user_id,
+                UserInventoryItem.item_type == item_type.value,
+                UserInventoryItem.item_key == item_key,
+            )
+        )
+        inventory_item = result.scalar_one_or_none()
+        now = datetime.now(UTC)
+        if inventory_item is None:
+            inventory_item = UserInventoryItem(
+                user_id=user_id,
+                item_type=item_type.value,
+                item_key=item_key,
+                quantity=quantity,
+                item_metadata=metadata,
+            )
+            db.add(inventory_item)
+            await db.flush()
+        else:
+            inventory_item.quantity += quantity
+            inventory_item.item_metadata = metadata
+            inventory_item.updated_at = now
+        return inventory_item
 
     async def _upsert_stack_reward_in_session(
         self,
