@@ -346,6 +346,348 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/game/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Game State */
+        get: operations["game_state_api_v1_game_state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/game/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Game Settings */
+        get: operations["game_settings_api_v1_game_settings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Game Settings Update */
+        patch: operations["game_settings_update_api_v1_game_settings_patch"];
+        trace?: never;
+    };
+    "/api/v1/game/cabin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Game Cabin */
+        get: operations["game_cabin_api_v1_game_cabin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/game/cabin/placements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Game Cabin Placement Create */
+        post: operations["game_cabin_placement_create_api_v1_game_cabin_placements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/game/cabin/placements/{placement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Game Cabin Placement Delete */
+        delete: operations["game_cabin_placement_delete_api_v1_game_cabin_placements__placement_id__delete"];
+        options?: never;
+        head?: never;
+        /** Game Cabin Placement Update */
+        patch: operations["game_cabin_placement_update_api_v1_game_cabin_placements__placement_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/game/stacks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Game Stack Profiles */
+        get: operations["game_stack_profiles_api_v1_game_stacks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/game/stacks/recalculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Game Stack Profiles Recalculate */
+        post: operations["game_stack_profiles_recalculate_api_v1_game_stacks_recalculate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/game/activity/daily-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Game Daily Activity Summary */
+        get: operations["game_daily_activity_summary_api_v1_game_activity_daily_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/game/activity/daily-reward": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Game Daily Reward Package */
+        post: operations["game_daily_reward_package_api_v1_game_activity_daily_reward_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Github Me */
+        get: operations["github_me_api_v1_github_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/app/install-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Github App Install Url */
+        get: operations["github_app_install_url_api_v1_github_app_install_url_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Github Activities */
+        get: operations["github_activities_api_v1_github_activities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Github Oauth Sync */
+        post: operations["github_oauth_sync_api_v1_github_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/repositories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Github Repositories */
+        get: operations["github_repositories_api_v1_github_repositories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/installations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Github Installations */
+        get: operations["github_installations_api_v1_github_installations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/installations/{github_installation_id}/sync-repositories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Github Installation Sync Repositories */
+        post: operations["github_installation_sync_repositories_api_v1_github_installations__github_installation_id__sync_repositories_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/github/stack-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Github Stack Summary */
+        get: operations["github_stack_summary_api_v1_github_stack_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rewards/packages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reward Packages */
+        get: operations["reward_packages_api_v1_rewards_packages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rewards/packages/{package_id}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reward Package Claim */
+        post: operations["reward_package_claim_api_v1_rewards_packages__package_id__claim_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Github Webhook */
+        post: operations["github_webhook_api_v1_webhooks_github_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -420,12 +762,63 @@ export interface components {
             /** Items */
             items: components["schemas"]["APIKeyResponse"][];
         };
+        /** ActivityResponse */
+        ActivityResponse: {
+            /** Id */
+            id: number;
+            /** User Id */
+            user_id: number;
+            type: components["schemas"]["ActivityType"];
+            /**
+             * Source
+             * @default WEBHOOK
+             */
+            source: string;
+            /** Github Installation Id */
+            github_installation_id?: number | null;
+            /** Repository Github Id */
+            repository_github_id?: number | null;
+            /** Repository Full Name */
+            repository_full_name?: string | null;
+            /** Github Delivery Id */
+            github_delivery_id?: string | null;
+            /** Github External Id */
+            github_external_id?: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * ActivityType
+         * @enum {string}
+         */
+        ActivityType:
+            | "COMMIT"
+            | "PUSH"
+            | "PULL_REQUEST_OPENED"
+            | "PULL_REQUEST_MERGED"
+            | "REVIEW"
+            | "ISSUE"
+            | "RELEASE";
         /** AppConfigResponse */
         AppConfigResponse: {
             /** Api Base Path */
             api_base_path: string;
             /** Login Enabled */
             login_enabled: boolean;
+            /** Password Auth Enabled */
+            password_auth_enabled: boolean;
             /** Frontend Base Path */
             frontend_base_path: string;
             /** Email Enabled */
@@ -452,6 +845,7 @@ export interface components {
                 | "ACCOUNT_LOCKED"
                 | "EMAIL_NOT_VERIFIED"
                 | "LOGIN_DISABLED"
+                | "PASSWORD_AUTH_DISABLED"
                 | "EMAIL_DISABLED"
                 | "INVALID_TOKEN"
                 | "INSUFFICIENT_ROLE"
@@ -506,6 +900,199 @@ export interface components {
             /** Session Id */
             session_id?: string | null;
         };
+        /**
+         * CabinObjectType
+         * @enum {string}
+         */
+        CabinObjectType: "SYSTEM" | "STACK_REWARD" | "INVENTORY_ITEM" | "FURNITURE";
+        /** CabinPlacementCreate */
+        CabinPlacementCreate: {
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /**
+             * Z
+             * @default 0
+             */
+            z: number;
+            /**
+             * Rotation
+             * @default 0
+             */
+            rotation: number;
+            /**
+             * Width
+             * @default 1
+             */
+            width: number;
+            /**
+             * Depth
+             * @default 1
+             */
+            depth: number;
+            object_type: components["schemas"]["CabinObjectType"];
+            /** Object Key */
+            object_key: string;
+        };
+        /** CabinPlacementResponse */
+        CabinPlacementResponse: {
+            /** Id */
+            id: number;
+            object_type: components["schemas"]["CabinObjectType"];
+            /** Object Key */
+            object_key: string;
+            /** X */
+            x: number;
+            /** Y */
+            y: number;
+            /** Z */
+            z: number;
+            /** Rotation */
+            rotation: number;
+            /** Width */
+            width: number;
+            /** Depth */
+            depth: number;
+            /**
+             * Locked
+             * @default false
+             */
+            locked: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CabinPlacementUpdate */
+        CabinPlacementUpdate: {
+            /** X */
+            x?: number | null;
+            /** Y */
+            y?: number | null;
+            /** Z */
+            z?: number | null;
+            /** Rotation */
+            rotation?: number | null;
+            /** Width */
+            width?: number | null;
+            /** Depth */
+            depth?: number | null;
+        };
+        /** CabinResponse */
+        CabinResponse: {
+            /** Id */
+            id: number;
+            /** Width */
+            width: number;
+            /** Depth */
+            depth: number;
+            /** Tile Width */
+            tile_width: number;
+            /** Tile Height */
+            tile_height: number;
+            /** Tile Z Height */
+            tile_z_height: number;
+            /** Placements */
+            placements?: components["schemas"]["CabinPlacementResponse"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DailyActivitySummaryCaps */
+        DailyActivitySummaryCaps: {
+            /**
+             * Food
+             * @default 10
+             */
+            food: number;
+            /**
+             * Coins
+             * @default 150
+             */
+            coins: number;
+            /**
+             * Pet Exp
+             * @default 300
+             */
+            pet_exp: number;
+            /**
+             * Growth Material
+             * @default 3
+             */
+            growth_material: number;
+            /**
+             * Package Count
+             * @default 1
+             */
+            package_count: number;
+        };
+        /** DailyActivitySummaryItem */
+        DailyActivitySummaryItem: {
+            activity_type: components["schemas"]["ActivityType"];
+            /** Count */
+            count: number;
+            /** Points */
+            points: number;
+            /** Raw Coins */
+            raw_coins: number;
+            /** Capped Coins */
+            capped_coins: number;
+        };
+        /** DailyActivitySummaryResponse */
+        DailyActivitySummaryResponse: {
+            /**
+             * Reward Date
+             * Format: date
+             */
+            reward_date: string;
+            /** Timezone */
+            timezone: string;
+            /** Daily Cutoff Hour */
+            daily_cutoff_hour: number;
+            /**
+             * Window Start
+             * Format: date-time
+             */
+            window_start: string;
+            /**
+             * Window End
+             * Format: date-time
+             */
+            window_end: string;
+            /** Total Activity Count */
+            total_activity_count: number;
+            /** Total Points */
+            total_points: number;
+            /** Raw Coins */
+            raw_coins: number;
+            /** Coins */
+            coins: number;
+            /** Food */
+            food: number;
+            /** Pet Exp */
+            pet_exp: number;
+            /** Growth Material */
+            growth_material: number;
+            caps?: components["schemas"]["DailyActivitySummaryCaps"];
+            /** Items */
+            items?: components["schemas"]["DailyActivitySummaryItem"][];
+        };
+        /** DailyRewardPackageResponse */
+        DailyRewardPackageResponse: {
+            /**
+             * Reward Date
+             * Format: date
+             */
+            reward_date: string;
+            /** Created */
+            created: boolean;
+            package?: components["schemas"]["RewardPackageResponse"] | null;
+            summary: components["schemas"]["DailyActivitySummaryResponse"];
+        };
         /** ForgotPasswordForm */
         ForgotPasswordForm: {
             /** Email */
@@ -515,6 +1102,204 @@ export interface components {
         ForgotPasswordResponse: {
             /** Message */
             message: string;
+        };
+        /** GameErrorDetail */
+        GameErrorDetail: {
+            /**
+             * Error
+             * @example REWARD_PACKAGE_NOT_FOUND
+             * @enum {string}
+             */
+            error:
+                | "REWARD_PACKAGE_NOT_FOUND"
+                | "REWARD_PACKAGE_ALREADY_CLAIMED"
+                | "CABIN_PLACEMENT_NOT_FOUND"
+                | "CABIN_PLACEMENT_INVALID"
+                | "CABIN_PLACEMENT_CONFLICT"
+                | "CABIN_ITEM_NOT_OWNED"
+                | "CABIN_SYSTEM_PLACEMENT_LOCKED";
+            /** Message */
+            message: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** GameErrorResponse */
+        GameErrorResponse: {
+            detail: components["schemas"]["GameErrorDetail"];
+        };
+        /** GameStateResponse */
+        GameStateResponse: {
+            settings: components["schemas"]["UserGameSettingsResponse"];
+            today: components["schemas"]["DailyActivitySummaryResponse"];
+            wallet: components["schemas"]["UserWalletResponse"];
+            /** Inventory */
+            inventory?: components["schemas"]["UserInventoryItemResponse"][];
+            cabin: components["schemas"]["CabinResponse"];
+            stack_profiles: components["schemas"]["StackProfilesResponse"];
+            /** Stack Rewards */
+            stack_rewards?: components["schemas"]["UserStackRewardResponse"][];
+            /** Pending Packages */
+            pending_packages?: components["schemas"]["RewardPackageResponse"][];
+        };
+        /** GitHubAppInstallUrlResponse */
+        GitHubAppInstallUrlResponse: {
+            /** Configured */
+            configured: boolean;
+            /** Install Url */
+            install_url?: string | null;
+        };
+        /** GitHubErrorDetail */
+        GitHubErrorDetail: {
+            /**
+             * Error
+             * @example GITHUB_PROFILE_NOT_FOUND
+             * @enum {string}
+             */
+            error:
+                | "GITHUB_PROFILE_NOT_FOUND"
+                | "GITHUB_API_REQUEST_FAILED"
+                | "GITHUB_APP_CONFIG_INVALID"
+                | "GITHUB_INSTALLATION_NOT_FOUND"
+                | "GITHUB_WEBHOOK_SECRET_MISSING"
+                | "GITHUB_WEBHOOK_INVALID_SIGNATURE"
+                | "GITHUB_WEBHOOK_MALFORMED_PAYLOAD";
+            /** Message */
+            message: string;
+            /** Details */
+            details?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** GitHubErrorResponse */
+        GitHubErrorResponse: {
+            detail: components["schemas"]["GitHubErrorDetail"];
+        };
+        /** GitHubInstallationResponse */
+        GitHubInstallationResponse: {
+            /** User Id */
+            user_id?: number | null;
+            /** Github Installation Id */
+            github_installation_id: number;
+            /** Account Id */
+            account_id?: number | null;
+            /** Account Login */
+            account_login?: string | null;
+            /** Account Type */
+            account_type?: string | null;
+            /** Target Type */
+            target_type?: string | null;
+            /** Repository Selection */
+            repository_selection?: string | null;
+            /** Suspended At */
+            suspended_at?: string | null;
+            /** Deleted At */
+            deleted_at?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** GitHubInstallationSyncResponse */
+        GitHubInstallationSyncResponse: {
+            /** Github Installation Id */
+            github_installation_id: number;
+            /** Repository Count */
+            repository_count: number;
+            /** Repositories */
+            repositories?: components["schemas"]["GitHubRepositoryResponse"][];
+        };
+        /** GitHubOAuthSyncRequest */
+        GitHubOAuthSyncRequest: {
+            /**
+             * Access Token
+             * Format: password
+             */
+            access_token: string;
+        };
+        /** GitHubOAuthSyncResponse */
+        GitHubOAuthSyncResponse: {
+            /** Repository Count */
+            repository_count: number;
+            /** Created Activity Count */
+            created_activity_count: number;
+            /** Duplicate Activity Count */
+            duplicate_activity_count: number;
+            /**
+             * Created Package Count
+             * @default 0
+             */
+            created_package_count: number;
+        };
+        /** GitHubProfileResponse */
+        GitHubProfileResponse: {
+            /** User Id */
+            user_id: number;
+            /** Github User Id */
+            github_user_id: number;
+            /** Login */
+            login: string;
+            /** Display Name */
+            display_name?: string | null;
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Profile Url */
+            profile_url?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** GitHubRepositoryResponse */
+        GitHubRepositoryResponse: {
+            /** Github Installation Id */
+            github_installation_id?: number | null;
+            /** Github Repo Id */
+            github_repo_id: number;
+            /** Owner Login */
+            owner_login: string;
+            /** Name */
+            name: string;
+            /** Full Name */
+            full_name: string;
+            /** Private */
+            private: boolean;
+            /** Html Url */
+            html_url?: string | null;
+            /** Default Branch */
+            default_branch?: string | null;
+            /** Primary Language */
+            primary_language?: string | null;
+            /** Pushed At */
+            pushed_at?: string | null;
+            /** Languages */
+            languages?: {
+                [key: string]: number;
+            };
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** GitHubStackLanguageResponse */
+        GitHubStackLanguageResponse: {
+            /** Language */
+            language: string;
+            /** Bytes */
+            bytes: number;
+            /** Ratio */
+            ratio: number;
+        };
+        /** GitHubStackSummaryResponse */
+        GitHubStackSummaryResponse: {
+            /** Total Bytes */
+            total_bytes: number;
+            /** Languages */
+            languages: components["schemas"]["GitHubStackLanguageResponse"][];
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -599,6 +1384,74 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** RewardPackageClaimResponse */
+        RewardPackageClaimResponse: {
+            package: components["schemas"]["RewardPackageResponse"];
+            /** Stack Rewards */
+            stack_rewards?: components["schemas"]["UserStackRewardResponse"][];
+            wallet?: components["schemas"]["UserWalletResponse"] | null;
+            /** Inventory */
+            inventory?: components["schemas"]["UserInventoryItemResponse"][];
+        };
+        /** RewardPackageItemResponse */
+        RewardPackageItemResponse: {
+            /** Id */
+            id: number;
+            item_type: components["schemas"]["RewardPackageItemType"];
+            /** Item Key */
+            item_key: string;
+            /** Quantity */
+            quantity: number;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * RewardPackageItemType
+         * @enum {string}
+         */
+        RewardPackageItemType:
+            | "STACK_REWARD_UPGRADE"
+            | "CURRENCY"
+            | "FOOD"
+            | "PET_EXP"
+            | "MATERIAL"
+            | "COSMETIC";
+        /** RewardPackageResponse */
+        RewardPackageResponse: {
+            /** Id */
+            id: number;
+            source: components["schemas"]["RewardPackageSource"];
+            status: components["schemas"]["RewardPackageStatus"];
+            /** Title */
+            title: string;
+            /** Description */
+            description?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Claimed At */
+            claimed_at?: string | null;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** Items */
+            items?: components["schemas"]["RewardPackageItemResponse"][];
+        };
+        /**
+         * RewardPackageSource
+         * @enum {string}
+         */
+        RewardPackageSource: "GITHUB_SYNC" | "DAILY_REWARD" | "ACHIEVEMENT";
+        /**
+         * RewardPackageStatus
+         * @enum {string}
+         */
+        RewardPackageStatus: "PENDING" | "CLAIMED" | "EXPIRED";
         /** SignupForm */
         SignupForm: {
             /** Email */
@@ -608,12 +1461,85 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** StackProfileResponse */
+        StackProfileResponse: {
+            /** Language */
+            language: string;
+            /** Total Bytes */
+            total_bytes: number;
+            /** Ratio */
+            ratio: number;
+            /** Repository Count */
+            repository_count: number;
+            /** Recent Activity Count */
+            recent_activity_count: number;
+            /** Active Days 30D */
+            active_days_30d: number;
+            /** Score */
+            score: number;
+            /** Tier */
+            tier: number;
+            /** Mastery Level */
+            mastery_level: number;
+            /**
+             * Calculated At
+             * Format: date-time
+             */
+            calculated_at: string;
+        };
+        /** StackProfilesResponse */
+        StackProfilesResponse: {
+            /** Items */
+            items?: components["schemas"]["StackProfileResponse"][];
+        };
+        /**
+         * StackRewardType
+         * @enum {string}
+         */
+        StackRewardType: "ANIMAL" | "FURNITURE";
         /** UpdateProfileForm */
         UpdateProfileForm: {
             /** Name */
             name?: string | null;
             /** Profile Image Url */
             profile_image_url?: string | null;
+        };
+        /** UserGameSettingsResponse */
+        UserGameSettingsResponse: {
+            /** Timezone */
+            timezone: string;
+            /**
+             * Daily Cutoff Hour
+             * @default 5
+             */
+            daily_cutoff_hour: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** UserGameSettingsUpdate */
+        UserGameSettingsUpdate: {
+            /** Timezone */
+            timezone: string;
+        };
+        /** UserInventoryItemResponse */
+        UserInventoryItemResponse: {
+            item_type: components["schemas"]["RewardPackageItemType"];
+            /** Item Key */
+            item_key: string;
+            /** Quantity */
+            quantity: number;
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** UserResponse */
         UserResponse: {
@@ -649,6 +1575,37 @@ export interface components {
             active_users: number;
             /** Admin Users */
             admin_users: number;
+        };
+        /** UserStackRewardResponse */
+        UserStackRewardResponse: {
+            /** Reward Key */
+            reward_key: string;
+            reward_type: components["schemas"]["StackRewardType"];
+            /** Source Language */
+            source_language: string;
+            /** Stage */
+            stage: number;
+            /** Stack Reward Level */
+            stack_reward_level: number;
+            /** Exp */
+            exp: number;
+            /** Is Featured */
+            is_featured: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** UserWalletResponse */
+        UserWalletResponse: {
+            /** Coins */
+            coins: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -743,6 +1700,23 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "PASSWORD_AUTH_DISABLED",
+                     *         "message": "Password-based authentication is disabled."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthErrorResponse"];
                 };
             };
             /** @description Conflict */
@@ -863,7 +1837,9 @@ export interface operations {
     };
     oauth_start_api_v1_auth_oauth__provider__start_get: {
         parameters: {
-            query?: never;
+            query?: {
+                prompt?: string | null;
+            };
             header?: never;
             path: {
                 provider: components["schemas"]["OAuthProvider"];
@@ -959,11 +1935,13 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            307: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -1402,6 +2380,23 @@ export interface operations {
                     "application/json": components["schemas"]["AuthErrorResponse"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "PASSWORD_AUTH_DISABLED",
+                     *         "message": "Password-based authentication is disabled."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthErrorResponse"];
+                };
+            };
             /** @description Not Found */
             404: {
                 headers: {
@@ -1452,6 +2447,23 @@ export interface operations {
                     "application/json": components["schemas"]["ResendVerificationResponse"];
                 };
             };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "PASSWORD_AUTH_DISABLED",
+                     *         "message": "Password-based authentication is disabled."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AuthErrorResponse"];
+                };
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -1494,8 +2506,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "detail": {
-                     *         "error": "EMAIL_DISABLED",
-                     *         "message": "Email-based features are disabled."
+                     *         "error": "PASSWORD_AUTH_DISABLED",
+                     *         "message": "Password-based authentication is disabled."
                      *       }
                      *     }
                      */
@@ -1561,8 +2573,8 @@ export interface operations {
                     /**
                      * @example {
                      *       "detail": {
-                     *         "error": "EMAIL_DISABLED",
-                     *         "message": "Email-based features are disabled."
+                     *         "error": "PASSWORD_AUTH_DISABLED",
+                     *         "message": "Password-based authentication is disabled."
                      *       }
                      *     }
                      */
@@ -1834,6 +2846,936 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["AuthErrorResponse"];
+                };
+            };
+        };
+    };
+    game_state_api_v1_game_state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameStateResponse"];
+                };
+            };
+        };
+    };
+    game_settings_api_v1_game_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserGameSettingsResponse"];
+                };
+            };
+        };
+    };
+    game_settings_update_api_v1_game_settings_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserGameSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserGameSettingsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    game_cabin_api_v1_game_cabin_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CabinResponse"];
+                };
+            };
+        };
+    };
+    game_cabin_placement_create_api_v1_game_cabin_placements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CabinPlacementCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CabinPlacementResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_PLACEMENT_INVALID",
+                     *         "message": "Cabin placement is outside the cabin grid."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_ITEM_NOT_OWNED",
+                     *         "message": "Cabin object is not owned by the user."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_PLACEMENT_CONFLICT",
+                     *         "message": "Cabin placement overlaps an existing object."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    game_cabin_placement_delete_api_v1_game_cabin_placements__placement_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_SYSTEM_PLACEMENT_LOCKED",
+                     *         "message": "System cabin placements cannot be changed."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_PLACEMENT_NOT_FOUND",
+                     *         "message": "Cabin placement was not found."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    game_cabin_placement_update_api_v1_game_cabin_placements__placement_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                placement_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CabinPlacementUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CabinPlacementResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_PLACEMENT_INVALID",
+                     *         "message": "Cabin placement is outside the cabin grid."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_SYSTEM_PLACEMENT_LOCKED",
+                     *         "message": "System cabin placements cannot be changed."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_PLACEMENT_NOT_FOUND",
+                     *         "message": "Cabin placement was not found."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "CABIN_PLACEMENT_CONFLICT",
+                     *         "message": "Cabin placement overlaps an existing object."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    game_stack_profiles_api_v1_game_stacks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackProfilesResponse"];
+                };
+            };
+        };
+    };
+    game_stack_profiles_recalculate_api_v1_game_stacks_recalculate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackProfilesResponse"];
+                };
+            };
+        };
+    };
+    game_daily_activity_summary_api_v1_game_activity_daily_summary_get: {
+        parameters: {
+            query?: {
+                reward_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyActivitySummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    game_daily_reward_package_api_v1_game_activity_daily_reward_post: {
+        parameters: {
+            query?: {
+                reward_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyRewardPackageResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    github_me_api_v1_github_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubProfileResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_PROFILE_NOT_FOUND",
+                     *         "message": "GitHub profile is not linked to this user."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+        };
+    };
+    github_app_install_url_api_v1_github_app_install_url_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubAppInstallUrlResponse"];
+                };
+            };
+        };
+    };
+    github_activities_api_v1_github_activities_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    github_oauth_sync_api_v1_github_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GitHubOAuthSyncRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubOAuthSyncResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_PROFILE_NOT_FOUND",
+                     *         "message": "GitHub profile is not linked to this user."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_API_REQUEST_FAILED",
+                     *         "message": "GitHub API request failed."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+        };
+    };
+    github_repositories_api_v1_github_repositories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubRepositoryResponse"][];
+                };
+            };
+        };
+    };
+    github_installations_api_v1_github_installations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubInstallationResponse"][];
+                };
+            };
+        };
+    };
+    github_installation_sync_repositories_api_v1_github_installations__github_installation_id__sync_repositories_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                github_installation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubInstallationSyncResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_INSTALLATION_NOT_FOUND",
+                     *         "message": "GitHub App installation is not linked to this user."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_APP_CONFIG_INVALID",
+                     *         "message": "GitHub App credentials are not configured."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_API_REQUEST_FAILED",
+                     *         "message": "GitHub API request failed."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+        };
+    };
+    github_stack_summary_api_v1_github_stack_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubStackSummaryResponse"];
+                };
+            };
+        };
+    };
+    reward_packages_api_v1_rewards_packages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPackageResponse"][];
+                };
+            };
+        };
+    };
+    reward_package_claim_api_v1_rewards_packages__package_id__claim_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                package_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPackageClaimResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "REWARD_PACKAGE_NOT_FOUND",
+                     *         "message": "Reward package was not found."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "REWARD_PACKAGE_ALREADY_CLAIMED",
+                     *         "message": "Reward package has already been claimed."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GameErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    github_webhook_api_v1_webhooks_github_post: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-GitHub-Event": string;
+                "X-GitHub-Delivery": string;
+                "X-Hub-Signature-256"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_WEBHOOK_MALFORMED_PAYLOAD",
+                     *         "message": "GitHub webhook payload is malformed."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_WEBHOOK_INVALID_SIGNATURE",
+                     *         "message": "GitHub webhook signature is invalid."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_PROFILE_NOT_FOUND",
+                     *         "message": "GitHub profile is not linked to this user."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "detail": {
+                     *         "error": "GITHUB_WEBHOOK_SECRET_MISSING",
+                     *         "message": "GitHub webhook secret is not configured."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["GitHubErrorResponse"];
                 };
             };
         };

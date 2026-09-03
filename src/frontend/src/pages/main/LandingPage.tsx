@@ -31,7 +31,7 @@ export function LandingPage({ loginEnabled }: LandingPageProps) {
                         className="landing-hero__start-button"
                         onClick={() => {
                             markLandingStarted();
-                            navigate(loginEnabled ? "/login" : "/show-case");
+                            navigate(loginEnabled ? "/login" : "/cabin");
                         }}
                     >
                         <span className="landing-hero__button-label">{t("landing.start")}</span>

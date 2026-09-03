@@ -20,6 +20,7 @@ const AUTH_ERROR_CODES = [
     "OAUTH_PROVIDER_NOT_ENABLED",
     "OAUTH_PROVIDER_REQUEST_FAILED",
     "OAUTH_SIGNUP_FAILED",
+    "PASSWORD_AUTH_DISABLED",
     "PROFILE_UPDATE_FAILED",
     "SIGNUP_FAILED",
     "USER_NOT_FOUND",
@@ -55,6 +56,7 @@ const AUTH_ERROR_CODE_TO_KEY: Record<AuthErrorCode, string> = {
     OAUTH_IDENTITY_CONFLICT: "auth.errors.oauthIdentityConflict",
     OAUTH_SIGNUP_FAILED: "auth.errors.oauthSignupFailed",
     OAUTH_PROVIDER_REQUEST_FAILED: "auth.errors.oauthProviderRequestFailed",
+    PASSWORD_AUTH_DISABLED: "auth.errors.passwordAuthDisabled",
     SIGNUP_FAILED: "auth.errors.signupFallback",
 };
 

@@ -330,7 +330,7 @@ export function ShowCasePage() {
                                     Open loading page
                                 </Button>
                             </ShowcaseItem>
-                            <ShowcaseItem component="ShowCaseNotFoundPage">
+                            <ShowcaseItem component="NotFoundPage">
                                 <Button type="button" onClick={() => navigate("/show-case/404")}>
                                     Open 404 page
                                 </Button>

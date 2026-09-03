@@ -109,6 +109,15 @@ Dashboard data는 backend summary에서 받아야 합니다. Room renderer가 re
 4. 제목과 로그인 panel은 scene 위에 얹되, 오두막 진입 연출 중에는 화면 아래로 빠지며 배경 확대를 방해하지 않아야 합니다.
 5. 모바일 portrait 화면도 같은 fill 규칙을 사용합니다. 중요한 오브젝트는 중앙 safe area에 둡니다.
 
+로그인 성공 후 진입 규칙:
+
+1. GitHub OAuth callback 이후 `/login/success`는 중간 화면 없이 `/cabin`으로 redirect합니다.
+2. `/cabin`이 로그인 후 첫 진입점입니다.
+3. `/cabin`은 실제 cabin renderer가 붙기 전의 playable init 화면입니다.
+4. `/cabin`은 `GET /api/v1/game/state`로 backend state를 읽고, 소포/설정은 화면 이동 없이 modal로 엽니다.
+5. 설정 modal은 GitHub 기반 프로필 세션과 로그아웃 action을 포함합니다.
+6. 사용자용 인증 흐름은 `/show-case`로 이동하면 안 됩니다. `/show-case`는 개발용 component 확인 화면으로만 남깁니다.
+
 ## Activity Reward Points
 
 GitHub raw event가 pet, inventory, cabin state를 직접 변경하면 안 됩니다.

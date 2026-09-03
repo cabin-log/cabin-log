@@ -26,6 +26,11 @@
         "retry": "Retry connection",
         "retrying": "Checking connection..."
     },
+    "notFound": {
+        "title": "404 Not Found",
+        "subtitle": "The page you are looking for does not exist.",
+        "backToCabin": "Back to cabin"
+    },
     "landing": {
         "navAria": "Landing navigation",
         "eyebrow": "Cabinlog",
@@ -54,6 +59,7 @@
             "resendVerificationFallback": "Could not resend verification email. Please try again.",
             "emailAlreadyExists": "This email is already in use.",
             "emailDisabled": "Email-based features are currently unavailable.",
+            "passwordAuthDisabled": "Password login is disabled. Use GitHub login instead.",
             "loginDisabled": "Login is currently disabled.",
             "invalidToken": "The token is invalid or has expired.",
             "insufficientRole": "You do not have permission to perform this action.",
@@ -100,13 +106,76 @@
         "forgotPasswordPrompt": "Forgot your password?",
         "forgotPasswordLink": "Find your password"
     },
-    "loginSuccess": {
-        "title": "GitHub login complete",
-        "subtitle": "Your Cabinlog account is connected to GitHub.",
-        "unknownUser": "Cabinlog user",
-        "githubConnected": "GitHub account connected",
-        "sessionConnected": "Session connected",
-        "continue": "Continue"
+    "cabin": {
+        "hud": {
+            "aria": "Cabin controls"
+        },
+        "stage": {
+            "aria": "Cabin init scene"
+        },
+        "player": {
+            "fallbackName": "Cabinlog user",
+            "ready": "Cabin ready"
+        },
+        "state": {
+            "loading": "Loading cabin state..."
+        },
+        "actions": {
+            "packages": "Packages",
+            "settings": "Settings",
+            "retry": "Retry"
+        },
+        "stats": {
+            "coins": "Coins",
+            "today": "Today",
+            "food": "Food",
+            "packages": "Packages"
+        },
+        "packages": {
+            "title": "Packages",
+            "description": "Packages arrive here after GitHub sync and daily rewards.",
+            "empty": "No packages have arrived yet.",
+            "noDescription": "Package details will be shown after sync.",
+            "itemCount": "{{count}} item(s)"
+        },
+        "settings": {
+            "title": "Cabin settings",
+            "description": "Current gameplay settings from the backend.",
+            "profileTitle": "GitHub profile",
+            "language": "Language",
+            "languageDescription": "Choose the display language for this device.",
+            "languages": {
+                "en": "English",
+                "ko": "한국어"
+            },
+            "playTitle": "Play settings",
+            "playDescription": "Backend-backed daily and cabin state.",
+            "timezone": "Timezone",
+            "cutoff": "Daily cutoff",
+            "cutoffValue": "{{hour}}:00",
+            "cabin": "Cabin grid",
+            "cabinValue": "{{width}} x {{depth}} cells, {{tileWidth}} x {{tileHeight}} px tiles",
+            "stacks": "Top stacks",
+            "githubConnected": "GitHub profile connected",
+            "githubUnknown": "GitHub profile not connected",
+            "logoutIdle": "Sign out",
+            "logoutBusy": "Signing out...",
+            "noStacks": "No stack data yet",
+            "unknown": "Unknown"
+        },
+        "modal": {
+            "close": "Close"
+        },
+        "errors": {
+            "stateLoadFailed": "Could not load cabin state.",
+            "rewardPackageNotFound": "Package was not found.",
+            "rewardPackageAlreadyClaimed": "Package was already claimed.",
+            "cabinPlacementNotFound": "Cabin placement was not found.",
+            "cabinPlacementInvalid": "Cabin placement is invalid.",
+            "cabinPlacementConflict": "Cabin placement conflicts with another object.",
+            "cabinItemNotOwned": "You do not own this cabin object.",
+            "cabinSystemPlacementLocked": "This cabin object cannot be changed."
+        }
     },
     "signup": {
         "title": "Sign up",
@@ -224,13 +293,13 @@
         "profileMenu": "Profile menu",
         "sidebar": {
             "aria": "Primary navigation",
-            "showCase": "ShowCase",
+            "cabin": "Cabin",
             "settings": "Settings",
             "toggleOpen": "Expand sidebar",
             "toggleClose": "Collapse sidebar"
         },
         "pageTitles": {
-            "showCase": "ShowCase Page",
+            "cabin": "Cabin",
             "settings": "Settings",
             "loading": "Loading",
             "notFound": "Not Found 404"
@@ -240,7 +309,7 @@
         "logoutBusy": "Signing out...",
         "logoutUnavailable": "Reconnect to the server before signing out.",
         "aria": {
-            "goShowCase": "Go to ShowCase page",
+            "goCabin": "Go to cabin",
             "openMenu": "Open profile menu"
         }
     },

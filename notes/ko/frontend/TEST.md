@@ -50,6 +50,8 @@ src/frontend/
             AppNavbar.test.tsx
             DesktopTitleBar.test.tsx
         pages/
+          cabin/
+            CabinInitPage.test.tsx
           login/
             LoginPage.test.tsx
           settings/
@@ -185,33 +187,36 @@ it("<behavior>", async () => {
     - 로그인 성공 submit + 내비게이션 분기
     - `INVALID_CREDENTIALS` 남은 시도 횟수 분기
     - `EMAIL_NOT_VERIFIED` + 인증 메일 재전송 분기
-7. `src/tests/component/pages/settings/SettingsPage.test.tsx`
+7. `src/tests/component/pages/cabin/CabinInitPage.test.tsx`
+    - Playable init 화면이 backend game state를 불러옴
+    - 소포/설정 버튼이 `/cabin`을 벗어나지 않고 modal overlay를 엶
+8. `src/tests/component/pages/settings/SettingsPage.test.tsx`
     - 역할 배지 표시 분기:
       admin은 배지 표시, user는 배지 숨김
     - 백엔드 정합 API 키 라이프사이클:
       create -> reveal -> list-visible -> disable -> enable -> delete
     - 백엔드 정합 에러 분기:
       duplicate-name (`API_KEY_NAME_ALREADY_EXISTS`), delete not-found (`API_KEY_NOT_FOUND`)
-8. `src/tests/integration/hooks/useAuth.test.tsx`
+9. `src/tests/integration/hooks/useAuth.test.tsx`
     - refresh bootstrap 성공 분기 (토큰 없음 -> refresh -> me)
     - 저장된 토큰 + `/me` 성공 분기 (refresh skip)
     - `/me` 실패 + refresh 실패 분기 (토큰 삭제 및 로그아웃 상태)
     - logout API 실패 시에도 `finally`에서 클라이언트 세션 정리 분기
-9. `tests/e2e/auth-smoke.spec.ts`
+10. `tests/e2e/auth-smoke.spec.ts`
     - 브라우저 레벨 `/login` 라우트 렌더 스모크
-10. `src/tests/unit/hooks/serverConnectivity.test.ts`
+11. `src/tests/unit/hooks/serverConnectivity.test.ts`
     - 지수 재연결 지연, 최대 지연 및 jitter 경계
-11. `src/tests/integration/api/systemApi.test.ts`
+12. `src/tests/integration/api/systemApi.test.ts`
     - `/health/ready`의 ready/degraded 응답 처리
-12. `src/tests/integration/hooks/useServerConnectivity.test.tsx`
+13. `src/tests/integration/hooks/useServerConnectivity.test.tsx`
     - 브라우저 polling 제외 및 Tauri offline-to-online 복구
-13. `src/tests/component/App.test.tsx`
+14. `src/tests/component/App.test.tsx`
     - `/config`를 사용할 수 없을 때 보호 라우팅의 fail-closed 처리, 공용 public Nav 구조, 지연된 재시도 로딩 상태
-14. `src/tests/integration/hooks/useFeatures.test.tsx`
+15. `src/tests/integration/hooks/useFeatures.test.tsx`
     - 설정 실패와 명시적 로그인 비활성화 구분 및 재시도 복구
-15. `src/tests/component/components/layout/AppNavbar.test.tsx`
+16. `src/tests/component/components/layout/AppNavbar.test.tsx`
     - 프로필 컨트롤 옆 compact 데스크톱 연결 상태 배치, 안정적인 재시도 문구, 오프라인 로그아웃 차단
-16. `src/tests/component/pages/main/LandingPage.test.tsx`
+17. `src/tests/component/pages/main/LandingPage.test.tsx`
     - 공용 public Nav 구조와 랜딩 탐색 동작
 
 ## 8.1) 백엔드 Full-System 매핑 (프론트 도달 가능 부분집합)

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Tooltip } from "../ui";
 
-type SidebarKey = "show-case" | "settings";
+type SidebarKey = "cabin" | "settings";
 
 type AppSidebarProps = {
     expanded: boolean;
@@ -19,8 +19,8 @@ export function AppSidebar({ expanded, onToggleExpanded }: AppSidebarProps) {
     const items = useMemo(
         () => [
             {
-                key: "show-case" as const,
-                label: t("nav.sidebar.showCase"),
+                key: "cabin" as const,
+                label: t("nav.sidebar.cabin"),
                 icon: AppWindow,
             },
             {
@@ -32,16 +32,14 @@ export function AppSidebar({ expanded, onToggleExpanded }: AppSidebarProps) {
         [t],
     );
 
-    const activeKey: SidebarKey = location.pathname.startsWith("/settings")
-        ? "settings"
-        : "show-case";
+    const activeKey: SidebarKey = location.pathname.startsWith("/settings") ? "settings" : "cabin";
 
     const handleSelect = (key: SidebarKey) => {
         if (key === "settings") {
             navigate("/settings");
             return;
         }
-        navigate("/show-case");
+        navigate("/cabin");
     };
 
     const toggleLabel = expanded ? t("nav.sidebar.toggleClose") : t("nav.sidebar.toggleOpen");
