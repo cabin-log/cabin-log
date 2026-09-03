@@ -96,17 +96,18 @@ Dashboard data는 backend summary에서 받아야 합니다. Room renderer가 re
 | Source file | `src/frontend/public/sprites/img/init-page.gif` |
 | Canonical pixel size | `443 x 249 px` |
 | Aspect ratio | 약 `1.78:1` |
-| Display rule | viewport height 기준으로 전체 높이를 맞춤 |
-| CSS sizing contract | `background-size: auto 100dvh` |
-| Outside artwork fill | Dark solid fallback `#101416` |
+| Animation delay | `0.6s` per frame |
+| Display rule | 원본 비율을 유지하며 viewport 전체를 채움 |
+| CSS sizing contract | `background-size: max(100vw, 178dvh) auto` |
+| Fallback fill | Dark solid fallback `#101416` |
 
 표현 규칙:
 
-1. 원본 pixel-art 비율은 변경하지 않고 브라우저 높이에 맞춰 표시합니다.
-2. viewport가 asset보다 넓거나 좁아 생기는 영역은 추가 배경 이미지 없이 어두운 단색으로 채웁니다.
+1. 원본 pixel-art 비율은 변경하지 않고 브라우저 화면 전체를 채웁니다.
+2. viewport 비율이 asset과 다르면 가장자리 일부가 crop될 수 있습니다.
 3. 로그인 진입 애니메이션은 같은 비율을 유지한 상태에서 오두막 방향으로 확대합니다.
 4. 제목과 로그인 panel은 scene 위에 얹되, 오두막 진입 연출 중에는 화면 아래로 빠지며 배경 확대를 방해하지 않아야 합니다.
-5. 모바일 portrait 화면에서 전체 폭까지 강제로 늘리지 않습니다. 필요해지면 별도 portrait asset을 추가합니다.
+5. 모바일 portrait 화면도 같은 fill 규칙을 사용합니다. 중요한 오브젝트는 중앙 safe area에 둡니다.
 
 ## Activity Reward Points
 

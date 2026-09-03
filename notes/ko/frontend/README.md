@@ -61,8 +61,9 @@ Tauri에서는 네이티브 창 컨트롤이 랜딩, 인증 및 앱 내부 Nav�
 
 - 기준 파일은 `src/frontend/public/sprites/img/init-page.gif`입니다.
 - 현재 기준 크기는 `443 x 249 px`이며, 약 `1.78:1` 비율을 유지합니다.
-- CSS는 `background-size: auto 100dvh`로 viewport 높이에 맞춥니다.
-- 남는 화면 영역은 추가 배경 이미지 없이 어두운 단색 `#101416`으로 채웁니다.
+- GIF animation delay는 프레임당 `0.6s`입니다.
+- CSS는 `background-size: max(100vw, 178dvh) auto`로 원본 비율을 유지하며 viewport 전체를 채웁니다.
+- 화면 비율이 asset과 다르면 가장자리 일부가 crop될 수 있고, fallback은 어두운 단색 `#101416`입니다.
 - 같은 비율로 큰 asset을 다시 만들 때는 `886 x 498`, `1329 x 747`처럼 `443:249` 배수로 제작합니다.
 
 API base URL 동작:

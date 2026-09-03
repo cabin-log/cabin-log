@@ -63,8 +63,9 @@ Login init background asset:
 
 - The canonical file is `src/frontend/public/sprites/img/init-page.gif`.
 - The current canonical size is `443 x 249 px`, preserving an approximately `1.78:1` ratio.
-- CSS uses `background-size: auto 100dvh` so the artwork is fit by viewport height.
-- Extra screen area is filled with the dark solid fallback `#101416` without a secondary background image.
+- GIF animation delay is `0.6s` per frame.
+- CSS uses `background-size: max(100vw, 178dvh) auto` so the artwork keeps its ratio while covering the viewport.
+- Viewports with a different ratio may crop the artwork edges, and the fallback remains the dark solid `#101416`.
 - Larger replacements should keep the same `443:249` ratio, for example `886 x 498` or `1329 x 747`.
 
 API base URL behavior:
