@@ -84,6 +84,30 @@ screen_y = (grid_x + grid_y) * (tile_height / 2) - grid_z * tile_z_height
 Dashboard data는 backend summary에서 받아야 합니다. Room renderer가 reward rule을
 직접 계산하면 안 됩니다.
 
+## Login Init Presentation
+
+로그인 init 화면은 사용자가 Cabinlog 오두막에 들어가기 전의 첫 장면입니다.
+게임 내부 cabin grid와는 별도의 2D pixel-art splash scene으로 취급합니다.
+
+기준 asset:
+
+| Property | Value |
+| --- | --- |
+| Source file | `src/frontend/public/sprites/img/init-page.gif` |
+| Canonical pixel size | `443 x 249 px` |
+| Aspect ratio | 약 `1.78:1` |
+| Display rule | viewport height 기준으로 전체 높이를 맞춤 |
+| CSS sizing contract | `background-size: auto 100dvh` |
+| Outside artwork fill | Dark solid fallback `#101416` |
+
+표현 규칙:
+
+1. 원본 pixel-art 비율은 변경하지 않고 브라우저 높이에 맞춰 표시합니다.
+2. viewport가 asset보다 넓거나 좁아 생기는 영역은 추가 배경 이미지 없이 어두운 단색으로 채웁니다.
+3. 로그인 진입 애니메이션은 같은 비율을 유지한 상태에서 오두막 방향으로 확대합니다.
+4. 제목과 로그인 panel은 scene 위에 얹되, 오두막 진입 연출 중에는 화면 아래로 빠지며 배경 확대를 방해하지 않아야 합니다.
+5. 모바일 portrait 화면에서 전체 폭까지 강제로 늘리지 않습니다. 필요해지면 별도 portrait asset을 추가합니다.
+
 ## Activity Reward Points
 
 GitHub raw event가 pet, inventory, cabin state를 직접 변경하면 안 됩니다.

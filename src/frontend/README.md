@@ -59,6 +59,14 @@ shows the server-unavailable page. Missing configuration is never interpreted as
 In Tauri, native window controls share the same title bar area as landing, authentication, and
 in-app navigation. The browser frontend keeps its existing navigation layout.
 
+Login init background asset:
+
+- The canonical file is `src/frontend/public/sprites/img/init-page.gif`.
+- The current canonical size is `443 x 249 px`, preserving an approximately `1.78:1` ratio.
+- CSS uses `background-size: auto 100dvh` so the artwork is fit by viewport height.
+- Extra screen area is filled with the dark solid fallback `#101416` without a secondary background image.
+- Larger replacements should keep the same `443:249` ratio, for example `886 x 498` or `1329 x 747`.
+
 API base URL behavior:
 
 - If `VITE_API_BASE_URL` is set, frontend uses that value. Local loopback aliases
