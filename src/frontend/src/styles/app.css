@@ -326,10 +326,11 @@ a {
     padding-top: clamp(6rem, 18vh, 11rem);
     background:
         linear-gradient(rgba(14, 19, 23, 0.08), rgba(14, 19, 23, 0.34)),
-        url("/sprites/img/init-page.gif") center no-repeat;
+        url("/sprites/img/init-page.gif") center / auto 100dvh no-repeat,
+        #101416;
     background-size:
         100% 100%,
-        max(100vw, 145dvh) auto;
+        auto 100dvh;
     image-rendering: pixelated;
     animation: auth-background-settle 900ms ease-out both;
 }
@@ -3080,7 +3081,7 @@ input:focus {
         background-position: center, center;
         background-size:
             100% 100%,
-            max(100vw, 145dvh) auto;
+            auto 100dvh;
         filter: saturate(1) brightness(1);
     }
     to {
@@ -3089,7 +3090,7 @@ input:focus {
             47% 40%;
         background-size:
             100% 100%,
-            max(190vw, 276dvh) auto;
+            auto 190dvh;
         filter: saturate(1.06) brightness(0.92);
     }
 }

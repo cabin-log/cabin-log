@@ -57,6 +57,14 @@ UI에는 앱 Nav 프로필 또는 standalone 타이틀바 도구 영역 옆에 c
 Tauri에서는 네이티브 창 컨트롤이 랜딩, 인증 및 앱 내부 Nav와 같은 타이틀바 영역을
 공유합니다. 브라우저 프론트엔드는 기존 탐색 레이아웃을 유지합니다.
 
+로그인 init 화면 배경 asset:
+
+- 기준 파일은 `src/frontend/public/sprites/img/init-page.gif`입니다.
+- 현재 기준 크기는 `443 x 249 px`이며, 약 `1.78:1` 비율을 유지합니다.
+- CSS는 `background-size: auto 100dvh`로 viewport 높이에 맞춥니다.
+- 남는 화면 영역은 추가 배경 이미지 없이 어두운 단색 `#101416`으로 채웁니다.
+- 같은 비율로 큰 asset을 다시 만들 때는 `886 x 498`, `1329 x 747`처럼 `443:249` 배수로 제작합니다.
+
 API base URL 동작:
 
 - `VITE_API_BASE_URL`이 설정되어 있으면 해당 값을 사용합니다. 로컬 루프백 별칭

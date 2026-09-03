@@ -21,6 +21,6 @@
         ]
     },
     "bundle": {
-        "icon": ["icons/icon-macos-v2.icns"]
+        "icon": ["icons/icon.icns"]
     }
 }
