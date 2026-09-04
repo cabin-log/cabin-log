@@ -74,11 +74,11 @@ const gameState: GameState = {
     inventory: [],
     cabin: {
         id: 1,
-        width: 18,
+        width: 12,
         depth: 12,
-        tile_width: 64,
-        tile_height: 32,
-        tile_z_height: 32,
+        tile_width: 60,
+        tile_height: 30,
+        tile_z_height: 46,
         placements: [],
         updated_at: "2026-09-03T00:00:00Z",
     },
@@ -189,7 +189,7 @@ describe("CabinInitPage", () => {
         // Then: settings are shown without navigating away from the playable init screen.
         const dialog = screen.getByRole("dialog", { name: "Cabin settings" });
         expect(within(dialog).getByText("Asia/Seoul")).toBeVisible();
-        expect(within(dialog).getByText("18 x 12 cells, 64 x 32 px tiles")).toBeVisible();
+        expect(within(dialog).getByText("12 x 12 cells, 60 x 30 px tiles")).toBeVisible();
         expect(within(dialog).getByText("TypeScript")).toBeVisible();
         expect(within(dialog).getByText("GitHub profile connected")).toBeVisible();
         expect(within(dialog).getByText("octo@example.com")).toBeVisible();

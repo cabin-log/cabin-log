@@ -338,11 +338,11 @@ def test_cabin_placement_flow_persists_user_adjusted_positions(
     )
     assert cabin_response.status_code == 200
     cabin = cabin_response.json()
-    assert cabin["width"] == 18
+    assert cabin["width"] == 12
     assert cabin["depth"] == 12
-    assert cabin["tile_width"] == 64
-    assert cabin["tile_height"] == 32
-    assert cabin["tile_z_height"] == 32
+    assert cabin["tile_width"] == 60
+    assert cabin["tile_height"] == 30
+    assert cabin["tile_z_height"] == 46
     assert cabin["placements"] == [
         {
             "id": cabin["placements"][0]["id"],

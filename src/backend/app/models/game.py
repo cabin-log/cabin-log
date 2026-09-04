@@ -60,11 +60,11 @@ class RewardPackageItemType(StrEnum):
 
 
 DEFAULT_USER_TIMEZONE = "UTC"
-DEFAULT_CABIN_WIDTH = 18
+DEFAULT_CABIN_WIDTH = 12
 DEFAULT_CABIN_DEPTH = 12
-DEFAULT_TILE_WIDTH = 64
-DEFAULT_TILE_HEIGHT = 32
-DEFAULT_TILE_Z_HEIGHT = 32
+DEFAULT_TILE_WIDTH = 60
+DEFAULT_TILE_HEIGHT = 30
+DEFAULT_TILE_Z_HEIGHT = 46
 DEFAULT_DASHBOARD_OBJECT_KEY = "system.dev-board"
 
 
@@ -1239,7 +1239,16 @@ class GameRepository:
                 )
             )
             await db.flush()
+        else:
+            self._sync_cabin_grid_contract(cabin)
         return cabin
+
+    def _sync_cabin_grid_contract(self, cabin: Cabin) -> None:
+        cabin.width = DEFAULT_CABIN_WIDTH
+        cabin.depth = DEFAULT_CABIN_DEPTH
+        cabin.tile_width = DEFAULT_TILE_WIDTH
+        cabin.tile_height = DEFAULT_TILE_HEIGHT
+        cabin.tile_z_height = DEFAULT_TILE_Z_HEIGHT
 
     async def _load_cabin_response(
         self,

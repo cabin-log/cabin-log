@@ -41,6 +41,7 @@ src/frontend/
           serverConnectivity.test.ts
         utils/
           apiBase.test.ts
+          cabinProjection.test.ts
           desktopRuntime.test.ts
           validation.test.ts
       component/
@@ -178,48 +179,50 @@ it("<behavior>", async () => {
     - 브라우저/Tauri 런타임 구분과 데스크톱 플랫폼 감지
 3. `src/tests/unit/utils/cabinEntryRedirect.test.ts`, `src/tests/unit/utils/cabinEntryReveal.test.ts`
     - OAuth callback bootstrap 치환과 1회성 cabin reveal 저장 처리
-4. `src/tests/unit/utils/validation.test.ts`
+4. `src/tests/unit/utils/cabinProjection.test.ts`
+    - Isometric cabin grid anchor, 좌표 projection, cell diamond 구성
+5. `src/tests/unit/utils/validation.test.ts`
     - 이메일/비밀번호 검증의 성공/실패 분기
-5. `src/tests/component/components/layout/DesktopTitleBar.test.tsx`
+6. `src/tests/component/components/layout/DesktopTitleBar.test.tsx`
     - 브라우저 숨김, macOS 네이티브 컨트롤, Windows 창 액션, standalone 연결 상태 배치
-6. `src/tests/integration/api/configApi.test.ts`
+7. `src/tests/integration/api/configApi.test.ts`
     - `/config` 성공/실패 API 응답 처리
-7. `src/tests/component/pages/login/LoginPage.test.tsx`
+8. `src/tests/component/pages/login/LoginPage.test.tsx`
     - 잘못된 이메일의 클라이언트 검증 분기
     - 로그인 성공 submit + 내비게이션 분기
     - `INVALID_CREDENTIALS` 남은 시도 횟수 분기
     - `EMAIL_NOT_VERIFIED` + 인증 메일 재전송 분기
-8. `src/tests/component/pages/cabin/CabinInitPage.test.tsx`
+9. `src/tests/component/pages/cabin/CabinInitPage.test.tsx`
     - Playable init 화면이 backend game state를 불러옴
     - 소포/설정 버튼이 `/cabin`을 벗어나지 않고 modal overlay를 엶
     - Login success entry state가 cabin reveal class를 적용함
-9. `src/tests/component/pages/settings/SettingsPage.test.tsx`
+10. `src/tests/component/pages/settings/SettingsPage.test.tsx`
     - 역할 배지 표시 분기:
       admin은 배지 표시, user는 배지 숨김
     - 백엔드 정합 API 키 라이프사이클:
       create -> reveal -> list-visible -> disable -> enable -> delete
     - 백엔드 정합 에러 분기:
       duplicate-name (`API_KEY_NAME_ALREADY_EXISTS`), delete not-found (`API_KEY_NOT_FOUND`)
-10. `src/tests/integration/hooks/useAuth.test.tsx`
+11. `src/tests/integration/hooks/useAuth.test.tsx`
     - refresh bootstrap 성공 분기 (토큰 없음 -> refresh -> me)
     - 저장된 토큰 + `/me` 성공 분기 (refresh skip)
     - `/me` 실패 + refresh 실패 분기 (토큰 삭제 및 로그아웃 상태)
     - logout API 실패 시에도 `finally`에서 클라이언트 세션 정리 분기
-11. `tests/e2e/auth-smoke.spec.ts`
+12. `tests/e2e/auth-smoke.spec.ts`
     - 브라우저 레벨 `/login` 라우트 렌더 스모크
-12. `src/tests/unit/hooks/serverConnectivity.test.ts`
+13. `src/tests/unit/hooks/serverConnectivity.test.ts`
     - 지수 재연결 지연, 최대 지연 및 jitter 경계
-13. `src/tests/integration/api/systemApi.test.ts`
+14. `src/tests/integration/api/systemApi.test.ts`
     - `/health/ready`의 ready/degraded 응답 처리
-14. `src/tests/integration/hooks/useServerConnectivity.test.tsx`
+15. `src/tests/integration/hooks/useServerConnectivity.test.tsx`
     - 브라우저 polling 제외 및 Tauri offline-to-online 복구
-15. `src/tests/component/App.test.tsx`
+16. `src/tests/component/App.test.tsx`
     - `/config`를 사용할 수 없을 때 보호 라우팅의 fail-closed 처리, 공용 public Nav 구조, 지연된 재시도 로딩 상태
-16. `src/tests/integration/hooks/useFeatures.test.tsx`
+17. `src/tests/integration/hooks/useFeatures.test.tsx`
     - 설정 실패와 명시적 로그인 비활성화 구분 및 재시도 복구
-17. `src/tests/component/components/layout/AppNavbar.test.tsx`
+18. `src/tests/component/components/layout/AppNavbar.test.tsx`
     - 프로필 컨트롤 옆 compact 데스크톱 연결 상태 배치, 안정적인 재시도 문구, 오프라인 로그아웃 차단
-18. `src/tests/component/pages/main/LandingPage.test.tsx`
+19. `src/tests/component/pages/main/LandingPage.test.tsx`
     - 공용 public Nav 구조와 랜딩 탐색 동작
 
 ## 8.1) 백엔드 Full-System 매핑 (프론트 도달 가능 부분집합)

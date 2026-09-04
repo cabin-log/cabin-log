@@ -45,10 +45,10 @@ flowchart TD
 | Property | Value |
 | --- | --- |
 | Room shape | Isometric rectangle |
-| Logical size | 고정 `18 x 12` floor cells |
-| Tile render size | `64 x 32 px` diamond |
-| Tile vertical height | `32 px` per `z` level |
-| Projected floor size | 벽/장식 여백 제외 약 `960 x 480 px` |
+| Logical size | 고정 `12 x 12` floor cells |
+| Tile render size | `60 x 30 px` diamond |
+| Tile vertical height | `46 px` per `z` level |
+| Projected floor size | 벽/장식 여백 제외 약 `720 x 360 px` |
 | Placement coordinate | `x`, `y`, `z`, `rotation`, `width`, `depth` |
 | Wall zones | Back-left wall, back-right wall |
 | Floor zones | Floor base, carpet layer, furniture layer |
@@ -61,6 +61,15 @@ flowchart TD
 screen_x = (grid_x - grid_y) * (tile_width / 2)
 screen_y = (grid_x + grid_y) * (tile_height / 2) - grid_z * tile_z_height
 ```
+
+Frontend projection source:
+
+1. Projection 구현은 `src/frontend/src/utils/cabinProjection.ts`가 담당합니다.
+2. `CabinGridContract`는 generated OpenAPI `CabinResponse`에서 `width`, `depth`, `tile_width`, `tile_height`, `tile_z_height`만 가져온 타입입니다.
+3. `CabinPhaserStage`는 backend state의 cabin 계약을 받아 같은 projection으로 floor 위에 visible isometric debug grid를 그립니다.
+4. Debug grid의 `0,0` marker와 중앙 marker는 실제 배치 가능 영역과 cabin artwork가 어긋나는지 직접 확인하기 위한 전처리 도구입니다.
+5. Debug grid가 표시하는 `12 x 12`, `60 x 30`, `z=46` 계약은 backend cabin 저장/검증 계약과 동일해야 합니다.
+6. Debug grid는 일부 기준점에 `z=1..3` vertical guide marker를 표시해 wall-mounted object, shelf, dashboard 같은 높이 배치를 검증할 수 있게 합니다.
 
 초기 Phaser renderer 계약:
 
@@ -78,12 +87,14 @@ Cabin Phaser tuning point:
 2. `CABIN_WORLD_CENTER_X`, `CABIN_WORLD_CENTER_Y`: wall/floor room base가 정렬되는 world 중심입니다.
 3. `WALL_CENTER_Y`: wall asset의 vertical 위치입니다. 값을 줄이면 벽이 위로 올라갑니다.
 4. `FLOOR_CENTER_Y`: floor asset의 vertical 위치입니다. 값을 줄이면 바닥이 위로 올라갑니다.
-5. `CAMERA_MIN_ZOOM`, `CAMERA_MAX_ZOOM`, `CAMERA_ZOOM_STEP`: camera zoom 범위와 wheel zoom 단위입니다.
+5. `CABIN_GRID_ANCHOR_OFFSET_X`, `CABIN_GRID_ANCHOR_OFFSET_Y`: visible isometric debug grid의 anchor 보정 offset입니다. Floor asset 위치는 유지한 채 실제 placement 인식 범위를 미세 조정할 때 사용합니다.
+6. `CABIN_GRID_DEBUG_Z_LEVELS`: visible z-axis guide marker가 표시할 높이 단계입니다.
+7. `CAMERA_MIN_ZOOM`, `CAMERA_MAX_ZOOM`, `CAMERA_ZOOM_STEP`: camera zoom 범위와 wheel zoom 단위입니다.
 
 배치 저장 규칙:
 
 1. Backend가 사용자가 조정 가능한 모든 object placement를 저장합니다.
-2. User placement는 고정 `18 x 12` cabin grid 안에 있어야 합니다.
+2. User placement는 고정 `12 x 12` cabin grid 안에 있어야 합니다.
 3. 같은 `z` level의 object footprint는 서로 겹칠 수 없습니다.
 4. `rotation`은 `0`, `90`, `180`, `270`만 허용합니다.
 5. Dashboard board 같은 system placement는 locked 상태입니다.

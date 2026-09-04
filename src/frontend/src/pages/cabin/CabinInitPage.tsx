@@ -147,6 +147,7 @@ export function CabinInitPage() {
             <section className="cabin-init-stage" aria-label={t("cabin.stage.aria")}>
                 <CabinPhaserStage
                     ariaLabel={t("cabin.stage.phaserAria")}
+                    cabin={state?.cabin ?? null}
                     zoomControlsLabel={t("cabin.actions.zoomControls")}
                     zoomInLabel={t("cabin.actions.zoomIn")}
                     zoomOutLabel={t("cabin.actions.zoomOut")}

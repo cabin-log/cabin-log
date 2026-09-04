@@ -2,6 +2,12 @@ import { ZoomIn, ZoomOut } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Tooltip } from "../../ui";
+import {
+    getCabinGridAnchor,
+    getCabinGridCellDiamond,
+    projectCabinGridPoint,
+    type CabinGridContract,
+} from "../../../utils/cabinProjection";
 
 type PhaserModule = typeof import("phaser");
 
@@ -18,10 +24,20 @@ const CABIN_WORLD_CENTER_X = CABIN_WORLD_WIDTH / 2;
 const CABIN_WORLD_CENTER_Y = CABIN_WORLD_HEIGHT / 2 - 150;
 const WALL_CENTER_Y = CABIN_WORLD_CENTER_Y - 89.7;
 const FLOOR_CENTER_Y = CABIN_WORLD_CENTER_Y + 112.3;
+const CABIN_GRID_ANCHOR_OFFSET_X = 0;
+const CABIN_GRID_ANCHOR_OFFSET_Y = 0;
+const CABIN_GRID_DEBUG_Z_LEVELS = 3;
 const CAMERA_MIN_ZOOM = 0.9;
 const CAMERA_MAX_ZOOM = 1.8;
 const CAMERA_ZOOM_STEP = 0.12;
 const CAMERA_KEYBOARD_ZOOM_SPEED = 0.00045;
+const DEFAULT_CABIN_GRID: CabinGridContract = {
+    width: 12,
+    depth: 12,
+    tile_width: 60,
+    tile_height: 30,
+    tile_z_height: 46,
+};
 
 type CameraControl = {
     update: (delta: number) => void;
@@ -31,6 +47,7 @@ type ZoomCamera = (direction: "in" | "out") => void;
 
 type CabinPhaserStageProps = {
     ariaLabel: string;
+    cabin?: CabinGridContract | null;
     zoomControlsLabel: string;
     zoomInLabel: string;
     zoomOutLabel: string;
@@ -38,12 +55,14 @@ type CabinPhaserStageProps = {
 
 export function CabinPhaserStage({
     ariaLabel,
+    cabin,
     zoomControlsLabel,
     zoomInLabel,
     zoomOutLabel,
 }: CabinPhaserStageProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const zoomCameraRef = useRef<ZoomCamera | null>(null);
+    const cabinGrid = cabin ?? DEFAULT_CABIN_GRID;
 
     useEffect(() => {
         if (import.meta.env.MODE === "test" || !containerRef.current) {
@@ -120,6 +139,7 @@ export function CabinPhaserStage({
                     floor.setDepth(10);
                     floor.setScale(ROOM_SCALE);
 
+                    this.drawCabinGridOverlay();
                     this.configureCameraControls(Phaser);
                     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
                         this.game.canvas.removeEventListener("wheel", this.handleCanvasWheel);
@@ -184,6 +204,164 @@ export function CabinPhaserStage({
                     this.input.on("gameout", () => {
                         this.draggingCamera = false;
                     });
+                }
+
+                private drawCabinGridOverlay() {
+                    const graphics = this.add.graphics();
+                    graphics.setDepth(30);
+
+                    const baseAnchor = getCabinGridAnchor(
+                        cabinGrid,
+                        CABIN_WORLD_CENTER_X,
+                        FLOOR_CENTER_Y,
+                    );
+                    const anchor = {
+                        x: baseAnchor.x + CABIN_GRID_ANCHOR_OFFSET_X,
+                        y: baseAnchor.y + CABIN_GRID_ANCHOR_OFFSET_Y,
+                    };
+
+                    for (let y = 0; y < cabinGrid.depth; y += 1) {
+                        for (let x = 0; x < cabinGrid.width; x += 1) {
+                            const diamond = getCabinGridCellDiamond(cabinGrid, anchor, { x, y });
+                            const isEvenCell = (x + y) % 2 === 0;
+                            graphics.lineStyle(
+                                1,
+                                isEvenCell ? 0xaeead6 : 0xf2c76b,
+                                isEvenCell ? 0.38 : 0.3,
+                            );
+                            graphics.beginPath();
+                            graphics.moveTo(diamond.top.x, diamond.top.y);
+                            graphics.lineTo(diamond.right.x, diamond.right.y);
+                            graphics.lineTo(diamond.bottom.x, diamond.bottom.y);
+                            graphics.lineTo(diamond.left.x, diamond.left.y);
+                            graphics.closePath();
+                            graphics.strokePath();
+                        }
+                    }
+
+                    const top = projectCabinGridPoint(cabinGrid, anchor, { x: 0, y: 0 });
+                    const right = projectCabinGridPoint(cabinGrid, anchor, {
+                        x: cabinGrid.width,
+                        y: 0,
+                    });
+                    const bottom = projectCabinGridPoint(cabinGrid, anchor, {
+                        x: cabinGrid.width,
+                        y: cabinGrid.depth,
+                    });
+                    const left = projectCabinGridPoint(cabinGrid, anchor, {
+                        x: 0,
+                        y: cabinGrid.depth,
+                    });
+                    const center = projectCabinGridPoint(cabinGrid, anchor, {
+                        x: cabinGrid.width / 2,
+                        y: cabinGrid.depth / 2,
+                    });
+
+                    graphics.lineStyle(3, 0xf7f4ea, 0.86);
+                    graphics.beginPath();
+                    graphics.moveTo(top.x, top.y);
+                    graphics.lineTo(right.x, right.y);
+                    graphics.lineTo(bottom.x, bottom.y);
+                    graphics.lineTo(left.x, left.y);
+                    graphics.closePath();
+                    graphics.strokePath();
+
+                    const originMarker = this.add.circle(top.x, top.y, 5, 0xf4d35e, 0.95);
+                    originMarker.setDepth(31);
+                    const originLabel = this.add.text(top.x + 10, top.y - 22, "0,0", {
+                        color: "#f7f4ea",
+                        fontFamily: "Inter, system-ui, sans-serif",
+                        fontSize: "16px",
+                        fontStyle: "800",
+                        stroke: "#101416",
+                        strokeThickness: 4,
+                    });
+                    originLabel.setDepth(31);
+
+                    const centerMarker = this.add.star(
+                        center.x,
+                        center.y,
+                        4,
+                        4,
+                        10,
+                        0x7bdff2,
+                        0.95,
+                    );
+                    centerMarker.setDepth(31);
+                    centerMarker.setAngle(45);
+
+                    const debugLabel = this.add.text(
+                        center.x + 14,
+                        center.y - 12,
+                        `${cabinGrid.width} x ${cabinGrid.depth}`,
+                        {
+                            color: "#d8fff3",
+                            fontFamily: "Inter, system-ui, sans-serif",
+                            fontSize: "16px",
+                            fontStyle: "800",
+                            stroke: "#101416",
+                            strokeThickness: 4,
+                        },
+                    );
+                    debugLabel.setDepth(31);
+
+                    this.drawCabinGridZGuides(graphics, anchor, [
+                        { x: 0, y: 0 },
+                        { x: cabinGrid.width / 2, y: cabinGrid.depth / 2 },
+                        { x: cabinGrid.width, y: 0 },
+                        { x: 0, y: cabinGrid.depth },
+                    ]);
+                }
+
+                private drawCabinGridZGuides(
+                    graphics: Phaser.GameObjects.Graphics,
+                    anchor: { x: number; y: number },
+                    guidePoints: Array<{ x: number; y: number }>,
+                ) {
+                    for (const guidePoint of guidePoints) {
+                        const floorPoint = projectCabinGridPoint(cabinGrid, anchor, guidePoint);
+                        const topPoint = projectCabinGridPoint(cabinGrid, anchor, {
+                            ...guidePoint,
+                            z: CABIN_GRID_DEBUG_Z_LEVELS,
+                        });
+
+                        graphics.lineStyle(2, 0xff6b6b, 0.74);
+                        graphics.beginPath();
+                        graphics.moveTo(floorPoint.x, floorPoint.y);
+                        graphics.lineTo(topPoint.x, topPoint.y);
+                        graphics.strokePath();
+
+                        for (let z = 1; z <= CABIN_GRID_DEBUG_Z_LEVELS; z += 1) {
+                            const levelPoint = projectCabinGridPoint(cabinGrid, anchor, {
+                                ...guidePoint,
+                                z,
+                            });
+
+                            const marker = this.add.circle(
+                                levelPoint.x,
+                                levelPoint.y,
+                                4,
+                                0xff6b6b,
+                                0.92,
+                            );
+                            marker.setDepth(32);
+
+                            const levelLabel = this.add.text(
+                                levelPoint.x + 8,
+                                levelPoint.y - 10,
+                                `z=${z}`,
+                                {
+                                    color: "#ffd6d6",
+                                    fontFamily: "Inter, system-ui, sans-serif",
+                                    fontSize: "12px",
+                                    fontStyle: "800",
+                                    stroke: "#101416",
+                                    strokeThickness: 3,
+                                },
+                            );
+                            levelLabel.setDepth(32);
+                        }
+                    }
                 }
 
                 private updateKeyboardZoom(delta: number) {
@@ -265,7 +443,13 @@ export function CabinPhaserStage({
             zoomCameraRef.current = null;
             game?.destroy(true);
         };
-    }, []);
+    }, [
+        cabinGrid.depth,
+        cabinGrid.tile_height,
+        cabinGrid.tile_width,
+        cabinGrid.tile_z_height,
+        cabinGrid.width,
+    ]);
 
     return (
         <div

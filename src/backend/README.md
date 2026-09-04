@@ -85,7 +85,7 @@ Game foundation:
 - `GET /api/v1/game/state` returns the current game state for the playable cabin view: settings, today's activity summary, wallet, inventory, fixed-size cabin layout, stack profiles, owned stack rewards, and pending packages.
 - `GET /api/v1/game/settings` returns the current user's game settings, including timezone and the daily cutoff hour.
 - `PATCH /api/v1/game/settings` updates the current user's IANA timezone, for example `{"timezone":"Asia/Seoul"}`.
-- `GET /api/v1/game/cabin` returns the current user's fixed `18 x 12` isometric cabin, `64 x 32 px` tile contract, and saved placements.
+- `GET /api/v1/game/cabin` returns the current user's fixed `12 x 12` isometric cabin, `60 x 30 px` tile contract, and saved placements.
 - `POST /api/v1/game/cabin/placements` places an owned stack reward or inventory item in the cabin grid.
 - `PATCH /api/v1/game/cabin/placements/{placement_id}` updates a user-adjustable placement's `x`, `y`, `z`, `rotation`, `width`, or `depth`.
 - `DELETE /api/v1/game/cabin/placements/{placement_id}` removes a user-adjustable placement.
