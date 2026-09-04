@@ -124,6 +124,9 @@
         "actions": {
             "packages": "Packages",
             "settings": "Settings",
+            "zoomControls": "Cabin zoom controls",
+            "zoomIn": "Zoom in (E or mouse wheel)",
+            "zoomOut": "Zoom out (Q or mouse wheel)",
             "retry": "Retry"
         },
         "stats": {

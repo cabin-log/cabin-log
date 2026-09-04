@@ -65,16 +65,20 @@ screen_y = (grid_x + grid_y) * (tile_height / 2) - grid_z * tile_z_height
 초기 Phaser renderer 계약:
 
 1. `/cabin` playable init screen은 Phaser `1280 x 720` FIT canvas를 사용합니다.
-2. 첫 room base asset은 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`입니다.
-3. Wall과 floor asset은 이미 isometric projection으로 제작된 단일 이미지이며, Phaser Scene에서 같은 scale로 중앙 정렬합니다.
-4. Layer 순서는 wall base를 먼저 그리고 floor base를 나중에 그려 floor가 전면에 오도록 합니다.
-5. 사용자 배치 object는 이후 같은 Scene에서 `screen_x`, `screen_y` projection 공식을 사용해 floor 위에 렌더링합니다.
+2. Camera world는 `1500 x 800`이며, cabin room base의 중심을 world 중앙에 맞춥니다.
+3. 첫 room base asset은 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`입니다.
+4. Wall과 floor asset은 이미 isometric projection으로 제작된 단일 이미지이며, Phaser Scene에서 같은 scale로 중앙 정렬합니다.
+5. Camera는 방향키 이동, `Q`/`E` 축소/확대, mouse wheel zoom, pointer drag pan을 지원합니다.
+6. Layer 순서는 wall base를 먼저 그리고 floor base를 나중에 그려 floor가 전면에 오도록 합니다.
+7. 사용자 배치 object는 이후 같은 Scene에서 `screen_x`, `screen_y` projection 공식을 사용해 floor 위에 렌더링합니다.
 
 Cabin Phaser tuning point:
 
-1. `ROOM_CENTER_X`: wall/floor의 공통 horizontal center입니다.
-2. `WALL_CENTER_Y`: wall asset의 vertical 위치입니다. 값을 줄이면 벽이 위로 올라갑니다.
-3. `FLOOR_CENTER_Y`: floor asset의 vertical 위치입니다. 값을 줄이면 바닥이 위로 올라갑니다.
+1. `CABIN_WORLD_WIDTH`, `CABIN_WORLD_HEIGHT`: camera가 이동할 수 있는 world 크기입니다.
+2. `CABIN_WORLD_CENTER_X`, `CABIN_WORLD_CENTER_Y`: wall/floor room base가 정렬되는 world 중심입니다.
+3. `WALL_CENTER_Y`: wall asset의 vertical 위치입니다. 값을 줄이면 벽이 위로 올라갑니다.
+4. `FLOOR_CENTER_Y`: floor asset의 vertical 위치입니다. 값을 줄이면 바닥이 위로 올라갑니다.
+5. `CAMERA_MIN_ZOOM`, `CAMERA_MAX_ZOOM`, `CAMERA_ZOOM_STEP`: camera zoom 범위와 wheel zoom 단위입니다.
 
 배치 저장 규칙:
 

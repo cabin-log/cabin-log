@@ -73,7 +73,7 @@ Tauri에서는 네이티브 창 컨트롤이 랜딩, 인증 및 앱 내부 Nav�
 - 인증된 사용자 route는 사용자를 `/show-case`로 보내면 안 됩니다.
 - `/cabin`은 첫 playable init 화면입니다. `GET /api/v1/game/state`를 불러오고, pixel-art 오두막 장면 위에 player/cabin summary를 표시하며, 소포와 설정은 장면 위에 회색 backdrop이 깔린 투명 modal panel로 엽니다.
 - 설정 modal은 현재 GitHub 기반 프로필 세션을 표시하고, 공통 auth context를 통해 로그아웃한 뒤 `/login`으로 돌아갑니다.
-- 첫 cabin renderer는 Phaser `1280 x 720` FIT canvas를 사용하고 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`를 isometric room base로 preload합니다.
+- 첫 cabin renderer는 Phaser `1280 x 720` FIT canvas와 `1500 x 800` camera world를 사용하고 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`를 isometric room base로 preload합니다. Room은 world 중앙에 정렬하며, 방향키로 camera를 이동하고 `Q`/`E`로 축소/확대하며 mouse wheel zoom과 pointer drag pan을 지원합니다.
 
 API base URL 동작:
 

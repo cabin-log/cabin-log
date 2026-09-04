@@ -124,6 +124,9 @@
         "actions": {
             "packages": "소포",
             "settings": "설정",
+            "zoomControls": "오두막 확대/축소 조작",
+            "zoomIn": "확대 (E 또는 마우스 휠)",
+            "zoomOut": "축소 (Q 또는 마우스 휠)",
             "retry": "다시 시도"
         },
         "stats": {

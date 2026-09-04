@@ -130,7 +130,12 @@ export function CabinInitPage() {
             </div>
 
             <section className="cabin-init-stage" aria-label={t("cabin.stage.aria")}>
-                <CabinPhaserStage ariaLabel={t("cabin.stage.phaserAria")} />
+                <CabinPhaserStage
+                    ariaLabel={t("cabin.stage.phaserAria")}
+                    zoomControlsLabel={t("cabin.actions.zoomControls")}
+                    zoomInLabel={t("cabin.actions.zoomIn")}
+                    zoomOutLabel={t("cabin.actions.zoomOut")}
+                />
                 <PanelCard className="cabin-init-panel">
                     {loading ? (
                         <div className="cabin-init-panel__loading">
