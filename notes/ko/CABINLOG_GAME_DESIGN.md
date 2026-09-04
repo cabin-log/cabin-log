@@ -62,6 +62,20 @@ screen_x = (grid_x - grid_y) * (tile_width / 2)
 screen_y = (grid_x + grid_y) * (tile_height / 2) - grid_z * tile_z_height
 ```
 
+초기 Phaser renderer 계약:
+
+1. `/cabin` playable init screen은 Phaser `1280 x 720` FIT canvas를 사용합니다.
+2. 첫 room base asset은 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`입니다.
+3. Wall과 floor asset은 이미 isometric projection으로 제작된 단일 이미지이며, Phaser Scene에서 같은 scale로 중앙 정렬합니다.
+4. Layer 순서는 wall base를 먼저 그리고 floor base를 나중에 그려 floor가 전면에 오도록 합니다.
+5. 사용자 배치 object는 이후 같은 Scene에서 `screen_x`, `screen_y` projection 공식을 사용해 floor 위에 렌더링합니다.
+
+Cabin Phaser tuning point:
+
+1. `ROOM_CENTER_X`: wall/floor의 공통 horizontal center입니다.
+2. `WALL_CENTER_Y`: wall asset의 vertical 위치입니다. 값을 줄이면 벽이 위로 올라갑니다.
+3. `FLOOR_CENTER_Y`: floor asset의 vertical 위치입니다. 값을 줄이면 바닥이 위로 올라갑니다.
+
 배치 저장 규칙:
 
 1. Backend가 사용자가 조정 가능한 모든 object placement를 저장합니다.

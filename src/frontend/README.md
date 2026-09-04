@@ -75,6 +75,7 @@ Authenticated GitHub login flow:
 - Authenticated player routes must not send players to `/show-case`.
 - `/cabin` is the first playable init screen. It loads `GET /api/v1/game/state`, shows player/cabin summary data over the pixel-art cabin scene, and opens package/settings as transparent modal panels with a muted backdrop over the scene.
 - The settings modal shows the current GitHub-backed profile session and signs out through the shared auth context before returning to `/login`.
+- The first cabin renderer uses Phaser with a `1280 x 720` FIT canvas and preloads `src/frontend/public/sprites/img/wall.png` and `src/frontend/public/sprites/img/floor.png` as the isometric room base.
 
 API base URL behavior:
 

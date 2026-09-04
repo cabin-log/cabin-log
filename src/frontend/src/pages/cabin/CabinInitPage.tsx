@@ -12,6 +12,7 @@ import {
     Tooltip,
     UserAvatar,
 } from "../../components/ui";
+import { CabinPhaserStage } from "../../components/features/cabin/CabinPhaserStage";
 import { useGameApi, type GameState } from "../../hooks/api/game/useGameApi";
 import { useAuthContext } from "../../hooks/useAuth";
 
@@ -129,6 +130,7 @@ export function CabinInitPage() {
             </div>
 
             <section className="cabin-init-stage" aria-label={t("cabin.stage.aria")}>
+                <CabinPhaserStage ariaLabel={t("cabin.stage.phaserAria")} />
                 <PanelCard className="cabin-init-panel">
                     {loading ? (
                         <div className="cabin-init-panel__loading">

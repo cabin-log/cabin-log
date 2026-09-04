@@ -111,7 +111,8 @@
             "aria": "오두막 조작"
         },
         "stage": {
-            "aria": "오두막 init 장면"
+            "aria": "오두막 init 장면",
+            "phaserAria": "아이소메트릭 오두막 방"
         },
         "player": {
             "fallbackName": "Cabinlog 사용자",

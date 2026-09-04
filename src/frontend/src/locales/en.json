@@ -111,7 +111,8 @@
             "aria": "Cabin controls"
         },
         "stage": {
-            "aria": "Cabin init scene"
+            "aria": "Cabin init scene",
+            "phaserAria": "Isometric cabin room"
         },
         "player": {
             "fallbackName": "Cabinlog user",

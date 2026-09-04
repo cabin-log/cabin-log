@@ -140,6 +140,7 @@ describe("CabinInitPage", () => {
 
         // Then: the init board shows player and summary data from the backend state.
         expect(await screen.findByText("Octo Dev")).toBeVisible();
+        expect(screen.getByTestId("cabin-phaser-stage")).toBeInTheDocument();
         expect(screen.getByText("120")).toBeVisible();
         expect(screen.getByText("8")).toBeVisible();
         expect(screen.getByText("3")).toBeVisible();

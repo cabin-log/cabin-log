@@ -2296,7 +2296,22 @@ a {
     pointer-events: none;
 }
 
+.cabin-phaser-stage {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: #101416;
+}
+
+.cabin-phaser-stage canvas {
+    display: block;
+    image-rendering: pixelated;
+}
+
 .cabin-init-panel {
+    position: relative;
+    z-index: 1;
     width: min(42rem, calc(100vw - 2rem));
     min-height: 5.2rem;
     padding: 0.85rem;
