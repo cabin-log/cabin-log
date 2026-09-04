@@ -23,15 +23,12 @@ export function AppNavbar() {
 
     const displayName = user?.name?.trim() || user?.email;
     const avatarLabel = displayName?.slice(0, 1).toUpperCase();
-    let pageTitle = t("nav.pageTitles.showCase");
+    let pageTitle = t("nav.pageTitles.cabin");
     if (location.pathname === "/settings") {
         pageTitle = t("nav.pageTitles.settings");
-    } else if (location.pathname === "/show-case/loading") {
+    } else if (location.pathname === "/loading") {
         pageTitle = t("nav.pageTitles.loading");
-    } else if (
-        location.pathname === "/show-case/404" ||
-        !location.pathname.startsWith("/show-case")
-    ) {
+    } else if (location.pathname !== "/cabin") {
         pageTitle = t("nav.pageTitles.notFound");
     }
 
@@ -44,7 +41,7 @@ export function AppNavbar() {
         setBusy(true);
         try {
             await logout();
-            navigate(loginEnabled ? "/login" : "/show-case", { replace: true });
+            navigate(loginEnabled ? "/login" : "/cabin", { replace: true });
         } finally {
             setBusy(false);
         }
@@ -53,12 +50,8 @@ export function AppNavbar() {
     return (
         <header className="app-nav" data-tauri-drag-region onMouseDown={startDesktopWindowDrag}>
             <div className="app-nav__inner" data-tauri-drag-region>
-                <Tooltip content={t("nav.aria.goShowCase")} side="right">
-                    <Link
-                        to="/show-case"
-                        className="app-nav__brand"
-                        aria-label={t("nav.aria.goShowCase")}
-                    >
+                <Tooltip content={t("nav.aria.goCabin")} side="right">
+                    <Link to="/cabin" className="app-nav__brand" aria-label={t("nav.aria.goCabin")}>
                         <BrandMark className="brand-mark--nav" />
                     </Link>
                 </Tooltip>

@@ -38,7 +38,7 @@ describe("App configuration guard", () => {
     it("keeps protected routes locked when server configuration is unavailable", async () => {
         // Given: desktop startup cannot load /config and the requested URL is protected.
         render(
-            <MemoryRouter initialEntries={["/show-case"]}>
+            <MemoryRouter initialEntries={["/cabin"]}>
                 <App />
             </MemoryRouter>,
         );
@@ -65,7 +65,7 @@ describe("App configuration guard", () => {
         // Given: a manual retry remains in flight.
         reloadConfigMock.mockReturnValue(new Promise(() => undefined));
         render(
-            <MemoryRouter initialEntries={["/show-case"]}>
+            <MemoryRouter initialEntries={["/cabin"]}>
                 <App />
             </MemoryRouter>,
         );

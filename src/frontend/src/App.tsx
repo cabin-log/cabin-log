@@ -1,40 +1,30 @@
 import { useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
-import { AppNavbar } from "./components/layout/AppNavbar";
-import { AppSidebar } from "./components/layout/AppSidebar";
 import { useAuthContext } from "./hooks/useAuth";
 import { useAppConfig } from "./hooks/useFeatures";
 import { hasStartedFromLanding } from "./utils/landing";
 import { LoginPage } from "./pages/login/LoginPage";
-import { LoginSuccessPage } from "./pages/login/LoginSuccessPage";
+import { CabinInitPage } from "./pages/cabin/CabinInitPage";
 import { LoadingPage } from "./pages/main/LoadingPage";
 import { LandingPage } from "./pages/main/LandingPage";
-import { ShowCaseNotFoundPage } from "./pages/main/ShowCaseNotFoundPage";
-import { ShowCasePage } from "./pages/main/ShowCasePage";
-import { SettingsPage } from "./pages/settings/SettingsPage";
+import { NotFoundPage } from "./pages/main/NotFoundPage";
 import { ServerUnavailablePage } from "./pages/main/ServerUnavailablePage";
 import { useServerConnectivity } from "./hooks/connectivity/useServerConnectivity";
 
-function ProtectedLayout({
+function ProtectedStandaloneRoute({
+    children,
     loginEnabled,
     configLoading,
 }: {
+    children: ReactNode;
     loginEnabled: boolean;
     configLoading: boolean;
 }) {
     const { user, loading } = useAuthContext();
     const { t } = useTranslation();
-    const location = useLocation();
-    const isMainPage = location.pathname === "/show-case";
-    const [sidebarExpanded, setSidebarExpanded] = useState(false);
-
-    useEffect(() => {
-        if (!isMainPage) {
-            setSidebarExpanded(false);
-        }
-    }, [isMainPage]);
 
     if (loading || configLoading) {
         return <LoadingPage message={t("app.loadingSession")} />;
@@ -43,59 +33,19 @@ function ProtectedLayout({
         return <Navigate to="/login" replace />;
     }
 
-    const mainClassName = isMainPage
-        ? sidebarExpanded
-            ? "app-main app-main--with-sidebar app-main--sidebar-expanded"
-            : "app-main app-main--with-sidebar app-main--sidebar-collapsed"
-        : "app-main";
-
-    return (
-        <div className="app-shell">
-            <AppNavbar />
-            <div className="app-body">
-                {isMainPage ? (
-                    <AppSidebar
-                        expanded={sidebarExpanded}
-                        onToggleExpanded={() => {
-                            setSidebarExpanded((prev) => !prev);
-                        }}
-                    />
-                ) : null}
-                <main className={mainClassName}>
-                    <Outlet />
-                </main>
-            </div>
-        </div>
-    );
+    return children;
 }
 
-function NotFoundRoute({
-    loginEnabled,
-    configLoading,
-}: {
-    loginEnabled: boolean;
-    configLoading: boolean;
-}) {
-    const { user, loading } = useAuthContext();
+function NotFoundRoute({ configLoading }: { configLoading: boolean }) {
+    const { loading } = useAuthContext();
 
     if (loading || configLoading) {
         return <LoadingPage />;
     }
 
-    if (user || !loginEnabled) {
-        return (
-            <div className="app-shell">
-                <AppNavbar />
-                <main className="app-main">
-                    <ShowCaseNotFoundPage />
-                </main>
-            </div>
-        );
-    }
-
     return (
         <main className="page">
-            <ShowCaseNotFoundPage />
+            <NotFoundPage />
         </main>
     );
 }
@@ -147,7 +97,7 @@ export function App() {
                 path="/"
                 element={
                     landingStarted ? (
-                        <Navigate to={loginEnabled ? "/login" : "/show-case"} replace />
+                        <Navigate to={loginEnabled ? "/login" : "/cabin"} replace />
                     ) : (
                         <LandingPage loginEnabled={loginEnabled} />
                     )
@@ -155,34 +105,22 @@ export function App() {
             />
             <Route
                 path="/login"
-                element={loginEnabled ? <LoginPage /> : <Navigate to="/show-case" replace />}
+                element={loginEnabled ? <LoginPage /> : <Navigate to="/cabin" replace />}
             />
             <Route path="/loading" element={<LoadingPage />} />
-            <Route path="/signup/*" element={<Navigate to="/login" replace />} />
-            <Route path="/forgot-password/*" element={<Navigate to="/login" replace />} />
-            <Route path="/reset-password/*" element={<Navigate to="/login" replace />} />
-            <Route path="/verify-email" element={<Navigate to="/login" replace />} />
+            <Route path="/login/success" element={<Navigate to="/cabin" replace />} />
             <Route
+                path="/cabin"
                 element={
-                    <ProtectedLayout loginEnabled={loginEnabled} configLoading={configLoading} />
-                }
-            >
-                <Route path="/dashboard" element={<Navigate to="/show-case" replace />} />
-                <Route path="/login/success" element={<LoginSuccessPage />} />
-                <Route path="/show-case" element={<ShowCasePage />} />
-                <Route
-                    path="/show-case/loading"
-                    element={<LoadingPage message="Loading preview..." />}
-                />
-                <Route path="/show-case/404" element={<ShowCaseNotFoundPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-            </Route>
-            <Route
-                path="*"
-                element={
-                    <NotFoundRoute loginEnabled={loginEnabled} configLoading={configLoading} />
+                    <ProtectedStandaloneRoute
+                        loginEnabled={loginEnabled}
+                        configLoading={configLoading}
+                    >
+                        <CabinInitPage />
+                    </ProtectedStandaloneRoute>
                 }
             />
+            <Route path="*" element={<NotFoundRoute configLoading={configLoading} />} />
         </Routes>
     );
 }

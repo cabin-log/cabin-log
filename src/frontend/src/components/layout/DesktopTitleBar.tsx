@@ -7,14 +7,7 @@ import { detectDesktopPlatform, isTauriRuntime } from "../../utils/desktopRuntim
 import { startDesktopWindowDrag } from "../../utils/desktopWindow";
 import { ConnectivityStatus } from "./ConnectivityStatus";
 
-const STANDALONE_TITLEBAR_PATHS = [
-    "/forgot-password",
-    "/loading",
-    "/login",
-    "/reset-password",
-    "/signup",
-    "/verify-email",
-];
+const STANDALONE_TITLEBAR_PATHS = ["/loading", "/login"];
 
 export function DesktopTitleBar() {
     const { t } = useTranslation();

@@ -62,6 +62,20 @@ screen_x = (grid_x - grid_y) * (tile_width / 2)
 screen_y = (grid_x + grid_y) * (tile_height / 2) - grid_z * tile_z_height
 ```
 
+초기 Phaser renderer 계약:
+
+1. `/cabin` playable init screen은 Phaser `1280 x 720` FIT canvas를 사용합니다.
+2. 첫 room base asset은 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`입니다.
+3. Wall과 floor asset은 이미 isometric projection으로 제작된 단일 이미지이며, Phaser Scene에서 같은 scale로 중앙 정렬합니다.
+4. Layer 순서는 wall base를 먼저 그리고 floor base를 나중에 그려 floor가 전면에 오도록 합니다.
+5. 사용자 배치 object는 이후 같은 Scene에서 `screen_x`, `screen_y` projection 공식을 사용해 floor 위에 렌더링합니다.
+
+Cabin Phaser tuning point:
+
+1. `ROOM_CENTER_X`: wall/floor의 공통 horizontal center입니다.
+2. `WALL_CENTER_Y`: wall asset의 vertical 위치입니다. 값을 줄이면 벽이 위로 올라갑니다.
+3. `FLOOR_CENTER_Y`: floor asset의 vertical 위치입니다. 값을 줄이면 바닥이 위로 올라갑니다.
+
 배치 저장 규칙:
 
 1. Backend가 사용자가 조정 가능한 모든 object placement를 저장합니다.
@@ -108,6 +122,15 @@ Dashboard data는 backend summary에서 받아야 합니다. Room renderer가 re
 3. 로그인 진입 애니메이션은 같은 비율을 유지한 상태에서 오두막 방향으로 확대합니다.
 4. 제목과 로그인 panel은 scene 위에 얹되, 오두막 진입 연출 중에는 화면 아래로 빠지며 배경 확대를 방해하지 않아야 합니다.
 5. 모바일 portrait 화면도 같은 fill 규칙을 사용합니다. 중요한 오브젝트는 중앙 safe area에 둡니다.
+
+로그인 성공 후 진입 규칙:
+
+1. GitHub OAuth callback 이후 `/login/success`는 중간 화면 없이 `/cabin`으로 redirect합니다.
+2. `/cabin`이 로그인 후 첫 진입점입니다.
+3. `/cabin`은 실제 cabin renderer가 붙기 전의 playable init 화면입니다.
+4. `/cabin`은 `GET /api/v1/game/state`로 backend state를 읽고, 소포/설정은 화면 이동 없이 modal로 엽니다.
+5. 설정 modal은 GitHub 기반 프로필 세션과 로그아웃 action을 포함합니다.
+6. 사용자용 인증 흐름은 `/show-case`로 이동하면 안 됩니다. `/show-case`는 개발용 component 확인 화면으로만 남깁니다.
 
 ## Activity Reward Points
 

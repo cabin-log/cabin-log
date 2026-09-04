@@ -26,6 +26,11 @@
         "retry": "연결 다시 시도",
         "retrying": "연결 확인 중..."
     },
+    "notFound": {
+        "title": "404 찾을 수 없음",
+        "subtitle": "요청한 페이지가 존재하지 않습니다.",
+        "backToCabin": "오두막으로 돌아가기"
+    },
     "landing": {
         "navAria": "랜딩 탐색",
         "eyebrow": "Cabinlog",
@@ -54,6 +59,7 @@
             "resendVerificationFallback": "인증 이메일 재전송에 실패했습니다. 다시 시도해주세요.",
             "emailAlreadyExists": "이미 사용 중인 이메일입니다.",
             "emailDisabled": "이메일 기반 기능이 현재 비활성화되어 있습니다.",
+            "passwordAuthDisabled": "비밀번호 로그인은 비활성화되어 있습니다. GitHub 로그인을 사용하세요.",
             "loginDisabled": "로그인이 현재 비활성화되어 있습니다.",
             "invalidToken": "토큰이 유효하지 않거나 만료되었습니다.",
             "insufficientRole": "이 작업을 수행할 권한이 없습니다.",
@@ -100,13 +106,77 @@
         "forgotPasswordPrompt": "비밀번호를 잊으셨나요?",
         "forgotPasswordLink": "비밀번호 찾기"
     },
-    "loginSuccess": {
-        "title": "GitHub 로그인 완료",
-        "subtitle": "Cabinlog 계정이 GitHub와 연결되었습니다.",
-        "unknownUser": "Cabinlog 사용자",
-        "githubConnected": "GitHub 계정 연결됨",
-        "sessionConnected": "세션 연결됨",
-        "continue": "계속하기"
+    "cabin": {
+        "hud": {
+            "aria": "오두막 조작"
+        },
+        "stage": {
+            "aria": "오두막 init 장면",
+            "phaserAria": "아이소메트릭 오두막 방"
+        },
+        "player": {
+            "fallbackName": "Cabinlog 사용자",
+            "ready": "오두막 준비 완료"
+        },
+        "state": {
+            "loading": "오두막 상태를 불러오는 중..."
+        },
+        "actions": {
+            "packages": "소포",
+            "settings": "설정",
+            "retry": "다시 시도"
+        },
+        "stats": {
+            "coins": "코인",
+            "today": "오늘 활동",
+            "food": "사료",
+            "packages": "소포"
+        },
+        "packages": {
+            "title": "소포",
+            "description": "GitHub 동기화와 일일 보상으로 도착한 소포가 여기에 표시됩니다.",
+            "empty": "아직 도착한 소포가 없습니다.",
+            "noDescription": "동기화 후 소포 상세 정보가 표시됩니다.",
+            "itemCount": "{{count}}개 아이템"
+        },
+        "settings": {
+            "title": "오두막 설정",
+            "description": "백엔드에서 받은 현재 게임 설정입니다.",
+            "profileTitle": "GitHub 프로필",
+            "language": "언어",
+            "languageDescription": "이 기기에서 사용할 표시 언어를 선택하세요.",
+            "languages": {
+                "en": "English",
+                "ko": "한국어"
+            },
+            "playTitle": "플레이 설정",
+            "playDescription": "백엔드와 연결된 일일 기준 및 오두막 상태입니다.",
+            "timezone": "시간대",
+            "cutoff": "일일 기준 시간",
+            "cutoffValue": "{{hour}}:00",
+            "cabin": "오두막 그리드",
+            "cabinValue": "{{width}} x {{depth}} 칸, {{tileWidth}} x {{tileHeight}} px 타일",
+            "stacks": "주요 스택",
+            "githubConnected": "GitHub 프로필 연결됨",
+            "githubUnknown": "GitHub 프로필 연결 정보를 확인할 수 없음",
+            "logoutIdle": "로그아웃",
+            "logoutBusy": "로그아웃 중...",
+            "noStacks": "아직 스택 데이터가 없습니다",
+            "unknown": "알 수 없음"
+        },
+        "modal": {
+            "close": "닫기"
+        },
+        "errors": {
+            "stateLoadFailed": "오두막 상태를 불러오지 못했습니다.",
+            "rewardPackageNotFound": "소포를 찾을 수 없습니다.",
+            "rewardPackageAlreadyClaimed": "이미 받은 소포입니다.",
+            "cabinPlacementNotFound": "오두막 배치를 찾을 수 없습니다.",
+            "cabinPlacementInvalid": "오두막 배치가 올바르지 않습니다.",
+            "cabinPlacementConflict": "다른 오브젝트와 배치가 겹칩니다.",
+            "cabinItemNotOwned": "보유하지 않은 오두막 오브젝트입니다.",
+            "cabinSystemPlacementLocked": "이 오두막 오브젝트는 변경할 수 없습니다."
+        }
     },
     "signup": {
         "title": "회원가입",
@@ -224,13 +294,13 @@
         "profileMenu": "프로필 메뉴",
         "sidebar": {
             "aria": "기본 탐색",
-            "showCase": "쇼케이스",
+            "cabin": "오두막",
             "settings": "설정",
             "toggleOpen": "사이드바 펼치기",
             "toggleClose": "사이드바 접기"
         },
         "pageTitles": {
-            "showCase": "쇼케이스 페이지",
+            "cabin": "오두막",
             "settings": "설정",
             "loading": "로딩",
             "notFound": "404 찾을 수 없음"
@@ -240,7 +310,7 @@
         "logoutBusy": "로그아웃 중...",
         "logoutUnavailable": "서버에 다시 연결한 뒤 로그아웃할 수 있습니다.",
         "aria": {
-            "goShowCase": "쇼케이스 페이지로 이동",
+            "goCabin": "오두막으로 이동",
             "openMenu": "프로필 메뉴 열기"
         }
     },

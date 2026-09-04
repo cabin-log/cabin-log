@@ -74,7 +74,7 @@ describe("AppNavbar", () => {
     it("blocks logout while the desktop server is disconnected", async () => {
         // Given: an authenticated desktop user is offline on the main page.
         const user = userEvent.setup();
-        renderWithRouter(<AppNavbar />, "/show-case");
+        renderWithRouter(<AppNavbar />, "/cabin");
 
         // When: the user opens the profile menu.
         await user.click(screen.getByRole("button", { name: "Open profile menu" }));
