@@ -90,7 +90,7 @@ class Settings(BaseModel):
     OAUTH_CALLBACK_RESPONSE_MODE: str = os.getenv(
         "OAUTH_CALLBACK_RESPONSE_MODE", "redirect"
     ).lower()
-    OAUTH_FRONTEND_SUCCESS_PATH: str = os.getenv("OAUTH_FRONTEND_SUCCESS_PATH", "/login/success")
+    OAUTH_FRONTEND_SUCCESS_PATH: str = os.getenv("OAUTH_FRONTEND_SUCCESS_PATH", "/cabin")
     OAUTH_FRONTEND_FAILURE_PATH: str = os.getenv("OAUTH_FRONTEND_FAILURE_PATH", "/login")
 
     OAUTH_GOOGLE_CLIENT_ID: str = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "")

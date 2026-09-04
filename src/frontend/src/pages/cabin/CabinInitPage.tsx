@@ -1,7 +1,7 @@
 import { Activity, Box, Coins, LogOut, Package, RefreshCw, Settings, Utensils } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
     Button,
@@ -15,10 +15,14 @@ import {
 import { CabinPhaserStage } from "../../components/features/cabin/CabinPhaserStage";
 import { useGameApi, type GameState } from "../../hooks/api/game/useGameApi";
 import { useAuthContext } from "../../hooks/useAuth";
+import { consumeCabinEntryReveal } from "../../utils/cabinEntryReveal";
 
 type CabinModal = "packages" | "settings" | null;
 const SUPPORTED_LANGUAGE_IDS = ["en", "ko"] as const;
 type SupportedLanguageId = (typeof SUPPORTED_LANGUAGE_IDS)[number];
+type CabinRouteState = {
+    playCabinEntryReveal?: boolean;
+};
 
 function formatNumber(value: number): string {
     return new Intl.NumberFormat().format(value);
@@ -59,6 +63,7 @@ function useCabinState() {
 
 export function CabinInitPage() {
     const { i18n, t } = useTranslation();
+    const location = useLocation();
     const navigate = useNavigate();
     const { logout, user } = useAuthContext();
     const { error, load, loading, state } = useCabinState();
@@ -66,6 +71,10 @@ export function CabinInitPage() {
     const [logoutBusy, setLogoutBusy] = useState(false);
     const displayName = user?.name?.trim() || user?.email || t("cabin.player.fallbackName");
     const isGithubConnected = user?.oauth_providers?.includes("github") === true;
+    const routeState = location.state as CabinRouteState | null;
+    const [shouldPlayEntryReveal] = useState(
+        () => routeState?.playCabinEntryReveal === true || consumeCabinEntryReveal(),
+    );
     const pendingPackages = state?.pending_packages ?? [];
     const stackProfiles = state?.stack_profiles.items ?? [];
     const topStacks = useMemo(() => stackProfiles.slice(0, 5), [stackProfiles]);
@@ -87,7 +96,13 @@ export function CabinInitPage() {
     };
 
     return (
-        <main className="page auth-page cabin-init-page">
+        <main
+            className={
+                shouldPlayEntryReveal
+                    ? "page auth-page cabin-init-page cabin-init-page--entry-reveal"
+                    : "page auth-page cabin-init-page"
+            }
+        >
             <div className="cabin-init-hud" aria-label={t("cabin.hud.aria")}>
                 <div className="cabin-init-player">
                     <UserAvatar

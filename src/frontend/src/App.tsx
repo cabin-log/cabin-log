@@ -108,7 +108,10 @@ export function App() {
                 element={loginEnabled ? <LoginPage /> : <Navigate to="/cabin" replace />}
             />
             <Route path="/loading" element={<LoadingPage />} />
-            <Route path="/login/success" element={<Navigate to="/cabin" replace />} />
+            <Route
+                path="/login/success"
+                element={<Navigate to="/cabin" replace state={{ playCabinEntryReveal: true }} />}
+            />
             <Route
                 path="/cabin"
                 element={

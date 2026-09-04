@@ -373,6 +373,24 @@ def test_oauth_callback_json_mode_returns_tokens_and_github_profile(
     assert payload["github_profile"]["login"] == "octodev"
 
 
+def test_oauth_callback_redirect_mode_sends_user_directly_to_cabin(
+    sample_user: UserResponse,
+):
+    """Scenario: OAuth callback redirect mode avoids a visible frontend success hop."""
+    client = create_auth_test_client(sample_user)
+
+    # Given/When: OAuth callback succeeds in redirect mode.
+    response = client.get(
+        "/api/v1/auth/oauth/github/callback",
+        params={"code": "github-code", "state": "state-token"},
+        follow_redirects=False,
+    )
+
+    # Then: the browser is sent directly to the cabin route.
+    assert response.status_code == 307
+    assert response.headers["location"] == f"{SETTINGS.APP_BASE_URL.rstrip('/')}/cabin"
+
+
 def test_login_success_returns_token_contract(sample_user: UserResponse):
     """Scenario: login route returns token payload on valid input."""
     client = create_auth_test_client(sample_user)

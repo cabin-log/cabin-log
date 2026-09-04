@@ -176,47 +176,50 @@ When a new frontend domain is added:
     - Local loopback hostname alignment for same-site authentication cookies.
 2. `src/tests/unit/utils/desktopRuntime.test.ts`
     - Browser/Tauri runtime distinction and desktop platform detection.
-3. `src/tests/unit/utils/validation.test.ts`
+3. `src/tests/unit/utils/cabinEntryRedirect.test.ts`, `src/tests/unit/utils/cabinEntryReveal.test.ts`
+    - OAuth callback bootstrap rewrite and one-time cabin reveal storage.
+4. `src/tests/unit/utils/validation.test.ts`
     - Email/password validation success and failure branches.
-4. `src/tests/component/components/layout/DesktopTitleBar.test.tsx`
+5. `src/tests/component/components/layout/DesktopTitleBar.test.tsx`
     - Browser hidden state, native macOS controls, Windows window actions, and standalone connectivity placement.
-5. `src/tests/integration/api/configApi.test.ts`
+6. `src/tests/integration/api/configApi.test.ts`
     - `/config` success and failure API response handling.
-6. `src/tests/component/pages/login/LoginPage.test.tsx`
+7. `src/tests/component/pages/login/LoginPage.test.tsx`
     - Invalid email client-side validation branch.
     - Successful login submit + navigation branch.
     - `INVALID_CREDENTIALS` remaining-attempts branch.
     - `EMAIL_NOT_VERIFIED` + resend verification branch.
-7. `src/tests/component/pages/cabin/CabinInitPage.test.tsx`
+8. `src/tests/component/pages/cabin/CabinInitPage.test.tsx`
     - Playable init screen loads backend game state.
     - Package and settings buttons open modal overlays without leaving `/cabin`.
-8. `src/tests/component/pages/settings/SettingsPage.test.tsx`
+    - Login success entry state applies the cabin reveal class.
+9. `src/tests/component/pages/settings/SettingsPage.test.tsx`
     - Role badge visibility branch:
       admin role shows badge, user role hides badge.
     - Backend-aligned API key lifecycle flow:
       create -> reveal -> list-visible -> disable -> enable -> delete.
     - Backend-aligned error branches:
       duplicate-name (`API_KEY_NAME_ALREADY_EXISTS`), delete not-found (`API_KEY_NOT_FOUND`).
-9. `src/tests/integration/hooks/useAuth.test.tsx`
+10. `src/tests/integration/hooks/useAuth.test.tsx`
     - refresh bootstrap success branch (no token -> refresh -> me).
     - stored token + `/me` success branch (refresh skip).
     - `/me` fail + refresh fail branch (token clear and logged-out state).
     - logout API failure branch with client-side session clear in `finally`.
-10. `tests/e2e/auth-smoke.spec.ts`
+11. `tests/e2e/auth-smoke.spec.ts`
     - Browser-level `/login` route render smoke.
-11. `src/tests/unit/hooks/serverConnectivity.test.ts`
+12. `src/tests/unit/hooks/serverConnectivity.test.ts`
     - Exponential reconnect delay, cap, and jitter boundaries.
-12. `src/tests/integration/api/systemApi.test.ts`
+13. `src/tests/integration/api/systemApi.test.ts`
     - Ready and degraded `/health/ready` response handling.
-13. `src/tests/integration/hooks/useServerConnectivity.test.tsx`
+14. `src/tests/integration/hooks/useServerConnectivity.test.tsx`
     - Browser polling exclusion and Tauri offline-to-online recovery.
-14. `src/tests/component/App.test.tsx`
+15. `src/tests/component/App.test.tsx`
     - Fail-closed protected routing, shared public-navbar structure, and delayed retry loading state when `/config` is unavailable.
-15. `src/tests/integration/hooks/useFeatures.test.tsx`
+16. `src/tests/integration/hooks/useFeatures.test.tsx`
     - Configuration failure remains distinct from explicit login disablement and recovers on retry.
-16. `src/tests/component/components/layout/AppNavbar.test.tsx`
+17. `src/tests/component/components/layout/AppNavbar.test.tsx`
     - Compact desktop connectivity status placement beside the profile control, stable retry label, and offline logout blocking.
-17. `src/tests/component/pages/main/LandingPage.test.tsx`
+18. `src/tests/component/pages/main/LandingPage.test.tsx`
     - Shared public-navbar structure and landing navigation behavior.
 
 ## 8.1) Backend Full-System Mapping (Frontend-Reachable Subset)

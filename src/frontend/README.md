@@ -70,8 +70,8 @@ Login init background asset:
 
 Authenticated GitHub login flow:
 
-- GitHub OAuth callback lands on `/login/success`.
-- `/login/success` immediately redirects authenticated players to `/cabin`; it does not render an intermediate "Enter cabin" page.
+- GitHub OAuth callback lands on `/cabin` by default.
+- `/login/success` remains a legacy fallback that rewrites to `/cabin` before React routing renders; neither path renders an intermediate "Enter cabin" page.
 - Authenticated player routes must not send players to `/show-case`.
 - `/cabin` is the first playable init screen. It loads `GET /api/v1/game/state`, shows player/cabin summary data over the pixel-art cabin scene, and opens package/settings as transparent modal panels with a muted backdrop over the scene.
 - The settings modal shows the current GitHub-backed profile session and signs out through the shared auth context before returning to `/login`.
