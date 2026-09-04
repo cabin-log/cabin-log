@@ -13,6 +13,7 @@ import {
     type RecentLoginAccount,
 } from "../../utils/loginHistory";
 import { getApiBase } from "../../utils/apiBase";
+import { markCabinEntryReveal } from "../../utils/cabinEntryReveal";
 
 export function LoginPage() {
     const { t } = useTranslation();
@@ -90,6 +91,7 @@ export function LoginPage() {
             return false;
         }
         setIsEnteringCabin(true);
+        markCabinEntryReveal();
         oauthRedirectTimerRef.current = window.setTimeout(() => {
             window.location.assign(oauthStartUrl);
         }, 1150);
@@ -102,6 +104,7 @@ export function LoginPage() {
         }
 
         setIsEnteringCabin(true);
+        markCabinEntryReveal();
         oauthRedirectTimerRef.current = window.setTimeout(() => {
             if (githubProvider) {
                 const oauthStartUrl = new URL(

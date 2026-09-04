@@ -129,7 +129,7 @@ Dashboard data는 backend summary에서 받아야 합니다. Room renderer가 re
 
 로그인 성공 후 진입 규칙:
 
-1. GitHub OAuth callback 이후 `/login/success`는 중간 화면 없이 `/cabin`으로 redirect합니다.
+1. GitHub OAuth callback 이후 backend는 기본적으로 `/cabin`으로 직접 redirect합니다. `/login/success`는 legacy fallback으로만 유지하며 React routing render 전에 중간 화면 없이 `/cabin`으로 치환됩니다.
 2. `/cabin`이 로그인 후 첫 진입점입니다.
 3. `/cabin`은 실제 cabin renderer가 붙기 전의 playable init 화면입니다.
 4. `/cabin`은 `GET /api/v1/game/state`로 backend state를 읽고, 소포/설정은 화면 이동 없이 modal로 엽니다.

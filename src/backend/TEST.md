@@ -90,6 +90,7 @@ Mandatory coverage per domain (minimum):
 1. Success case (200/201)
 2. Auth failure case (401 when protected)
 3. Request validation failure (422 when input invalid)
+4. Auth OAuth callback redirect target when redirect-mode behavior changes
 
 Notes for this codebase:
 1. Router tests use fake services, not real repositories.

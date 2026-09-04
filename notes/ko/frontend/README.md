@@ -68,8 +68,8 @@ Tauri에서는 네이티브 창 컨트롤이 랜딩, 인증 및 앱 내부 Nav�
 
 인증된 GitHub 로그인 흐름:
 
-- GitHub OAuth callback은 `/login/success`에 도착합니다.
-- `/login/success`는 인증된 사용자를 곧바로 `/cabin`으로 redirect하며, 중간 "오두막 들어가기" 페이지를 렌더링하지 않습니다.
+- GitHub OAuth callback은 기본적으로 `/cabin`에 도착합니다.
+- `/login/success`는 legacy fallback으로 유지하며 React routing render 전에 `/cabin`으로 치환됩니다. 두 경로 모두 중간 "오두막 들어가기" 페이지를 렌더링하지 않습니다.
 - 인증된 사용자 route는 사용자를 `/show-case`로 보내면 안 됩니다.
 - `/cabin`은 첫 playable init 화면입니다. `GET /api/v1/game/state`를 불러오고, pixel-art 오두막 장면 위에 player/cabin summary를 표시하며, 소포와 설정은 장면 위에 회색 backdrop이 깔린 투명 modal panel로 엽니다.
 - 설정 modal은 현재 GitHub 기반 프로필 세션을 표시하고, 공통 auth context를 통해 로그아웃한 뒤 `/login`으로 돌아갑니다.

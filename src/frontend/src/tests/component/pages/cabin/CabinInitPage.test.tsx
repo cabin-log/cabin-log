@@ -1,5 +1,6 @@
-import { screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CabinInitPage } from "../../../../pages/cabin/CabinInitPage";
@@ -152,6 +153,28 @@ describe("CabinInitPage", () => {
         const dialog = screen.getByRole("dialog", { name: "Packages" });
         expect(within(dialog).getByText("TypeScript level 2 upgrade package")).toBeVisible();
         expect(within(dialog).getByText("TypeScript stack reward level 2 is ready.")).toBeVisible();
+    });
+
+    it("reveals the cabin scene when reached from the login success callback", async () => {
+        // Given: login success redirected the user to the cabin with entry reveal state.
+        const { container } = render(
+            <MemoryRouter
+                initialEntries={[
+                    {
+                        pathname: "/cabin",
+                        state: { playCabinEntryReveal: true },
+                    },
+                ]}
+            >
+                <CabinInitPage />
+            </MemoryRouter>,
+        );
+
+        // Then: the cabin screen loads normally while applying the reveal animation class.
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+        expect(container.querySelector(".cabin-init-page")).toHaveClass(
+            "cabin-init-page--entry-reveal",
+        );
     });
 
     it("opens backend-backed settings details", async () => {

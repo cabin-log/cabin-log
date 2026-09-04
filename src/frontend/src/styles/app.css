@@ -2169,6 +2169,15 @@ a {
         linear-gradient(rgba(18, 20, 20, 0.08), rgba(14, 16, 15, 0.3));
 }
 
+.cabin-init-page--entry-reveal .cabin-phaser-stage {
+    animation: cabin-stage-entry-reveal 760ms cubic-bezier(0.2, 0.78, 0.18, 1) both;
+}
+
+.cabin-init-page--entry-reveal .cabin-init-hud,
+.cabin-init-page--entry-reveal .cabin-init-panel {
+    animation: cabin-ui-entry-reveal 560ms cubic-bezier(0.2, 0.78, 0.18, 1) 320ms both;
+}
+
 .cabin-init-hud {
     position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 1rem);
@@ -3649,12 +3658,39 @@ input:focus {
     }
 }
 
+@keyframes cabin-stage-entry-reveal {
+    from {
+        opacity: 0;
+        filter: brightness(0.72) saturate(0.92);
+        transform: scale(1.035);
+    }
+    to {
+        opacity: 1;
+        filter: brightness(1) saturate(1);
+        transform: scale(1);
+    }
+}
+
+@keyframes cabin-ui-entry-reveal {
+    from {
+        opacity: 0;
+        transform: translateY(0.85rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .auth-page,
     .auth-page::before,
     .auth-title-image,
     .auth-panel--github-only,
-    .auth-github-link {
+    .auth-github-link,
+    .cabin-init-page--entry-reveal .cabin-phaser-stage,
+    .cabin-init-page--entry-reveal .cabin-init-hud,
+    .cabin-init-page--entry-reveal .cabin-init-panel {
         animation: none;
     }
 }
