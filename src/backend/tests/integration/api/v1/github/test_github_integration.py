@@ -376,7 +376,7 @@ def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
         "repository_count": 1,
         "created_activity_count": 4,
         "duplicate_activity_count": 0,
-        "created_package_count": 0,
+        "created_package_count": 1,
     }
     assert duplicate_response.json() == {
         "repository_count": 1,
@@ -408,6 +408,16 @@ def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
         "PULL_REQUEST_MERGED",
         "ISSUE",
     }
+
+    packages_response = integration_client.get(
+        "/api/v1/rewards/packages",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert packages_response.status_code == 200
+    packages = packages_response.json()
+    assert len(packages) == 1
+    assert packages[0]["metadata"]["grant_type"] == "onboarding"
+    assert packages[0]["metadata"]["total_activity_count"] == 4
     assert {activity["source"] for activity in activities} == {"OAUTH_API"}
     assert all(activity["github_external_id"] for activity in activities)
     assert all(activity["repository_full_name"] == "octodev/cabin" for activity in activities)

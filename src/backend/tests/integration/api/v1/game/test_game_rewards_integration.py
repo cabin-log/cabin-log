@@ -112,8 +112,19 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     first_packages = asyncio.run(GameService().refresh_after_github_sync(user_id=user_id))
     duplicate_packages = asyncio.run(GameService().refresh_after_github_sync(user_id=user_id))
 
-    assert len(first_packages) == 5
+    assert len(first_packages) == 4
     assert duplicate_packages == []
+    assert sum(1 for package in first_packages if package.source == "DAILY_REWARD") == 1
+    onboarding_package = next(
+        package for package in first_packages if package.metadata.get("grant_type") == "onboarding"
+    )
+    assert onboarding_package.source == "GITHUB_SYNC"
+    assert onboarding_package.metadata["activity_scope"] == "github_history"
+    assert onboarding_package.metadata["total_activity_count"] == 20
+    onboarding_items = {item.item_type: item for item in onboarding_package.items}
+    assert onboarding_items["CURRENCY"].item_key == "coins"
+    assert onboarding_items["FOOD"].item_key == "basic_feed"
+    assert onboarding_items["PET_EXP"].item_key == "pet_exp"
 
     stacks_response = integration_client.get(
         "/api/v1/game/stacks",
@@ -132,16 +143,21 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     )
     assert packages_response.status_code == 200
     packages = packages_response.json()
-    assert len(packages) == 5
+    assert len(packages) == 4
     assert {package["status"] for package in packages} == {"PENDING"}
+    assert sum(1 for package in packages if package["source"] == "DAILY_REWARD") == 1
+    assert (
+        sum(1 for package in packages if package["metadata"].get("grant_type") == "onboarding") == 1
+    )
 
-    python_level_three = next(
+    python_origin = next(
         package
         for package in packages
-        if package["metadata"]["language"] == "Python" and package["metadata"]["mastery_level"] == 3
+        if package["metadata"].get("language") == "Python"
+        and package["metadata"].get("mastery_level") == 1
     )
     claim_response = integration_client.post(
-        f"/api/v1/rewards/packages/{python_level_three['id']}/claim",
+        f"/api/v1/rewards/packages/{python_origin['id']}/claim",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert claim_response.status_code == 200
@@ -150,11 +166,11 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     assert claimed["stack_rewards"][0]["reward_key"] == "stack.python-serpent"
     assert claimed["stack_rewards"][0]["reward_type"] == "ANIMAL"
     assert claimed["stack_rewards"][0]["source_language"] == "Python"
-    assert claimed["stack_rewards"][0]["stack_reward_level"] == 3
-    assert claimed["stack_rewards"][0]["stage"] == 2
+    assert claimed["stack_rewards"][0]["stack_reward_level"] == 1
+    assert claimed["stack_rewards"][0]["stage"] == 1
 
     duplicate_claim_response = integration_client.post(
-        f"/api/v1/rewards/packages/{python_level_three['id']}/claim",
+        f"/api/v1/rewards/packages/{python_origin['id']}/claim",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert duplicate_claim_response.status_code == 409
@@ -249,7 +265,6 @@ def test_game_settings_and_daily_activity_summary_use_timezone_cutoff(
     assert summary["coins"] == 41
     assert summary["food"] == 3
     assert summary["pet_exp"] == 172
-    assert summary["growth_material"] == 1
     items = {item["activity_type"]: item for item in summary["items"]}
     assert items["COMMIT"] == {
         "activity_type": "COMMIT",
@@ -284,8 +299,7 @@ def test_game_settings_and_daily_activity_summary_use_timezone_cutoff(
     assert reward_items["FOOD"]["quantity"] == 3
     assert reward_items["PET_EXP"]["item_key"] == "pet_exp"
     assert reward_items["PET_EXP"]["quantity"] == 172
-    assert reward_items["MATERIAL"]["item_key"] == "growth_crystal"
-    assert reward_items["MATERIAL"]["quantity"] == 1
+    assert "MATERIAL" not in reward_items
 
     duplicate_reward_response = integration_client.post(
         "/api/v1/game/activity/daily-reward?reward_date=2026-09-02",
@@ -307,7 +321,6 @@ def test_game_settings_and_daily_activity_summary_use_timezone_cutoff(
     claimed_inventory = {item["item_key"]: item for item in claimed["inventory"]}
     assert claimed_inventory["basic_feed"]["quantity"] == 3
     assert claimed_inventory["pet_exp"]["quantity"] == 172
-    assert claimed_inventory["growth_crystal"]["quantity"] == 1
 
     state_response = integration_client.get(
         "/api/v1/game/state",
@@ -321,8 +334,88 @@ def test_game_settings_and_daily_activity_summary_use_timezone_cutoff(
     state_inventory = {item["item_key"]: item for item in state["inventory"]}
     assert state_inventory["basic_feed"]["quantity"] == 3
     assert state_inventory["pet_exp"]["quantity"] == 172
-    assert state_inventory["growth_crystal"]["quantity"] == 1
     assert state["pending_packages"] == []
+
+
+@pytest.mark.primary_data
+def test_default_daily_reward_date_uses_last_completed_window(
+    integration_client: TestClient,
+):
+    """Scenario: omitted reward dates settle the last completed daily window."""
+    user_id, token = asyncio.run(_create_github_oauth_user())
+    asyncio.run(
+        Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.COMMIT,
+                source="OAUTH_API",
+                github_external_id="github:test:settled-yesterday",
+                occurred_at=datetime(2026, 9, 5, 8, 0, tzinfo=UTC),
+                metadata={"external_id": "settled-yesterday"},
+            )
+        )
+    )
+
+    updated_settings_response = integration_client.patch(
+        "/api/v1/game/settings",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"timezone": "UTC"},
+    )
+    assert updated_settings_response.status_code == 200
+
+    service = GameService()
+    assert (
+        service._resolve_reward_date(
+            now=datetime(2026, 9, 6, 6, 0, tzinfo=UTC),
+            timezone=UTC,
+        )
+        == datetime(2026, 9, 5, tzinfo=UTC).date()
+    )
+    assert (
+        service._resolve_reward_date(
+            now=datetime(2026, 9, 6, 4, 0, tzinfo=UTC),
+            timezone=UTC,
+        )
+        == datetime(2026, 9, 4, tzinfo=UTC).date()
+    )
+
+
+@pytest.mark.primary_data
+def test_game_reward_sync_endpoint_creates_onboarding_package(
+    integration_client: TestClient,
+):
+    """Scenario: cabin reward sync creates one onboarding package from stored history."""
+    user_id, token = asyncio.run(_create_github_oauth_user())
+    asyncio.run(
+        Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.COMMIT,
+                source="OAUTH_API",
+                github_external_id="github:test:onboarding-history",
+                occurred_at=datetime(2026, 8, 19, 9, 0, tzinfo=UTC),
+                metadata={"external_id": "onboarding-history"},
+            )
+        )
+    )
+
+    sync_response = integration_client.post(
+        "/api/v1/game/rewards/sync",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    duplicate_sync_response = integration_client.post(
+        "/api/v1/game/rewards/sync",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert sync_response.status_code == 200
+    assert duplicate_sync_response.status_code == 200
+    synced_packages = sync_response.json()
+    assert len(synced_packages) == 1
+    assert synced_packages[0]["source"] == "GITHUB_SYNC"
+    assert synced_packages[0]["metadata"]["grant_type"] == "onboarding"
+    assert synced_packages[0]["metadata"]["total_activity_count"] == 1
+    assert duplicate_sync_response.json() == []
 
 
 @pytest.mark.primary_data

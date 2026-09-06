@@ -12,6 +12,7 @@ from app.models.game import (
     DailyActivitySummaryResponse,
     DailyRewardPackageResponse,
     GameStateResponse,
+    RewardPackageResponse,
     StackProfilesResponse,
     UserGameSettingsResponse,
     UserGameSettingsUpdate,
@@ -128,6 +129,14 @@ async def game_stack_profiles_recalculate(
     service: GameService = Depends(GameService),
 ) -> StackProfilesResponse:
     return await service.recalculate_stack_profiles(user_id=current_user.id)
+
+
+@router.post("/rewards/sync", response_model=list[RewardPackageResponse])
+async def game_reward_packages_sync(
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> list[RewardPackageResponse]:
+    return await service.sync_reward_packages(user_id=current_user.id)
 
 
 @router.get("/activity/daily-summary", response_model=DailyActivitySummaryResponse)

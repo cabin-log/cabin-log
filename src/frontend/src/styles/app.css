@@ -2271,9 +2271,18 @@ a {
     background: rgba(20, 27, 22, 0.34);
 }
 
+.cabin-init-icon-button:disabled {
+    cursor: wait;
+    opacity: 0.72;
+}
+
 .cabin-init-icon-button svg {
     width: 1.2rem;
     height: 1.2rem;
+}
+
+.cabin-init-icon-button__spin {
+    animation: cabin-refresh-spin 850ms linear infinite;
 }
 
 .cabin-init-icon-button__badge {
@@ -2292,6 +2301,16 @@ a {
     font-size: 0.68rem;
     font-weight: 900;
     text-shadow: none;
+}
+
+@keyframes cabin-refresh-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .cabin-init-stage {
@@ -2475,6 +2494,14 @@ a {
     gap: 0.7rem;
 }
 
+.cabin-init-package-list {
+    max-height: min(28rem, calc(100dvh - 13rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
 .cabin-init-settings-content {
     display: grid;
     gap: 0.72rem;
@@ -2597,14 +2624,16 @@ a {
 
 .cabin-init-package > span {
     flex: 0 0 auto;
-    min-width: 2rem;
+    min-width: 4.6rem;
     height: 2rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 0.65rem;
     background: rgba(248, 250, 242, 0.16);
+    font-size: 0.74rem;
     font-weight: 800;
+    white-space: nowrap;
 }
 
 .cabin-init-settings-list {

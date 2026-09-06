@@ -89,13 +89,15 @@ Game 기반:
 - `DELETE /api/v1/game/cabin/placements/{placement_id}`는 사용자가 조정 가능한 placement를 제거합니다.
 - `GET /api/v1/game/stacks`는 현재 사용자의 계산된 stack profile을 반환합니다.
 - `POST /api/v1/game/stacks/recalculate`는 저장된 GitHub repository language와 최근 activity를 기준으로 stack profile을 재계산합니다.
-- `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD`는 선택한 reward date의 activity count, point, capped coin, food, pet EXP, growth material을 반환합니다.
-- `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD`는 선택한 날짜의 daily activity reward package를 한 번만 생성합니다.
+- `POST /api/v1/game/rewards/sync`는 저장된 GitHub 데이터를 기준으로 GitHub history onboarding, 마지막 완료 daily reward, stack reward package를 정산합니다.
+- `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD`는 선택한 reward date의 activity count, point, capped coin, food, pet EXP를 반환합니다. 생략하면 마지막으로 완료된 daily window가 기본 reward date가 됩니다.
+- `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD`는 선택한 날짜의 daily activity reward package를 한 번만 생성합니다. 생략하면 마지막으로 완료된 daily window를 정산합니다.
 - `GET /api/v1/rewards/packages`는 현재 사용자의 pending/claimed reward package를 반환합니다.
-- `POST /api/v1/rewards/packages/{package_id}/claim`은 reward package를 수령하고 owned stack reward 생성/upgrade, wallet coin 증가, inventory food/material/PET_EXP 적재를 처리합니다.
+- `POST /api/v1/rewards/packages/{package_id}/claim`은 reward package를 수령하고 origin package의 owned stack reward 생성, wallet coin 증가, inventory food/PET_EXP 적재를 처리합니다.
 - Stack reward package는 `reward_grants.grant_key`로 idempotent하게 생성되어 sync를 반복해도 중복 생성되지 않습니다.
-- Stack profile은 GitHub 데이터 변화에 따라 내려갈 수 있지만, 이미 claim한 stack reward는 최고 claim level을 유지합니다.
-- Daily activity summary는 사용자 timezone과 로컬 05:00 cutoff를 사용합니다. Activity timestamp는 계속 UTC로 저장합니다.
+- Stack profile은 GitHub 데이터 변화에 따라 내려갈 수 있지만, 보유한 stack reward는 제거되거나 downgrade되지 않습니다.
+- Daily activity summary는 사용자 timezone과 로컬 05:00 cutoff를 사용합니다. Activity timestamp는 계속 UTC로 저장하며, 기본 정산 대상은 진행 중인 날짜가 아니라 이전 완료 reward date입니다.
+- GitHub OAuth sync는 repository/activity 데이터를 갱신한 뒤 cabin 화면과 같은 game reward sync를 실행합니다.
 
 GitHub OAuth snapshot 흐름:
 

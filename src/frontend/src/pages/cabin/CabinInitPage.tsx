@@ -13,8 +13,9 @@ import {
     UserAvatar,
 } from "../../components/ui";
 import { CabinPhaserStage } from "../../components/features/cabin/CabinPhaserStage";
-import { useGameApi, type GameState } from "../../hooks/api/game/useGameApi";
+import { useGameApi, type GameState, type RewardPackage } from "../../hooks/api/game/useGameApi";
 import { useAuthContext } from "../../hooks/useAuth";
+import { markCabinDailySyncComplete, shouldRunCabinDailySync } from "../../utils/cabinDailySync";
 import { consumeCabinEntryReveal } from "../../utils/cabinEntryReveal";
 
 type CabinModal = "packages" | "settings" | null;
@@ -28,17 +29,67 @@ function formatNumber(value: number): string {
     return new Intl.NumberFormat().format(value);
 }
 
-function useCabinState() {
+function getStringMetadataValue(
+    metadata: Record<string, unknown> | undefined,
+    key: string,
+): string | null {
+    const value = metadata?.[key];
+    return typeof value === "string" && value.trim() ? value : null;
+}
+
+function resolvePackageDisplayText(
+    item: RewardPackage,
+    t: ReturnType<typeof useTranslation>["t"],
+): { title: string; description: string } {
+    const metadata = item.metadata as Record<string, unknown> | undefined;
+    const grantType = getStringMetadataValue(metadata, "grant_type");
+    if (grantType === "onboarding") {
+        return {
+            title: t("cabin.packages.onboardingTitle"),
+            description: t("cabin.packages.onboardingDescription"),
+        };
+    }
+
+    const language = getStringMetadataValue(metadata, "language");
+    if (language) {
+        return {
+            title: t("cabin.packages.stackOriginTitle", { language }),
+            description: t("cabin.packages.stackOriginDescription", { language }),
+        };
+    }
+
+    const rewardDate = getStringMetadataValue(metadata, "reward_date");
+    if (item.source === "DAILY_REWARD" && rewardDate) {
+        return {
+            title: t("cabin.packages.dailyTitle", { date: rewardDate }),
+            description: t("cabin.packages.dailyDescription"),
+        };
+    }
+
+    return {
+        title: item.title,
+        description: item.description || t("cabin.packages.noDescription"),
+    };
+}
+
+function useCabinState(userId: number | null | undefined) {
     const { t } = useTranslation();
-    const { getGameState, extractGameErrorDetail, resolveGameErrorMessage } = useGameApi();
+    const { getGameState, extractGameErrorDetail, resolveGameErrorMessage, syncRewardPackages } =
+        useGameApi();
     const [state, setState] = useState<GameState | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
         try {
-            const payload = await getGameState();
+            let payload = await getGameState();
+            if (userId && shouldRunCabinDailySync(userId, payload.today.reward_date)) {
+                await syncRewardPackages();
+                markCabinDailySyncComplete(userId, payload.today.reward_date);
+                payload = await getGameState();
+            }
             setState(payload);
             setError(null);
         } catch (caught) {
@@ -52,13 +103,50 @@ function useCabinState() {
         } finally {
             setLoading(false);
         }
-    }, [extractGameErrorDetail, getGameState, resolveGameErrorMessage, t]);
+    }, [
+        extractGameErrorDetail,
+        getGameState,
+        resolveGameErrorMessage,
+        syncRewardPackages,
+        t,
+        userId,
+    ]);
+
+    const refresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await syncRewardPackages();
+            const payload = await getGameState();
+            if (userId) {
+                markCabinDailySyncComplete(userId, payload.today.reward_date);
+            }
+            setState(payload);
+            setError(null);
+        } catch (caught) {
+            setError(
+                resolveGameErrorMessage(
+                    t,
+                    extractGameErrorDetail(caught),
+                    "cabin.errors.stateLoadFailed",
+                ),
+            );
+        } finally {
+            setRefreshing(false);
+        }
+    }, [
+        extractGameErrorDetail,
+        getGameState,
+        resolveGameErrorMessage,
+        syncRewardPackages,
+        t,
+        userId,
+    ]);
 
     useEffect(() => {
         void load();
     }, [load]);
 
-    return { error, load, loading, state };
+    return { error, load, loading, refresh, refreshing, state };
 }
 
 export function CabinInitPage() {
@@ -66,7 +154,7 @@ export function CabinInitPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { logout, user } = useAuthContext();
-    const { error, load, loading, state } = useCabinState();
+    const { error, load, loading, refresh, refreshing, state } = useCabinState(user?.id);
     const [activeModal, setActiveModal] = useState<CabinModal>(null);
     const [logoutBusy, setLogoutBusy] = useState(false);
     const displayName = user?.name?.trim() || user?.email || t("cabin.player.fallbackName");
@@ -116,6 +204,20 @@ export function CabinInitPage() {
                     </div>
                 </div>
                 <div className="cabin-init-actions">
+                    <Tooltip content={t("cabin.actions.refresh")} side="bottom">
+                        <button
+                            type="button"
+                            className="cabin-init-icon-button"
+                            onClick={() => void refresh()}
+                            disabled={refreshing}
+                            aria-label={t("cabin.actions.refresh")}
+                        >
+                            <RefreshCw
+                                className={refreshing ? "cabin-init-icon-button__spin" : undefined}
+                                aria-hidden="true"
+                            />
+                        </button>
+                    </Tooltip>
                     <Tooltip content={t("cabin.actions.packages")} side="bottom">
                         <button
                             type="button"
@@ -207,10 +309,14 @@ export function CabinInitPage() {
                         {pendingPackages.map((item) => (
                             <article className="cabin-init-package" key={item.id}>
                                 <div>
-                                    <h3>{item.title}</h3>
-                                    <p>{item.description || t("cabin.packages.noDescription")}</p>
+                                    <h3>{resolvePackageDisplayText(item, t).title}</h3>
+                                    <p>{resolvePackageDisplayText(item, t).description}</p>
                                 </div>
-                                <span>{item.items?.length ?? 0}</span>
+                                <span>
+                                    {t("cabin.packages.itemCount", {
+                                        count: item.items?.length ?? 0,
+                                    })}
+                                </span>
                             </article>
                         ))}
                     </div>

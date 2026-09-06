@@ -123,6 +123,7 @@
         },
         "actions": {
             "packages": "Packages",
+            "refresh": "Update daily rewards",
             "settings": "Settings",
             "zoomControls": "Cabin zoom controls",
             "zoomIn": "Zoom in (E or mouse wheel)",
@@ -131,7 +132,7 @@
         },
         "stats": {
             "coins": "Coins",
-            "today": "Today",
+            "today": "Settled day",
             "food": "Food",
             "packages": "Packages"
         },
@@ -140,6 +141,12 @@
             "description": "Packages arrive here after GitHub sync and daily rewards.",
             "empty": "No packages have arrived yet.",
             "noDescription": "Package details will be shown after sync.",
+            "dailyTitle": "{{date}} activity package",
+            "dailyDescription": "Settled activity rewards are ready.",
+            "onboardingTitle": "GitHub history onboarding package",
+            "onboardingDescription": "Welcome rewards from your synced GitHub history are ready.",
+            "stackOriginTitle": "{{language}} origin package",
+            "stackOriginDescription": "{{language}} stack reward is ready.",
             "itemCount": "{{count}} item(s)"
         },
         "settings": {
