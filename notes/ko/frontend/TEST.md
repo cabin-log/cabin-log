@@ -200,7 +200,10 @@ it("<behavior>", async () => {
     - 소포/설정 버튼이 `/cabin`을 벗어나지 않고 modal overlay를 엶
     - 소포 수령 시 backend claim API를 호출하고 cabin state를 다시 불러옴
     - 인벤토리는 수령 보상을 소모품, 가구, 펫로그로 분류함
-    - 도감은 가구와 펫로그만 추적하고 소모품은 제외함
+    - 소포, 인벤토리, 도감 modal은 높이를 고정하고 넘치는 list/grid만 내부 scroll함
+    - 인벤토리 slot은 asset 우선 square item으로 표시하고 선택 시 상세 panel을 열며, 배치된 보상 수거 시 cabin placement delete API를 호출함
+    - 도감은 stack/event 가구와 펫로그를 추적하고 소모품은 제외함
+    - 잠긴 도감 slot은 선택 전 `?`로 표시하고, 선택 후 보상 상세와 수령 조건을 표시함
     - Login success entry state가 cabin reveal class를 적용함
 11. `src/tests/component/pages/settings/SettingsPage.test.tsx`
     - 역할 배지 표시 분기:

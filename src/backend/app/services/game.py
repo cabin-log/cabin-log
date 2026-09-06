@@ -80,18 +80,177 @@ class StackRewardDefinition:
     language: str
     reward_type: StackRewardType
     reward_key: str
+    asset_key: str
+    required_mastery_level: int = 1
+    required_bytes: int = 50_000
+    required_recent_activity_count: int = 10
+    condition_key: str = "stack_bytes"
 
 
 STACK_REWARD_CATALOG: dict[str, StackRewardDefinition] = {
-    "Python": StackRewardDefinition("Python", StackRewardType.ANIMAL, "stack.python-serpent"),
+    "Python": StackRewardDefinition(
+        "Python",
+        StackRewardType.ANIMAL,
+        "stack.python-serpent",
+        "python-serpent",
+    ),
     "TypeScript": StackRewardDefinition(
         "TypeScript",
         StackRewardType.FURNITURE,
         "stack.terminal-desk",
+        "typescript-terminal-desk",
     ),
-    "Java": StackRewardDefinition("Java", StackRewardType.ANIMAL, "stack.coffee-sprout"),
-    "Rust": StackRewardDefinition("Rust", StackRewardType.FURNITURE, "stack.forge-bench"),
-    "Go": StackRewardDefinition("Go", StackRewardType.ANIMAL, "stack.cloud-helper"),
+    "Java": StackRewardDefinition(
+        "Java",
+        StackRewardType.ANIMAL,
+        "stack.coffee-sprout",
+        "java-coffee-sprout",
+    ),
+    "Rust": StackRewardDefinition(
+        "Rust",
+        StackRewardType.FURNITURE,
+        "stack.forge-bench",
+        "rust-forge-bench",
+    ),
+    "Go": StackRewardDefinition(
+        "Go",
+        StackRewardType.ANIMAL,
+        "stack.cloud-helper",
+        "go-cloud-helper",
+    ),
+    "JavaScript": StackRewardDefinition(
+        "JavaScript",
+        StackRewardType.FURNITURE,
+        "stack.browser-console-table",
+        "javascript-browser-console-table",
+    ),
+    "C/C++": StackRewardDefinition(
+        "C/C++",
+        StackRewardType.FURNITURE,
+        "stack.circuit-bench",
+        "cpp-circuit-bench",
+    ),
+    "C#": StackRewardDefinition(
+        "C#",
+        StackRewardType.FURNITURE,
+        "stack.blueprint-studio-desk",
+        "csharp-blueprint-studio-desk",
+    ),
+    "Kotlin": StackRewardDefinition(
+        "Kotlin",
+        StackRewardType.ANIMAL,
+        "stack.night-fox",
+        "kotlin-night-fox",
+    ),
+    "Swift": StackRewardDefinition(
+        "Swift",
+        StackRewardType.ANIMAL,
+        "stack.swiftlet-light",
+        "swift-swiftlet-light",
+    ),
+    "PHP": StackRewardDefinition(
+        "PHP",
+        StackRewardType.ANIMAL,
+        "stack.pantry-blob",
+        "php-pantry-blob",
+    ),
+    "Ruby": StackRewardDefinition(
+        "Ruby",
+        StackRewardType.ANIMAL,
+        "stack.gem-sprite",
+        "ruby-gem-sprite",
+    ),
+    "Shell": StackRewardDefinition(
+        "Shell",
+        StackRewardType.FURNITURE,
+        "stack.command-crate",
+        "shell-command-crate",
+    ),
+    "SQL": StackRewardDefinition(
+        "SQL",
+        StackRewardType.FURNITURE,
+        "stack.data-cabinet",
+        "sql-data-cabinet",
+    ),
+    "Docker": StackRewardDefinition(
+        "Docker",
+        StackRewardType.FURNITURE,
+        "stack.container-shelf",
+        "docker-container-shelf",
+    ),
+}
+
+EVENT_REWARD_CATALOG: dict[str, StackRewardDefinition] = {
+    "event.night-owl-bed": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.night-owl-bed",
+        "event-night-owl-bed",
+        condition_key="night_owl_commits",
+    ),
+    "event.morning-kettle": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.morning-kettle",
+        "event-morning-kettle",
+        condition_key="morning_activity_days",
+    ),
+    "event.review-lamp": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.review-lamp",
+        "event-review-lamp",
+        condition_key="pull_request_reviews",
+    ),
+    "event.release-banner": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.release-banner",
+        "event-release-banner",
+        condition_key="release_activity",
+    ),
+    "event.bugfix-toolbox": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.bugfix-toolbox",
+        "event-bugfix-toolbox",
+        condition_key="bugfix_activity",
+    ),
+    "event.weekend-cushion": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.weekend-cushion",
+        "event-weekend-cushion",
+        condition_key="weekend_activity",
+    ),
+    "event.docs-scroll": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.docs-scroll",
+        "event-docs-scroll",
+        condition_key="docs_commits",
+    ),
+    "event.first-sync-compass": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.FURNITURE,
+        "event.first-sync-compass",
+        "event-first-sync-compass",
+        condition_key="first_github_sync",
+    ),
+    "event.streak-spark": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.ANIMAL,
+        "event.streak-spark",
+        "event-streak-spark",
+        condition_key="activity_streak",
+    ),
+    "event.mentor-orb": StackRewardDefinition(
+        "Achievement",
+        StackRewardType.ANIMAL,
+        "event.mentor-orb",
+        "event-mentor-orb",
+        condition_key="mentor_collaboration",
+    ),
 }
 
 
@@ -139,7 +298,7 @@ class GameService:
         furniture: list[GameCollectionEntryResponse] = []
         pet_logs: list[GameCollectionEntryResponse] = []
         for definition in sorted(
-            STACK_REWARD_CATALOG.values(),
+            [*STACK_REWARD_CATALOG.values(), *EVENT_REWARD_CATALOG.values()],
             key=lambda item: (item.reward_type.value, item.language),
         ):
             owned_reward = owned_rewards.get(definition.reward_key)
@@ -148,7 +307,12 @@ class GameService:
                 reward_key=definition.reward_key,
                 reward_type=definition.reward_type,
                 source_language=definition.language,
+                asset_key=definition.asset_key,
                 owned=owned_reward is not None,
+                required_mastery_level=definition.required_mastery_level,
+                required_bytes=definition.required_bytes,
+                required_recent_activity_count=definition.required_recent_activity_count,
+                condition_key=definition.condition_key,
                 stack_reward_level=owned_reward.stack_reward_level if owned_reward else 0,
                 stage=owned_reward.stage if owned_reward else 0,
                 mastery_level=profile.mastery_level if profile else 0,

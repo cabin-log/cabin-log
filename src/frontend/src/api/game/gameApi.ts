@@ -7,6 +7,7 @@ export type RewardPackageClaim = components["schemas"]["RewardPackageClaimRespon
 export type GameInventory = components["schemas"]["GameInventoryResponse"];
 export type GameCollection = components["schemas"]["GameCollectionResponse"];
 export type DailyRewardPackage = components["schemas"]["DailyRewardPackageResponse"];
+export type CabinPlacement = components["schemas"]["CabinPlacementResponse"];
 
 export async function getGameState(): Promise<GameState> {
     const { data, error } = await apiClient.GET("/api/v1/game/state", {
@@ -76,4 +77,18 @@ export async function getCollection(): Promise<GameCollection> {
         throw error;
     }
     return data;
+}
+
+export async function deleteCabinPlacement(placementId: number): Promise<void> {
+    const { error } = await apiClient.DELETE("/api/v1/game/cabin/placements/{placement_id}", {
+        headers: getAuthHeader(),
+        params: {
+            path: {
+                placement_id: placementId,
+            },
+        },
+    });
+    if (error) {
+        throw error;
+    }
 }

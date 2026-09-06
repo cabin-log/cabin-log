@@ -377,7 +377,7 @@ stack_reward_unlock:{language_slug}:{reward_key}
 10. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
    wallet coin 증가, inventory item 적재, owned stack reward 생성을 처리합니다.
 11. `GET /api/v1/game/inventory`는 수령 완료된 보상을 소모품, 가구, 펫로그로 나누어 반환합니다.
-12. `GET /api/v1/game/collection`은 stack reward catalog 기준 가구와 펫로그 도감을 반환합니다. 사료 같은 소모품은 도감 항목이 아니라 inventory 항목으로만 추적합니다.
+12. `GET /api/v1/game/collection`은 stack reward catalog와 event reward catalog 기준 가구와 펫로그 도감을 반환합니다. 사료 같은 소모품은 도감 항목이 아니라 inventory 항목으로만 추적합니다.
 11. `GET /api/v1/game/state`는 첫 playable cabin screen에 필요한 backend state를
    반환합니다.
 
@@ -396,26 +396,105 @@ Reward key는 Cabinlog 자체 개념입니다. 특정 기술이나 프로젝트�
 
 Stack-themed reward catalog:
 
-| Stack | Reward type | Reward concept | Room visual identity | Food/material concept |
-| --- | --- | --- | --- | --- |
-| Python | Animal | 유연한 serpent-like companion | 종이와 작은 램프가 있는 차분한 lab corner | Warm byte biscuit, shed scale |
-| TypeScript | Furniture | UI monitor와 component board가 붙는 terminal desk | Panel과 status light가 있는 밝은 workstation | Signal candy, typed core |
-| Java | Animal | Coffee sprout companion | Brewing tool이 있는 따뜻한 cafe desk | Roasted bean, warm cup |
-| Rust | Furniture | Lamp, anvil table, metal rack이 붙는 forge bench | Spark와 gear가 있는 workshop corner | Gear treat, forge core |
-| Go | Animal | Cloud helper companion | Cloud/server motif가 있는 가벼운 infra corner | Cloud puff, deploy token |
-| JavaScript | Furniture | Browser console table with script poster | Yellow accent light가 있는 playful scripting corner | Spark snack, event loop bead |
-| C/C++ | Furniture | Circuit bench with compiler cabinet | Board와 tool이 있는 low-level hardware corner | Bit chip, linker plate |
-| C# | Furniture | Studio desk with blueprint panel | Polished panel 중심의 clean toolsmith corner | Sharp candy, crystal shard |
-| Kotlin | Animal | Night fox companion | Compact mobile studio corner | Moon jelly, coroutine thread |
-| Swift | Animal | Swiftlet light companion | 밝은 app studio corner | Feather cookie, app icon gem |
-| PHP | Animal | Pantry blob companion | Retro web cabin corner | Purple jelly, request token |
-| Ruby | Animal | Gem sprite companion | Red gem accent가 있는 cozy craft corner | Gem candy, polished shard |
-| Shell | Furniture | Command crate with log board | Crate와 cable이 있는 utility corner | Command chip, shell fragment |
-| SQL | Furniture | Data cabinet with query table | Drawer 중심의 organized archive corner | Data grain, index tag |
-| Docker | Furniture | Container shelf with deploy crate | Label box가 있는 shipping/storage corner | Container cracker, image seal |
+| Stack | Reward type | Reward key | Asset key | Reward concept | Room visual identity | Food/material concept |
+| --- | --- | --- | --- | --- | --- | --- |
+| Python | Animal | `stack.python-serpent` | `python-serpent` | 유연한 serpent-like companion | 종이와 작은 램프가 있는 차분한 lab corner | Warm byte biscuit, shed scale |
+| TypeScript | Furniture | `stack.terminal-desk` | `typescript-terminal-desk` | UI monitor와 component board가 붙는 terminal desk | Panel과 status light가 있는 밝은 workstation | Signal candy, typed core |
+| Java | Animal | `stack.coffee-sprout` | `java-coffee-sprout` | Coffee sprout companion | Brewing tool이 있는 따뜻한 cafe desk | Roasted bean, warm cup |
+| Rust | Furniture | `stack.forge-bench` | `rust-forge-bench` | Lamp, anvil table, metal rack이 붙는 forge bench | Spark와 gear가 있는 workshop corner | Gear treat, forge core |
+| Go | Animal | `stack.cloud-helper` | `go-cloud-helper` | Cloud helper companion | Cloud/server motif가 있는 가벼운 infra corner | Cloud puff, deploy token |
+| JavaScript | Furniture | `stack.browser-console-table` | `javascript-browser-console-table` | Browser console table with script poster | Yellow accent light가 있는 playful scripting corner | Spark snack, event loop bead |
+| C/C++ | Furniture | `stack.circuit-bench` | `cpp-circuit-bench` | Circuit bench with compiler cabinet | Board와 tool이 있는 low-level hardware corner | Bit chip, linker plate |
+| C# | Furniture | `stack.blueprint-studio-desk` | `csharp-blueprint-studio-desk` | Studio desk with blueprint panel | Polished panel 중심의 clean toolsmith corner | Sharp candy, crystal shard |
+| Kotlin | Animal | `stack.night-fox` | `kotlin-night-fox` | Night fox companion | Compact mobile studio corner | Moon jelly, coroutine thread |
+| Swift | Animal | `stack.swiftlet-light` | `swift-swiftlet-light` | Swiftlet light companion | 밝은 app studio corner | Feather cookie, app icon gem |
+| PHP | Animal | `stack.pantry-blob` | `php-pantry-blob` | Pantry blob companion | Retro web cabin corner | Purple jelly, request token |
+| Ruby | Animal | `stack.gem-sprite` | `ruby-gem-sprite` | Gem sprite companion | Red gem accent가 있는 cozy craft corner | Gem candy, polished shard |
+| Shell | Furniture | `stack.command-crate` | `shell-command-crate` | Command crate with log board | Crate와 cable이 있는 utility corner | Command chip, shell fragment |
+| SQL | Furniture | `stack.data-cabinet` | `sql-data-cabinet` | Data cabinet with query table | Drawer 중심의 organized archive corner | Data grain, index tag |
+| Docker | Furniture | `stack.container-shelf` | `docker-container-shelf` | Container shelf with deploy crate | Label box가 있는 shipping/storage corner | Container cracker, image seal |
 
 초기 MVP는 Python, TypeScript, Java, Rust, Go를 먼저 구현합니다.
 나머지 stack row는 future reward key와 visual direction을 정의합니다.
+
+## Reward Collection UX
+
+도감은 가구와 펫로그만 표시합니다. 소모품은 인벤토리에만 표시하고 도감에는 넣지
+않습니다.
+
+도감 표시 규칙:
+
+1. 모든 `STACK_REWARD_CATALOG`와 `EVENT_REWARD_CATALOG` 항목은 도감에 표시합니다.
+2. 보유하지 않은 항목은 슬롯 내부 이름을 `?`로 표시합니다.
+3. 잠긴 항목을 선택하면 상세 패널에서 실제 이름과 수령 조건을 표시합니다.
+4. 기본 stack 수령 조건은 `{Language} 코드 50,000 bytes 이상` 또는
+   `최근 {Language} 활동 10회 이상`입니다.
+5. 보유 항목은 이름, stack, 현재 level/stage를 표시합니다.
+6. 상세 패널은 `asset_key`를 함께 표시하여 추후 실제 sprite asset 연결 위치를
+   확인할 수 있게 합니다.
+
+## Reward Asset Manifest
+
+모든 asset은 isometric cabin grid 위에 배치되는 것을 전제로 제작합니다. 실제 파일이
+들어오기 전까지 UI는 `asset_key`와 placeholder slot을 사용합니다.
+
+공통 경로 규칙:
+
+| Type | Path pattern | Notes |
+| --- | --- | --- |
+| Furniture | `public/sprites/rewards/furniture/{asset_key}/{direction}.png` | `front`, `back`, `left`, `right` 4방향 |
+| Pet log idle/walk | `public/sprites/rewards/pet-logs/{asset_key}/{state}-{direction}.png` | `idle`, `walk`, `sleep`, `held` 상태와 4방향 |
+| Collection icon | `public/sprites/rewards/icons/{asset_key}.png` | 도감/인벤토리 슬롯용 1:1 아이콘 |
+
+가구 asset 요구사항:
+
+1. 모든 가구는 `front`, `back`, `left`, `right` 4방향 png가 필요합니다.
+2. 기본 footprint는 `1 x 1` grid cell로 시작하고, 큰 가구는 catalog에 별도
+   footprint metadata를 추가한 뒤 확장합니다.
+3. 가구 sprite의 기준점은 하단 중앙입니다. Isometric tile 위에 놓았을 때 바닥
+   접점이 흔들리면 안 됩니다.
+4. Level 2 이상 upgrade는 같은 `asset_key` 아래 `level-2`, `level-3` 하위 폴더로
+   분리합니다.
+
+펫로그 asset 요구사항:
+
+1. 모든 펫로그는 `idle-front/back/left/right`, `walk-front/back/left/right`,
+   `sleep-front/back/left/right`, `held-front/back/left/right` 상태가 필요합니다.
+2. `held`는 마우스로 잡았을 때 쓰는 상태이며, 그림자와 바닥 접촉 표현을 제거하거나
+   약하게 처리합니다.
+3. `sleep`은 오두막 내부에서 자동 idle 변형으로 쓸 수 있어야 합니다.
+4. `walk`는 최소 4프레임 loop를 권장합니다.
+5. Stage 진화가 있는 펫로그는 `stage-1`, `stage-2`, `stage-3` 하위 폴더를 둡니다.
+
+## Event Reward Recommendations
+
+Stack reward 외에도 사용자의 개발 습관을 기념하는 이벤트성 보상을 둘 수 있습니다.
+이벤트 보상은 특정 stack을 강제하기보다 시간대, 협업, 유지보수, 집중도 같은 플레이
+정체성을 보여주는 쪽이 좋습니다.
+
+추천 이벤트 보상:
+
+| Event key | Reward | Type | Condition | Design reason |
+| --- | --- | --- | --- | --- |
+| `event.night-owl-bed` | 새벽 작업 침대 | Furniture | 사용자 timezone 기준 00:00-05:00 commit 10회 이상 | 사용자가 제안한 새벽 작업 보상. 무리한 반복을 막기 위해 누적 milestone으로 처리 |
+| `event.morning-kettle` | 아침 주전자 | Furniture | 05:00-09:00 사이 activity가 7일 이상 | 꾸준한 아침 루틴을 보상 |
+| `event.review-lamp` | 리뷰 램프 | Furniture | Pull request review 20회 이상 | 협업/리뷰 기여를 보상 |
+| `event.release-banner` | 릴리즈 배너 | Furniture | release activity 3회 이상 | 배포 성취를 방 안에 남김 |
+| `event.bugfix-toolbox` | 버그픽스 공구함 | Furniture | issue close 또는 fix label 연결 활동 15회 이상 | 유지보수 기여를 보상 |
+| `event.weekend-cushion` | 주말 쿠션 | Furniture | 토/일 activity가 4일 이상 | 시간대 기반 milestone. 과한 일일 반복보다 누적형으로 제한 |
+| `event.docs-scroll` | 문서 두루마리 | Furniture | README/docs 변경 commit 10회 이상 | 문서화 습관을 보상 |
+| `event.first-sync-compass` | 첫 동기화 나침반 | Furniture | GitHub sync 최초 완료 | 온보딩 완료를 방 안의 오브젝트로 표현 |
+| `event.streak-spark` | 연속 활동 스파크 로그 | Pet log | 7일 이상 서로 다른 reward date에 activity 존재 | streak를 펫로그로 표현 |
+| `event.mentor-orb` | 멘토 오브 로그 | Pet log | review/comment 계열 협업 활동 30회 이상 | 협업 성향을 companion 형태로 표현 |
+
+이벤트 보상 정책:
+
+1. 이벤트 보상은 `ACHIEVEMENT` package source로 전달합니다.
+2. 조건은 사용자 timezone 기준으로 계산합니다.
+3. farming 방지를 위해 대부분 누적 milestone으로 설계하고, 일일 반복 claim은 피합니다.
+4. 이벤트 reward key는 stack reward와 충돌하지 않도록 `event.*` prefix를 사용합니다.
+5. 이벤트성 펫로그도 stack 펫로그와 동일한 asset state(`idle`, `walk`, `sleep`,
+   `held`)를 따라야 합니다.
 
 ## Animal Reward Evolution
 

@@ -200,9 +200,16 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     collection_furniture = {item["reward_key"]: item for item in collection["furniture"]}
     collection_pet_logs = {item["reward_key"]: item for item in collection["pet_logs"]}
     assert collection_furniture["stack.terminal-desk"]["owned"] is True
+    assert collection_furniture["stack.terminal-desk"]["asset_key"] == "typescript-terminal-desk"
     assert collection_furniture["stack.forge-bench"]["owned"] is False
+    assert collection_furniture["stack.forge-bench"]["required_bytes"] == 50_000
+    assert collection_furniture["stack.browser-console-table"]["owned"] is False
+    assert collection_furniture["event.night-owl-bed"]["condition_key"] == "night_owl_commits"
+    assert collection_furniture["event.first-sync-compass"]["owned"] is False
     assert collection_pet_logs["stack.python-serpent"]["owned"] is True
     assert collection_pet_logs["stack.coffee-sprout"]["owned"] is False
+    assert collection_pet_logs["stack.night-fox"]["required_recent_activity_count"] == 10
+    assert collection_pet_logs["event.streak-spark"]["condition_key"] == "activity_streak"
 
     duplicate_claim_response = integration_client.post(
         f"/api/v1/rewards/packages/{python_origin['id']}/claim",

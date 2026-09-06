@@ -163,15 +163,37 @@
             "emptyPetLogs": "No pet logs claimed yet.",
             "quantity": "x{{quantity}}",
             "level": "Lv. {{level}}",
-            "stage": "Stage {{stage}}"
+            "stage": "Stage {{stage}}",
+            "quantityDetail": "Owned quantity: {{quantity}}.",
+            "rewardDetail": "{{language}} reward, Lv. {{level}}, stage {{stage}}.",
+            "placed": "Placed in the cabin.",
+            "notPlaced": "Not placed in the cabin.",
+            "notPlaceable": "This supply is used from inventory and is not placed in the cabin.",
+            "collect": "Collect"
         },
         "collection": {
             "title": "Collection",
             "description": "Track furniture and pet logs unlocked by your stack history.",
             "furniture": "Furniture",
             "petLogs": "Pet logs",
+            "unknown": "?",
             "owned": "Owned",
-            "locked": "Lv. {{level}}"
+            "locked": "Locked",
+            "requirement": "Unlock by syncing {{language}} work with at least {{bytes}} bytes, or {{activities}} recent {{language}} activities.",
+            "ownedDetail": "{{language}} reward is owned at level {{level}}.",
+            "conditions": {
+                "achievement": "Unlock this achievement reward by meeting its event condition.",
+                "night_owl_commits": "Unlock by making 10 commits between midnight and 05:00 in your timezone.",
+                "morning_activity_days": "Unlock by recording activity between 05:00 and 09:00 on 7 different days.",
+                "pull_request_reviews": "Unlock by completing 20 pull request reviews.",
+                "release_activity": "Unlock by recording 3 release activities.",
+                "bugfix_activity": "Unlock by closing issues or completing fix-labeled work 15 times.",
+                "weekend_activity": "Unlock by recording activity on 4 weekend days.",
+                "docs_commits": "Unlock by making 10 README or documentation commits.",
+                "first_github_sync": "Unlock by completing your first GitHub sync.",
+                "activity_streak": "Unlock by recording activity on 7 different reward dates.",
+                "mentor_collaboration": "Unlock by completing 30 review or comment collaboration activities."
+            }
         },
         "supplies": {
             "basic_feed": "Basic feed",
@@ -183,7 +205,29 @@
                 "terminal-desk": "TypeScript terminal desk",
                 "coffee-sprout": "Java coffee sprout",
                 "forge-bench": "Rust forge bench",
-                "cloud-helper": "Go cloud helper pet log"
+                "cloud-helper": "Go cloud helper pet log",
+                "browser-console-table": "JavaScript browser console table",
+                "circuit-bench": "C/C++ circuit bench",
+                "blueprint-studio-desk": "C# blueprint studio desk",
+                "night-fox": "Kotlin night fox pet log",
+                "swiftlet-light": "Swift swiftlet light pet log",
+                "pantry-blob": "PHP pantry blob pet log",
+                "gem-sprite": "Ruby gem sprite pet log",
+                "command-crate": "Shell command crate",
+                "data-cabinet": "SQL data cabinet",
+                "container-shelf": "Docker container shelf"
+            },
+            "event": {
+                "night-owl-bed": "Night owl bed",
+                "morning-kettle": "Morning kettle",
+                "review-lamp": "Review lamp",
+                "release-banner": "Release banner",
+                "bugfix-toolbox": "Bugfix toolbox",
+                "weekend-cushion": "Weekend cushion",
+                "docs-scroll": "Docs scroll",
+                "first-sync-compass": "First sync compass",
+                "streak-spark": "Activity streak spark pet log",
+                "mentor-orb": "Mentor orb pet log"
             }
         },
         "settings": {

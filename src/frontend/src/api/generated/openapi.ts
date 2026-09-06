@@ -1154,8 +1154,30 @@ export interface components {
             reward_type: components["schemas"]["StackRewardType"];
             /** Source Language */
             source_language: string;
+            /** Asset Key */
+            asset_key: string;
             /** Owned */
             owned: boolean;
+            /**
+             * Required Mastery Level
+             * @default 1
+             */
+            required_mastery_level: number;
+            /**
+             * Required Bytes
+             * @default 50000
+             */
+            required_bytes: number;
+            /**
+             * Required Recent Activity Count
+             * @default 10
+             */
+            required_recent_activity_count: number;
+            /**
+             * Condition Key
+             * @default stack_bytes
+             */
+            condition_key: string;
             /**
              * Stack Reward Level
              * @default 0
