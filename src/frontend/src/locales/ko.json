@@ -163,15 +163,37 @@
             "emptyPetLogs": "아직 받은 펫로그가 없습니다.",
             "quantity": "x{{quantity}}",
             "level": "Lv. {{level}}",
-            "stage": "단계 {{stage}}"
+            "stage": "단계 {{stage}}",
+            "quantityDetail": "보유 수량: {{quantity}}개",
+            "rewardDetail": "{{language}} 보상, Lv. {{level}}, 단계 {{stage}}",
+            "placed": "현재 오두막에 배치되어 있습니다.",
+            "notPlaced": "현재 오두막에 배치되어 있지 않습니다.",
+            "notPlaceable": "소모품은 인벤토리에서 사용하며 오두막에 배치하지 않습니다.",
+            "collect": "수거"
         },
         "collection": {
             "title": "도감",
             "description": "스택 기록으로 해금한 가구와 펫로그를 추적합니다.",
             "furniture": "가구",
             "petLogs": "펫로그",
+            "unknown": "?",
             "owned": "보유",
-            "locked": "Lv. {{level}}"
+            "locked": "잠김",
+            "requirement": "{{language}} 코드가 {{bytes}} bytes 이상 동기화되거나, 최근 {{language}} 활동이 {{activities}}회 이상이면 받을 수 있습니다.",
+            "ownedDetail": "{{language}} 보상을 Lv. {{level}}로 보유 중입니다.",
+            "conditions": {
+                "achievement": "이벤트 조건을 달성하면 받을 수 있는 보상입니다.",
+                "night_owl_commits": "내 시간대 기준 00:00-05:00 사이 커밋을 10회 달성하면 받을 수 있습니다.",
+                "morning_activity_days": "05:00-09:00 사이 활동한 날이 7일 이상이면 받을 수 있습니다.",
+                "pull_request_reviews": "Pull request review를 20회 완료하면 받을 수 있습니다.",
+                "release_activity": "릴리즈 활동을 3회 기록하면 받을 수 있습니다.",
+                "bugfix_activity": "이슈 종료 또는 fix label 관련 작업을 15회 완료하면 받을 수 있습니다.",
+                "weekend_activity": "토요일 또는 일요일 활동일이 4일 이상이면 받을 수 있습니다.",
+                "docs_commits": "README 또는 문서 변경 커밋을 10회 달성하면 받을 수 있습니다.",
+                "first_github_sync": "첫 GitHub 동기화를 완료하면 받을 수 있습니다.",
+                "activity_streak": "서로 다른 정산일 7일 이상 활동하면 받을 수 있습니다.",
+                "mentor_collaboration": "리뷰 또는 코멘트 기반 협업 활동을 30회 완료하면 받을 수 있습니다."
+            }
         },
         "supplies": {
             "basic_feed": "기본 사료",
@@ -183,7 +205,29 @@
                 "terminal-desk": "TypeScript 터미널 책상",
                 "coffee-sprout": "Java 커피 새싹",
                 "forge-bench": "Rust 대장간 작업대",
-                "cloud-helper": "Go 구름 도우미 펫로그"
+                "cloud-helper": "Go 구름 도우미 펫로그",
+                "browser-console-table": "JavaScript 브라우저 콘솔 테이블",
+                "circuit-bench": "C/C++ 회로 작업대",
+                "blueprint-studio-desk": "C# 설계 스튜디오 책상",
+                "night-fox": "Kotlin 밤여우 펫로그",
+                "swiftlet-light": "Swift 빛새 펫로그",
+                "pantry-blob": "PHP 팬트리 블롭 펫로그",
+                "gem-sprite": "Ruby 보석 스프라이트 펫로그",
+                "command-crate": "Shell 커맨드 상자",
+                "data-cabinet": "SQL 데이터 캐비닛",
+                "container-shelf": "Docker 컨테이너 선반"
+            },
+            "event": {
+                "night-owl-bed": "새벽 작업 침대",
+                "morning-kettle": "아침 주전자",
+                "review-lamp": "리뷰 램프",
+                "release-banner": "릴리즈 배너",
+                "bugfix-toolbox": "버그픽스 공구함",
+                "weekend-cushion": "주말 쿠션",
+                "docs-scroll": "문서 두루마리",
+                "first-sync-compass": "첫 동기화 나침반",
+                "streak-spark": "연속 활동 스파크 펫로그",
+                "mentor-orb": "멘토 오브 펫로그"
             }
         },
         "settings": {

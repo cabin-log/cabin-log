@@ -200,7 +200,10 @@ When a new frontend domain is added:
     - Package and settings buttons open modal overlays without leaving `/cabin`.
     - Package claim calls the backend claim API and reloads cabin state.
     - Inventory groups claimed rewards as supplies, furniture, and pet logs.
-    - Collection tracks furniture and pet logs only; supplies stay out of the codex.
+    - Collection tracks stack and event furniture and pet logs; supplies stay out of the codex.
+    - Package, inventory, and collection modal content keeps fixed height and scrolls overflowing lists internally.
+    - Inventory slots show asset-first square items, select into a detail panel, and call the cabin placement delete API when collecting a placed reward.
+    - Locked collection slots show `?` until selected, then reveal reward details and unlock requirements.
     - Login success entry state applies the cabin reveal class.
 11. `src/tests/component/pages/settings/SettingsPage.test.tsx`
     - Role badge visibility branch:

@@ -11,6 +11,7 @@ import { renderWithRouter } from "../../../utils/renderWithRouter";
 const getGameStateMock = vi.fn();
 const syncRewardPackagesMock = vi.fn();
 const claimRewardPackageMock = vi.fn();
+const deleteCabinPlacementMock = vi.fn();
 const extractGameErrorDetailMock = vi.fn();
 const resolveGameErrorMessageMock = vi.fn();
 const logoutMock = vi.fn();
@@ -45,6 +46,7 @@ vi.mock("../../../../hooks/api/game/useGameApi", () => ({
         getGameState: getGameStateMock,
         syncRewardPackages: syncRewardPackagesMock,
         claimRewardPackage: claimRewardPackageMock,
+        deleteCabinPlacement: deleteCabinPlacementMock,
         extractGameErrorDetail: extractGameErrorDetailMock,
         resolveGameErrorMessage: resolveGameErrorMessageMock,
     }),
@@ -124,7 +126,12 @@ const gameState: GameState = {
                 reward_key: "stack.terminal-desk",
                 reward_type: "FURNITURE",
                 source_language: "TypeScript",
+                asset_key: "typescript-terminal-desk",
                 owned: true,
+                required_mastery_level: 1,
+                required_bytes: 50000,
+                required_recent_activity_count: 10,
+                condition_key: "stack_bytes",
                 stack_reward_level: 1,
                 stage: 1,
                 mastery_level: 2,
@@ -135,7 +142,28 @@ const gameState: GameState = {
                 reward_key: "stack.forge-bench",
                 reward_type: "FURNITURE",
                 source_language: "Rust",
+                asset_key: "rust-forge-bench",
                 owned: false,
+                required_mastery_level: 1,
+                required_bytes: 50000,
+                required_recent_activity_count: 10,
+                condition_key: "stack_bytes",
+                stack_reward_level: 0,
+                stage: 0,
+                mastery_level: 0,
+                total_bytes: 0,
+                repository_count: 0,
+            },
+            {
+                reward_key: "event.night-owl-bed",
+                reward_type: "FURNITURE",
+                source_language: "Achievement",
+                asset_key: "event-night-owl-bed",
+                owned: false,
+                required_mastery_level: 1,
+                required_bytes: 50000,
+                required_recent_activity_count: 10,
+                condition_key: "night_owl_commits",
                 stack_reward_level: 0,
                 stage: 0,
                 mastery_level: 0,
@@ -148,12 +176,49 @@ const gameState: GameState = {
                 reward_key: "stack.python-serpent",
                 reward_type: "ANIMAL",
                 source_language: "Python",
+                asset_key: "python-serpent",
                 owned: true,
+                required_mastery_level: 1,
+                required_bytes: 50000,
+                required_recent_activity_count: 10,
+                condition_key: "stack_bytes",
                 stack_reward_level: 1,
                 stage: 1,
                 mastery_level: 1,
                 total_bytes: 150000,
                 repository_count: 2,
+            },
+            {
+                reward_key: "stack.night-fox",
+                reward_type: "ANIMAL",
+                source_language: "Kotlin",
+                asset_key: "kotlin-night-fox",
+                owned: false,
+                required_mastery_level: 1,
+                required_bytes: 50000,
+                required_recent_activity_count: 10,
+                condition_key: "stack_bytes",
+                stack_reward_level: 0,
+                stage: 0,
+                mastery_level: 0,
+                total_bytes: 0,
+                repository_count: 0,
+            },
+            {
+                reward_key: "event.streak-spark",
+                reward_type: "ANIMAL",
+                source_language: "Achievement",
+                asset_key: "event-streak-spark",
+                owned: false,
+                required_mastery_level: 1,
+                required_bytes: 50000,
+                required_recent_activity_count: 10,
+                condition_key: "activity_streak",
+                stack_reward_level: 0,
+                stage: 0,
+                mastery_level: 0,
+                total_bytes: 0,
+                repository_count: 0,
             },
         ],
     },
@@ -164,7 +229,21 @@ const gameState: GameState = {
         tile_width: 60,
         tile_height: 30,
         tile_z_height: 46,
-        placements: [],
+        placements: [
+            {
+                id: 17,
+                object_type: "FURNITURE",
+                object_key: "stack.terminal-desk",
+                x: 5,
+                y: 5,
+                z: 0,
+                rotation: 0,
+                width: 1,
+                depth: 1,
+                locked: false,
+                updated_at: "2026-09-03T00:00:00Z",
+            },
+        ],
         updated_at: "2026-09-03T00:00:00Z",
     },
     stack_profiles: {
@@ -227,6 +306,7 @@ describe("CabinInitPage", () => {
         getGameStateMock.mockReset();
         syncRewardPackagesMock.mockReset();
         claimRewardPackageMock.mockReset();
+        deleteCabinPlacementMock.mockReset();
         extractGameErrorDetailMock.mockReset();
         resolveGameErrorMessageMock.mockReset();
         logoutMock.mockReset();
@@ -236,6 +316,7 @@ describe("CabinInitPage", () => {
         window.localStorage.clear();
         getGameStateMock.mockResolvedValue(gameState);
         syncRewardPackagesMock.mockResolvedValue([]);
+        deleteCabinPlacementMock.mockResolvedValue(undefined);
         claimRewardPackageMock.mockResolvedValue({
             package: { ...gameState.pending_packages?.[0], status: "CLAIMED" },
             stack_rewards: gameState.categorized_inventory.furniture,
@@ -295,10 +376,29 @@ describe("CabinInitPage", () => {
         const dialog = screen.getByRole("dialog", { name: "Inventory" });
         expect(within(dialog).getByRole("tab", { name: "Supplies" })).toBeVisible();
         expect(within(dialog).getByText("Basic feed")).toBeVisible();
+        expect(within(dialog).getByText("Owned quantity: 3.")).toBeVisible();
         await user.click(within(dialog).getByRole("tab", { name: "Furniture" }));
         expect(within(dialog).getByText("TypeScript terminal desk")).toBeVisible();
+        expect(within(dialog).getByText("Placed in the cabin.")).toBeVisible();
         await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
         expect(within(dialog).getByText("Python serpent pet log")).toBeVisible();
+    });
+
+    it("collects a placed inventory reward from the cabin", async () => {
+        // Given: a claimed furniture reward is already placed in the cabin.
+        const user = userEvent.setup();
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+
+        // When: the player opens inventory and collects the placed furniture.
+        await user.click(screen.getByRole("button", { name: "Inventory" }));
+        const dialog = screen.getByRole("dialog", { name: "Inventory" });
+        await user.click(within(dialog).getByRole("tab", { name: "Furniture" }));
+        await user.click(within(dialog).getByRole("button", { name: "Collect" }));
+
+        // Then: the cabin placement delete API is used and state is reloaded.
+        await waitFor(() => expect(deleteCabinPlacementMock).toHaveBeenCalledWith(17));
+        expect(getGameStateMock).toHaveBeenCalledTimes(3);
     });
 
     it("tracks furniture and pet logs in the collection", async () => {
@@ -310,12 +410,30 @@ describe("CabinInitPage", () => {
         // When: the player opens the collection.
         await user.click(screen.getByRole("button", { name: "Collection" }));
 
-        // Then: only furniture and pet logs are shown in the collection.
+        // Then: owned entries show names, while locked entries reveal details only when selected.
         const dialog = screen.getByRole("dialog", { name: "Collection" });
-        expect(within(dialog).getByText("TypeScript terminal desk")).toBeVisible();
+        expect(within(dialog).getAllByText("TypeScript terminal desk")[0]).toBeVisible();
+        expect(within(dialog).queryByText("Rust forge bench")).not.toBeInTheDocument();
+        await user.click(within(dialog).getByRole("button", { name: /\?RustLocked/ }));
         expect(within(dialog).getByText("Rust forge bench")).toBeVisible();
+        expect(
+            within(dialog).getByText(
+                "Unlock by syncing Rust work with at least 50,000 bytes, or 10 recent Rust activities.",
+            ),
+        ).toBeVisible();
+        await user.click(within(dialog).getByRole("button", { name: /\?AchievementLocked/ }));
+        expect(within(dialog).getByText("Night owl bed")).toBeVisible();
+        expect(
+            within(dialog).getByText(
+                "Unlock by making 10 commits between midnight and 05:00 in your timezone.",
+            ),
+        ).toBeVisible();
         await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
-        expect(within(dialog).getByText("Python serpent pet log")).toBeVisible();
+        expect(within(dialog).getAllByText("Python serpent pet log")[0]).toBeVisible();
+        await user.click(within(dialog).getByRole("button", { name: /\?KotlinLocked/ }));
+        expect(within(dialog).getByText("Kotlin night fox pet log")).toBeVisible();
+        await user.click(within(dialog).getByRole("button", { name: /\?AchievementLocked/ }));
+        expect(within(dialog).getByText("Activity streak spark pet log")).toBeVisible();
         expect(within(dialog).queryByText("Basic feed")).not.toBeInTheDocument();
     });
 

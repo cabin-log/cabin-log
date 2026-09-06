@@ -6,6 +6,7 @@ import {
     Box,
     Check,
     Coins,
+    ImageOff,
     LogOut,
     Package,
     PawPrint,
@@ -27,7 +28,12 @@ import {
     UserAvatar,
 } from "../../components/ui";
 import { CabinPhaserStage } from "../../components/features/cabin/CabinPhaserStage";
-import { useGameApi, type GameState, type RewardPackage } from "../../hooks/api/game/useGameApi";
+import {
+    useGameApi,
+    type CabinPlacement,
+    type GameState,
+    type RewardPackage,
+} from "../../hooks/api/game/useGameApi";
 import { useAuthContext } from "../../hooks/useAuth";
 import { markCabinDailySyncComplete, shouldRunCabinDailySync } from "../../utils/cabinDailySync";
 import { consumeCabinEntryReveal } from "../../utils/cabinEntryReveal";
@@ -37,9 +43,35 @@ const SUPPORTED_LANGUAGE_IDS = ["en", "ko"] as const;
 type SupportedLanguageId = (typeof SUPPORTED_LANGUAGE_IDS)[number];
 type InventoryTab = "supplies" | "furniture" | "petLogs";
 type CollectionTab = "furniture" | "petLogs";
+type CollectionEntry = NonNullable<NonNullable<GameState["collection"]>["furniture"]>[number];
+type InventorySupplyItem = NonNullable<
+    NonNullable<GameState["categorized_inventory"]>["supplies"]
+>[number];
+type InventoryRewardItem = NonNullable<
+    NonNullable<GameState["categorized_inventory"]>["furniture"]
+>[number];
 type CabinRouteState = {
     playCabinEntryReveal?: boolean;
 };
+
+type InventoryDisplayItem =
+    | {
+          kind: "supply";
+          key: string;
+          title: string;
+          assetKey: string;
+          quantity: number;
+      }
+    | {
+          kind: "reward";
+          key: string;
+          title: string;
+          assetKey: string;
+          sourceLanguage: string;
+          level: number;
+          stage: number;
+          placement: CabinPlacement | null;
+      };
 
 function formatNumber(value: number): string {
     return new Intl.NumberFormat().format(value);
@@ -100,10 +132,72 @@ function resolveSupplyName(itemKey: string, t: ReturnType<typeof useTranslation>
     return t(`cabin.supplies.${itemKey}`, { defaultValue: itemKey });
 }
 
+function getCollectionRequirementText(
+    item: CollectionEntry,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    const conditionKey = item.condition_key ?? "stack_bytes";
+    if (conditionKey !== "stack_bytes") {
+        return t(`cabin.collection.conditions.${conditionKey}`, {
+            defaultValue: t("cabin.collection.conditions.achievement"),
+        });
+    }
+    return t("cabin.collection.requirement", {
+        language: item.source_language,
+        bytes: formatNumber(item.required_bytes ?? 50000),
+        activities: formatNumber(item.required_recent_activity_count ?? 10),
+    });
+}
+
+function getRewardAssetKey(rewardKey: string, collectionItems: CollectionEntry[]): string {
+    const collectionItem = collectionItems.find((item) => item.reward_key === rewardKey);
+    return collectionItem?.asset_key ?? rewardKey.split(".").at(-1) ?? rewardKey;
+}
+
+function getAssetPath(assetKey: string): string {
+    return `/sprites/rewards/icons/${assetKey}.png`;
+}
+
+function AssetPreview({
+    alt,
+    assetKey,
+    label,
+    size = "sm",
+}: {
+    alt: string;
+    assetKey: string;
+    label: string;
+    size?: "sm" | "lg";
+}) {
+    const [failedAssetKey, setFailedAssetKey] = useState<string | null>(null);
+    const src = getAssetPath(assetKey);
+    const hasFailed = failedAssetKey === assetKey;
+
+    return (
+        <div
+            className={
+                size === "lg"
+                    ? "cabin-init-asset-preview cabin-init-asset-preview--lg"
+                    : "cabin-init-asset-preview"
+            }
+        >
+            {hasFailed ? (
+                <span className="cabin-init-asset-preview__fallback">
+                    <span>{label}</span>
+                    <ImageOff aria-hidden="true" />
+                </span>
+            ) : (
+                <img src={src} alt={alt} onError={() => setFailedAssetKey(assetKey)} />
+            )}
+        </div>
+    );
+}
+
 function useCabinState(userId: number | null | undefined) {
     const { t } = useTranslation();
     const {
         claimRewardPackage,
+        deleteCabinPlacement,
         getGameState,
         extractGameErrorDetail,
         resolveGameErrorMessage,
@@ -113,6 +207,7 @@ function useCabinState(userId: number | null | undefined) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [claimingPackageId, setClaimingPackageId] = useState<number | null>(null);
+    const [removingPlacementId, setRemovingPlacementId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     const load = useCallback(async () => {
@@ -199,11 +294,45 @@ function useCabinState(userId: number | null | undefined) {
         [claimRewardPackage, extractGameErrorDetail, getGameState, resolveGameErrorMessage, t],
     );
 
+    const removeCabinPlacement = useCallback(
+        async (placementId: number) => {
+            setRemovingPlacementId(placementId);
+            try {
+                await deleteCabinPlacement(placementId);
+                const payload = await getGameState();
+                setState(payload);
+                setError(null);
+            } catch (caught) {
+                setError(
+                    resolveGameErrorMessage(
+                        t,
+                        extractGameErrorDetail(caught),
+                        "cabin.errors.stateLoadFailed",
+                    ),
+                );
+            } finally {
+                setRemovingPlacementId(null);
+            }
+        },
+        [deleteCabinPlacement, extractGameErrorDetail, getGameState, resolveGameErrorMessage, t],
+    );
+
     useEffect(() => {
         void load();
     }, [load]);
 
-    return { claimPackage, claimingPackageId, error, load, loading, refresh, refreshing, state };
+    return {
+        claimPackage,
+        claimingPackageId,
+        error,
+        load,
+        loading,
+        refresh,
+        refreshing,
+        removeCabinPlacement,
+        removingPlacementId,
+        state,
+    };
 }
 
 export function CabinInitPage() {
@@ -211,11 +340,23 @@ export function CabinInitPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { logout, user } = useAuthContext();
-    const { claimPackage, claimingPackageId, error, load, loading, refresh, refreshing, state } =
-        useCabinState(user?.id);
+    const {
+        claimPackage,
+        claimingPackageId,
+        error,
+        load,
+        loading,
+        refresh,
+        refreshing,
+        removeCabinPlacement,
+        removingPlacementId,
+        state,
+    } = useCabinState(user?.id);
     const [activeModal, setActiveModal] = useState<CabinModal>(null);
     const [inventoryTab, setInventoryTab] = useState<InventoryTab>("supplies");
     const [collectionTab, setCollectionTab] = useState<CollectionTab>("furniture");
+    const [selectedInventoryKey, setSelectedInventoryKey] = useState<string | null>(null);
+    const [selectedCollectionKey, setSelectedCollectionKey] = useState<string | null>(null);
     const [logoutBusy, setLogoutBusy] = useState(false);
     const displayName = user?.name?.trim() || user?.email || t("cabin.player.fallbackName");
     const isGithubConnected = user?.oauth_providers?.includes("github") === true;
@@ -231,6 +372,62 @@ export function CabinInitPage() {
     const inventoryPetLogs = inventory?.pet_logs ?? [];
     const collectionFurniture = collection?.furniture ?? [];
     const collectionPetLogs = collection?.pet_logs ?? [];
+    const allCollectionItems = useMemo(
+        () => [...collectionFurniture, ...collectionPetLogs],
+        [collectionFurniture, collectionPetLogs],
+    );
+    const cabinPlacements = state?.cabin.placements ?? [];
+    const buildRewardInventoryItem = useCallback(
+        (item: InventoryRewardItem): InventoryDisplayItem => {
+            const placement =
+                cabinPlacements.find(
+                    (placementItem) => placementItem.object_key === item.reward_key,
+                ) ?? null;
+            return {
+                kind: "reward",
+                key: item.reward_key,
+                title: resolveRewardName(item.reward_key, item.source_language, t),
+                assetKey: getRewardAssetKey(item.reward_key, allCollectionItems),
+                sourceLanguage: item.source_language,
+                level: item.stack_reward_level,
+                stage: item.stage,
+                placement,
+            };
+        },
+        [allCollectionItems, cabinPlacements, t],
+    );
+    const visibleInventoryItems: InventoryDisplayItem[] = useMemo(() => {
+        if (inventoryTab === "supplies") {
+            return inventorySupplies.map((item: InventorySupplyItem) => ({
+                kind: "supply",
+                key: item.item_key,
+                title: resolveSupplyName(item.item_key, t),
+                assetKey: item.item_key,
+                quantity: item.quantity,
+            }));
+        }
+        if (inventoryTab === "furniture") {
+            return inventoryFurniture.map(buildRewardInventoryItem);
+        }
+        return inventoryPetLogs.map(buildRewardInventoryItem);
+    }, [
+        buildRewardInventoryItem,
+        inventoryFurniture,
+        inventoryPetLogs,
+        inventorySupplies,
+        inventoryTab,
+        t,
+    ]);
+    const selectedInventoryItem =
+        visibleInventoryItems.find((item) => item.key === selectedInventoryKey) ??
+        visibleInventoryItems[0] ??
+        null;
+    const visibleCollectionItems =
+        collectionTab === "furniture" ? collectionFurniture : collectionPetLogs;
+    const selectedCollectionItem =
+        visibleCollectionItems.find((item) => item.reward_key === selectedCollectionKey) ??
+        visibleCollectionItems[0] ??
+        null;
     const stackProfiles = state?.stack_profiles.items ?? [];
     const topStacks = useMemo(() => stackProfiles.slice(0, 5), [stackProfiles]);
     const normalizedLanguageId =
@@ -391,9 +588,9 @@ export function CabinInitPage() {
                 closeLabel={t("cabin.modal.close")}
                 onClose={() => setActiveModal(null)}
             >
-                {pendingPackages.length > 0 ? (
-                    <div className="cabin-init-package-list">
-                        {pendingPackages.map((item) => (
+                <div className="cabin-init-package-list">
+                    {pendingPackages.length > 0 ? (
+                        pendingPackages.map((item) => (
                             <article className="cabin-init-package" key={item.id}>
                                 <div>
                                     <h3>{resolvePackageDisplayText(item, t).title}</h3>
@@ -416,11 +613,13 @@ export function CabinInitPage() {
                                     </Button>
                                 </div>
                             </article>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="cabin-init-empty">{t("cabin.packages.empty")}</p>
-                )}
+                        ))
+                    ) : (
+                        <p className="cabin-init-empty cabin-init-empty--panel">
+                            {t("cabin.packages.empty")}
+                        </p>
+                    )}
+                </div>
             </Modal>
 
             <Modal
@@ -479,17 +678,58 @@ export function CabinInitPage() {
 
                     {inventoryTab === "supplies" ? (
                         inventorySupplies.length > 0 ? (
-                            <div className="cabin-init-tracker__grid">
-                                {inventorySupplies.map((item) => (
-                                    <article
-                                        className="cabin-init-tracker__slot"
-                                        key={item.item_key}
-                                    >
-                                        <strong>{resolveSupplyName(item.item_key, t)}</strong>
-                                        <span>{item.item_key}</span>
-                                        <b>{formatNumber(item.quantity)}</b>
-                                    </article>
-                                ))}
+                            <div className="cabin-init-tracker__body">
+                                {selectedInventoryItem ? (
+                                    <section className="cabin-init-tracker__detail cabin-init-tracker__detail--side">
+                                        <AssetPreview
+                                            assetKey={selectedInventoryItem.assetKey}
+                                            alt={selectedInventoryItem.title}
+                                            label={selectedInventoryItem.title}
+                                            size="lg"
+                                        />
+                                        <div>
+                                            <strong>{selectedInventoryItem.title}</strong>
+                                            <span>{selectedInventoryItem.assetKey}</span>
+                                        </div>
+                                        <p>
+                                            {"quantity" in selectedInventoryItem
+                                                ? t("cabin.inventory.quantityDetail", {
+                                                      quantity: formatNumber(
+                                                          selectedInventoryItem.quantity,
+                                                      ),
+                                                  })
+                                                : null}
+                                        </p>
+                                        <p>{t("cabin.inventory.notPlaceable")}</p>
+                                    </section>
+                                ) : null}
+                                <div className="cabin-init-tracker__grid cabin-init-tracker__grid--scroll">
+                                    {visibleInventoryItems.map((item) => (
+                                        <button
+                                            type="button"
+                                            className={[
+                                                "cabin-init-tracker__slot",
+                                                selectedInventoryItem?.key === item.key
+                                                    ? "cabin-init-tracker__slot--selected"
+                                                    : "",
+                                            ]
+                                                .filter(Boolean)
+                                                .join(" ")}
+                                            onClick={() => setSelectedInventoryKey(item.key)}
+                                            key={item.key}
+                                            aria-label={item.title}
+                                        >
+                                            <AssetPreview
+                                                assetKey={item.assetKey}
+                                                alt=""
+                                                label={item.title}
+                                            />
+                                            {"quantity" in item ? (
+                                                <b>{formatNumber(item.quantity)}</b>
+                                            ) : null}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             <p className="cabin-init-empty">{t("cabin.inventory.emptySupplies")}</p>
@@ -498,27 +738,87 @@ export function CabinInitPage() {
 
                     {inventoryTab === "furniture" ? (
                         inventoryFurniture.length > 0 ? (
-                            <div className="cabin-init-tracker__grid">
-                                {inventoryFurniture.map((item) => (
-                                    <article
-                                        className="cabin-init-tracker__slot"
-                                        key={item.reward_key}
-                                    >
-                                        <strong>
-                                            {resolveRewardName(
-                                                item.reward_key,
-                                                item.source_language,
-                                                t,
-                                            )}
-                                        </strong>
-                                        <span>{item.source_language}</span>
-                                        <b>
-                                            {t("cabin.inventory.level", {
-                                                level: item.stack_reward_level,
-                                            })}
-                                        </b>
-                                    </article>
-                                ))}
+                            <div className="cabin-init-tracker__body">
+                                {selectedInventoryItem ? (
+                                    <section className="cabin-init-tracker__detail cabin-init-tracker__detail--side">
+                                        <AssetPreview
+                                            assetKey={selectedInventoryItem.assetKey}
+                                            alt={selectedInventoryItem.title}
+                                            label={selectedInventoryItem.title}
+                                            size="lg"
+                                        />
+                                        <div>
+                                            <strong>{selectedInventoryItem.title}</strong>
+                                            <span>{selectedInventoryItem.assetKey}</span>
+                                        </div>
+                                        {"level" in selectedInventoryItem ? (
+                                            <>
+                                                <p>
+                                                    {t("cabin.inventory.rewardDetail", {
+                                                        language:
+                                                            selectedInventoryItem.sourceLanguage,
+                                                        level: selectedInventoryItem.level,
+                                                        stage: selectedInventoryItem.stage,
+                                                    })}
+                                                </p>
+                                                <p>
+                                                    {selectedInventoryItem.placement
+                                                        ? t("cabin.inventory.placed")
+                                                        : t("cabin.inventory.notPlaced")}
+                                                </p>
+                                                <Button
+                                                    type="button"
+                                                    className="cabin-init-tracker__detail-action"
+                                                    disabled={!selectedInventoryItem.placement}
+                                                    loading={
+                                                        removingPlacementId ===
+                                                        selectedInventoryItem.placement?.id
+                                                    }
+                                                    onClick={() => {
+                                                        if (selectedInventoryItem.placement) {
+                                                            void removeCabinPlacement(
+                                                                selectedInventoryItem.placement.id,
+                                                            );
+                                                        }
+                                                    }}
+                                                >
+                                                    {t("cabin.inventory.collect")}
+                                                </Button>
+                                            </>
+                                        ) : null}
+                                    </section>
+                                ) : null}
+                                <div className="cabin-init-tracker__grid cabin-init-tracker__grid--scroll">
+                                    {visibleInventoryItems.map((item) => (
+                                        <button
+                                            type="button"
+                                            className={[
+                                                "cabin-init-tracker__slot",
+                                                selectedInventoryItem?.key === item.key
+                                                    ? "cabin-init-tracker__slot--selected"
+                                                    : "",
+                                            ]
+                                                .filter(Boolean)
+                                                .join(" ")}
+                                            onClick={() => setSelectedInventoryKey(item.key)}
+                                            key={item.key}
+                                            aria-label={item.title}
+                                        >
+                                            <AssetPreview
+                                                assetKey={item.assetKey}
+                                                alt=""
+                                                label={item.title}
+                                            />
+                                            {"level" in item ? (
+                                                <b>
+                                                    {t("cabin.inventory.level", {
+                                                        level: item.level,
+                                                    })}
+                                                </b>
+                                            ) : null}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             <p className="cabin-init-empty">
@@ -529,23 +829,87 @@ export function CabinInitPage() {
 
                     {inventoryTab === "petLogs" ? (
                         inventoryPetLogs.length > 0 ? (
-                            <div className="cabin-init-tracker__grid">
-                                {inventoryPetLogs.map((item) => (
-                                    <article
-                                        className="cabin-init-tracker__slot"
-                                        key={item.reward_key}
-                                    >
-                                        <strong>
-                                            {resolveRewardName(
-                                                item.reward_key,
-                                                item.source_language,
-                                                t,
-                                            )}
-                                        </strong>
-                                        <span>{item.source_language}</span>
-                                        <b>{t("cabin.inventory.stage", { stage: item.stage })}</b>
-                                    </article>
-                                ))}
+                            <div className="cabin-init-tracker__body">
+                                {selectedInventoryItem ? (
+                                    <section className="cabin-init-tracker__detail cabin-init-tracker__detail--side">
+                                        <AssetPreview
+                                            assetKey={selectedInventoryItem.assetKey}
+                                            alt={selectedInventoryItem.title}
+                                            label={selectedInventoryItem.title}
+                                            size="lg"
+                                        />
+                                        <div>
+                                            <strong>{selectedInventoryItem.title}</strong>
+                                            <span>{selectedInventoryItem.assetKey}</span>
+                                        </div>
+                                        {"level" in selectedInventoryItem ? (
+                                            <>
+                                                <p>
+                                                    {t("cabin.inventory.rewardDetail", {
+                                                        language:
+                                                            selectedInventoryItem.sourceLanguage,
+                                                        level: selectedInventoryItem.level,
+                                                        stage: selectedInventoryItem.stage,
+                                                    })}
+                                                </p>
+                                                <p>
+                                                    {selectedInventoryItem.placement
+                                                        ? t("cabin.inventory.placed")
+                                                        : t("cabin.inventory.notPlaced")}
+                                                </p>
+                                                <Button
+                                                    type="button"
+                                                    className="cabin-init-tracker__detail-action"
+                                                    disabled={!selectedInventoryItem.placement}
+                                                    loading={
+                                                        removingPlacementId ===
+                                                        selectedInventoryItem.placement?.id
+                                                    }
+                                                    onClick={() => {
+                                                        if (selectedInventoryItem.placement) {
+                                                            void removeCabinPlacement(
+                                                                selectedInventoryItem.placement.id,
+                                                            );
+                                                        }
+                                                    }}
+                                                >
+                                                    {t("cabin.inventory.collect")}
+                                                </Button>
+                                            </>
+                                        ) : null}
+                                    </section>
+                                ) : null}
+                                <div className="cabin-init-tracker__grid cabin-init-tracker__grid--scroll">
+                                    {visibleInventoryItems.map((item) => (
+                                        <button
+                                            type="button"
+                                            className={[
+                                                "cabin-init-tracker__slot",
+                                                selectedInventoryItem?.key === item.key
+                                                    ? "cabin-init-tracker__slot--selected"
+                                                    : "",
+                                            ]
+                                                .filter(Boolean)
+                                                .join(" ")}
+                                            onClick={() => setSelectedInventoryKey(item.key)}
+                                            key={item.key}
+                                            aria-label={item.title}
+                                        >
+                                            <AssetPreview
+                                                assetKey={item.assetKey}
+                                                alt=""
+                                                label={item.title}
+                                            />
+                                            {"stage" in item ? (
+                                                <b>
+                                                    {t("cabin.inventory.stage", {
+                                                        stage: item.stage,
+                                                    })}
+                                                </b>
+                                            ) : null}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             <p className="cabin-init-empty">{t("cabin.inventory.emptyPetLogs")}</p>
@@ -594,67 +958,129 @@ export function CabinInitPage() {
                         </button>
                     </div>
 
-                    {collectionTab === "furniture" ? (
-                        <div className="cabin-init-tracker__grid">
-                            {collectionFurniture.map((item) => (
-                                <article
-                                    className={
-                                        item.owned
-                                            ? "cabin-init-tracker__slot"
-                                            : "cabin-init-tracker__slot cabin-init-tracker__slot--locked"
-                                    }
-                                    key={item.reward_key}
-                                >
+                    <div className="cabin-init-tracker__body">
+                        {selectedCollectionItem ? (
+                            <section className="cabin-init-tracker__detail cabin-init-tracker__detail--side">
+                                <AssetPreview
+                                    assetKey={selectedCollectionItem.asset_key}
+                                    alt={resolveRewardName(
+                                        selectedCollectionItem.reward_key,
+                                        selectedCollectionItem.source_language,
+                                        t,
+                                    )}
+                                    label={resolveRewardName(
+                                        selectedCollectionItem.reward_key,
+                                        selectedCollectionItem.source_language,
+                                        t,
+                                    )}
+                                    size="lg"
+                                />
+                                <div>
                                     <strong>
                                         {resolveRewardName(
-                                            item.reward_key,
-                                            item.source_language,
+                                            selectedCollectionItem.reward_key,
+                                            selectedCollectionItem.source_language,
                                             t,
                                         )}
                                     </strong>
-                                    <span>{item.source_language}</span>
-                                    <b>
-                                        {item.owned
-                                            ? t("cabin.collection.owned")
-                                            : t("cabin.collection.locked", {
-                                                  level: item.mastery_level,
-                                              })}
-                                    </b>
-                                </article>
-                            ))}
-                        </div>
-                    ) : null}
+                                    <span>{selectedCollectionItem.asset_key}</span>
+                                </div>
+                                <p>
+                                    {selectedCollectionItem.owned
+                                        ? t("cabin.collection.ownedDetail", {
+                                              language: selectedCollectionItem.source_language,
+                                              level: selectedCollectionItem.stack_reward_level,
+                                          })
+                                        : getCollectionRequirementText(selectedCollectionItem, t)}
+                                </p>
+                            </section>
+                        ) : null}
+                        {collectionTab === "furniture" ? (
+                            <div className="cabin-init-tracker__grid cabin-init-tracker__grid--scroll">
+                                {collectionFurniture.map((item) => (
+                                    <button
+                                        type="button"
+                                        className={[
+                                            "cabin-init-tracker__slot",
+                                            item.owned ? "" : "cabin-init-tracker__slot--locked",
+                                            selectedCollectionItem?.reward_key === item.reward_key
+                                                ? "cabin-init-tracker__slot--selected"
+                                                : "",
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" ")}
+                                        onClick={() => setSelectedCollectionKey(item.reward_key)}
+                                        key={item.reward_key}
+                                        aria-label={`${item.owned ? resolveRewardName(item.reward_key, item.source_language, t) : t("cabin.collection.unknown")}${item.source_language}${item.owned ? t("cabin.collection.owned") : t("cabin.collection.locked", { level: item.mastery_level })}`}
+                                    >
+                                        <AssetPreview
+                                            assetKey={item.asset_key}
+                                            alt=""
+                                            label={
+                                                item.owned
+                                                    ? resolveRewardName(
+                                                          item.reward_key,
+                                                          item.source_language,
+                                                          t,
+                                                      )
+                                                    : t("cabin.collection.unknown")
+                                            }
+                                        />
+                                        <b>
+                                            {item.owned
+                                                ? t("cabin.collection.owned")
+                                                : t("cabin.collection.locked", {
+                                                      level: item.mastery_level,
+                                                  })}
+                                        </b>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
 
-                    {collectionTab === "petLogs" ? (
-                        <div className="cabin-init-tracker__grid">
-                            {collectionPetLogs.map((item) => (
-                                <article
-                                    className={
-                                        item.owned
-                                            ? "cabin-init-tracker__slot"
-                                            : "cabin-init-tracker__slot cabin-init-tracker__slot--locked"
-                                    }
-                                    key={item.reward_key}
-                                >
-                                    <strong>
-                                        {resolveRewardName(
-                                            item.reward_key,
-                                            item.source_language,
-                                            t,
-                                        )}
-                                    </strong>
-                                    <span>{item.source_language}</span>
-                                    <b>
-                                        {item.owned
-                                            ? t("cabin.collection.owned")
-                                            : t("cabin.collection.locked", {
-                                                  level: item.mastery_level,
-                                              })}
-                                    </b>
-                                </article>
-                            ))}
-                        </div>
-                    ) : null}
+                        {collectionTab === "petLogs" ? (
+                            <div className="cabin-init-tracker__grid cabin-init-tracker__grid--scroll">
+                                {collectionPetLogs.map((item) => (
+                                    <button
+                                        type="button"
+                                        className={[
+                                            "cabin-init-tracker__slot",
+                                            item.owned ? "" : "cabin-init-tracker__slot--locked",
+                                            selectedCollectionItem?.reward_key === item.reward_key
+                                                ? "cabin-init-tracker__slot--selected"
+                                                : "",
+                                        ]
+                                            .filter(Boolean)
+                                            .join(" ")}
+                                        onClick={() => setSelectedCollectionKey(item.reward_key)}
+                                        key={item.reward_key}
+                                        aria-label={`${item.owned ? resolveRewardName(item.reward_key, item.source_language, t) : t("cabin.collection.unknown")}${item.source_language}${item.owned ? t("cabin.collection.owned") : t("cabin.collection.locked", { level: item.mastery_level })}`}
+                                    >
+                                        <AssetPreview
+                                            assetKey={item.asset_key}
+                                            alt=""
+                                            label={
+                                                item.owned
+                                                    ? resolveRewardName(
+                                                          item.reward_key,
+                                                          item.source_language,
+                                                          t,
+                                                      )
+                                                    : t("cabin.collection.unknown")
+                                            }
+                                        />
+                                        <b>
+                                            {item.owned
+                                                ? t("cabin.collection.owned")
+                                                : t("cabin.collection.locked", {
+                                                      level: item.mastery_level,
+                                                  })}
+                                        </b>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
             </Modal>
 

@@ -462,7 +462,12 @@ class GameCollectionEntryResponse(BaseModel):
     reward_key: str
     reward_type: StackRewardType
     source_language: str
+    asset_key: str
     owned: bool
+    required_mastery_level: int = 1
+    required_bytes: int = 50_000
+    required_recent_activity_count: int = 10
+    condition_key: str = "stack_bytes"
     stack_reward_level: int = 0
     stage: int = 0
     mastery_level: int = 0
