@@ -103,6 +103,105 @@ async def _seed_owned_stack_reward(user_id: int) -> None:
         await db.commit()
 
 
+async def _seed_event_reward_activity(user_id: int) -> None:
+    for index in range(10):
+        await Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.COMMIT,
+                source="OAUTH_API",
+                repository_full_name="stackdev/night-cabin",
+                github_external_id=f"github:test:event:night-{index}",
+                occurred_at=datetime(2026, 8, 1, 1, index, tzinfo=UTC),
+                metadata={"message": f"Night commit {index}"},
+            )
+        )
+    for index in range(7):
+        day = index + 2
+        await Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.PUSH,
+                source="OAUTH_API",
+                repository_full_name="stackdev/morning-cabin",
+                github_external_id=f"github:test:event:morning-{index}",
+                occurred_at=datetime(2026, 8, day, 6, 0, tzinfo=UTC),
+                metadata={"ref": "refs/heads/main"},
+            )
+        )
+    await Activities.create_activity_once(
+        ActivityCreate(
+            user_id=user_id,
+            type=ActivityType.PUSH,
+            source="OAUTH_API",
+            repository_full_name="stackdev/weekend-cabin",
+            github_external_id="github:test:event:weekend-extra",
+            occurred_at=datetime(2026, 8, 9, 6, 0, tzinfo=UTC),
+            metadata={"ref": "refs/heads/main"},
+        )
+    )
+    for index in range(20):
+        await Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.REVIEW,
+                source="OAUTH_API",
+                repository_full_name="stackdev/review-cabin",
+                github_external_id=f"github:test:event:review-{index}",
+                occurred_at=datetime(2026, 8, 10, 10, index, tzinfo=UTC),
+                metadata={"title": f"Review cabin change {index}"},
+            )
+        )
+    for index in range(3):
+        await Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.RELEASE,
+                source="OAUTH_API",
+                repository_full_name="stackdev/release-cabin",
+                github_external_id=f"github:test:event:release-{index}",
+                occurred_at=datetime(2026, 8, 11, 9, index, tzinfo=UTC),
+                metadata={"tag": f"v1.0.{index}"},
+            )
+        )
+    for index in range(15):
+        await Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.ISSUE,
+                source="OAUTH_API",
+                repository_full_name="stackdev/bugfix-cabin",
+                github_external_id=f"github:test:event:bugfix-{index}",
+                occurred_at=datetime(2026, 8, 12, 12, index, tzinfo=UTC),
+                metadata={"title": f"Fix cabin bug {index}", "state": "closed"},
+            )
+        )
+    for index in range(10):
+        await Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.COMMIT,
+                source="OAUTH_API",
+                repository_full_name="stackdev/docs-cabin",
+                github_external_id=f"github:test:event:docs-{index}",
+                occurred_at=datetime(2026, 8, 13, 13, index, tzinfo=UTC),
+                metadata={"message": f"Update README docs {index}", "files": ["README.md"]},
+            )
+        )
+    for index in range(10):
+        await Activities.create_activity_once(
+            ActivityCreate(
+                user_id=user_id,
+                type=ActivityType.PULL_REQUEST_OPENED,
+                source="OAUTH_API",
+                repository_full_name="stackdev/collab-cabin",
+                github_external_id=f"github:test:event:collab-{index}",
+                occurred_at=datetime(2026, 8, 14, 14, index, tzinfo=UTC),
+                metadata={"title": f"Collaborate on cabin {index}"},
+            )
+        )
+
+
 @pytest.mark.primary_data
 def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     """Scenario: GitHub snapshot data creates stack profiles, packages, and claimable rewards."""
@@ -112,9 +211,18 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     first_packages = asyncio.run(GameService().refresh_after_github_sync(user_id=user_id))
     duplicate_packages = asyncio.run(GameService().refresh_after_github_sync(user_id=user_id))
 
-    assert len(first_packages) == 4
+    assert len(first_packages) >= 5
     assert duplicate_packages == []
     assert sum(1 for package in first_packages if package.source == "DAILY_REWARD") == 1
+    assert (
+        sum(
+            1
+            for package in first_packages
+            if package.source == "ACHIEVEMENT"
+            and package.metadata.get("reward_key") == "event.first-sync-compass"
+        )
+        == 1
+    )
     onboarding_package = next(
         package for package in first_packages if package.metadata.get("grant_type") == "onboarding"
     )
@@ -143,9 +251,18 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     )
     assert packages_response.status_code == 200
     packages = packages_response.json()
-    assert len(packages) == 4
+    assert len(packages) >= 5
     assert {package["status"] for package in packages} == {"PENDING"}
     assert sum(1 for package in packages if package["source"] == "DAILY_REWARD") == 1
+    assert (
+        sum(
+            1
+            for package in packages
+            if package["source"] == "ACHIEVEMENT"
+            and package["metadata"].get("reward_key") == "event.first-sync-compass"
+        )
+        == 1
+    )
     assert (
         sum(1 for package in packages if package["metadata"].get("grant_type") == "onboarding") == 1
     )
@@ -217,6 +334,76 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     )
     assert duplicate_claim_response.status_code == 409
     assert duplicate_claim_response.json()["detail"]["error"] == "REWARD_PACKAGE_ALREADY_CLAIMED"
+
+
+@pytest.mark.primary_data
+def test_event_reward_sync_creates_achievement_packages(integration_client: TestClient):
+    """Scenario: stored GitHub activity unlocks event reward packages once."""
+    user_id, token = asyncio.run(_create_github_oauth_user())
+    asyncio.run(_seed_event_reward_activity(user_id))
+
+    sync_response = integration_client.post(
+        "/api/v1/game/rewards/sync",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    duplicate_sync_response = integration_client.post(
+        "/api/v1/game/rewards/sync",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert sync_response.status_code == 200
+    assert duplicate_sync_response.status_code == 200
+    packages = sync_response.json()
+    event_packages = [
+        package for package in packages if package["metadata"].get("grant_type") == "event_reward"
+    ]
+    expected_event_reward_keys = {
+        "event.night-owl-bed",
+        "event.morning-kettle",
+        "event.review-lamp",
+        "event.release-banner",
+        "event.bugfix-toolbox",
+        "event.weekend-cushion",
+        "event.docs-scroll",
+        "event.first-sync-compass",
+        "event.streak-spark",
+        "event.mentor-orb",
+    }
+    actual_event_reward_keys = {package["metadata"]["reward_key"] for package in event_packages}
+    assert actual_event_reward_keys == expected_event_reward_keys, (
+        expected_event_reward_keys - actual_event_reward_keys
+    )
+    assert {package["source"] for package in event_packages} == {"ACHIEVEMENT"}
+    assert duplicate_sync_response.json() == []
+
+    night_package = next(
+        package
+        for package in event_packages
+        if package["metadata"]["reward_key"] == "event.night-owl-bed"
+    )
+    assert night_package["metadata"]["condition_key"] == "night_owl_commits"
+    assert night_package["metadata"]["threshold"] == 10
+    assert night_package["metadata"]["progress"] >= 10
+
+    claim_response = integration_client.post(
+        f"/api/v1/rewards/packages/{night_package['id']}/claim",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert claim_response.status_code == 200
+    claimed = claim_response.json()
+    assert claimed["stack_rewards"][0]["reward_key"] == "event.night-owl-bed"
+    assert claimed["stack_rewards"][0]["reward_type"] == "FURNITURE"
+    assert claimed["stack_rewards"][0]["source_language"] == "Achievement"
+
+    collection_response = integration_client.get(
+        "/api/v1/game/collection",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert collection_response.status_code == 200
+    collection_furniture = {
+        item["reward_key"]: item for item in collection_response.json()["furniture"]
+    }
+    assert collection_furniture["event.night-owl-bed"]["owned"] is True
 
 
 @pytest.mark.primary_data
@@ -453,10 +640,21 @@ def test_game_reward_sync_endpoint_creates_onboarding_package(
     assert sync_response.status_code == 200
     assert duplicate_sync_response.status_code == 200
     synced_packages = sync_response.json()
-    assert len(synced_packages) == 1
-    assert synced_packages[0]["source"] == "GITHUB_SYNC"
-    assert synced_packages[0]["metadata"]["grant_type"] == "onboarding"
-    assert synced_packages[0]["metadata"]["total_activity_count"] == 1
+    assert len(synced_packages) == 2
+    onboarding_package = next(
+        package
+        for package in synced_packages
+        if package["metadata"].get("grant_type") == "onboarding"
+    )
+    event_package = next(
+        package
+        for package in synced_packages
+        if package["metadata"].get("grant_type") == "event_reward"
+    )
+    assert onboarding_package["source"] == "GITHUB_SYNC"
+    assert onboarding_package["metadata"]["total_activity_count"] == 1
+    assert event_package["source"] == "ACHIEVEMENT"
+    assert event_package["metadata"]["reward_key"] == "event.first-sync-compass"
     assert duplicate_sync_response.json() == []
 
 

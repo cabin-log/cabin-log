@@ -43,6 +43,20 @@ DAILY_CUTOFF_HOUR = 5
 ONBOARDING_COIN_CAP = 750
 ONBOARDING_FOOD_CAP = 25
 ONBOARDING_PET_EXP_CAP = 1500
+EVENT_REWARD_THRESHOLDS: dict[str, int] = {
+    "night_owl_commits": 10,
+    "morning_activity_days": 7,
+    "pull_request_reviews": 20,
+    "release_activity": 3,
+    "bugfix_activity": 15,
+    "weekend_activity": 4,
+    "docs_commits": 10,
+    "first_github_sync": 1,
+    "activity_streak": 7,
+    "mentor_collaboration": 30,
+}
+BUGFIX_KEYWORDS = ("bug", "bugfix", "fix", "fixed", "hotfix", "resolve", "resolved")
+DOCS_KEYWORDS = ("readme", "docs", "doc", "documentation", ".md", "markdown")
 
 ACTIVITY_POINT_WEIGHTS: dict[ActivityType, int] = {
     ActivityType.COMMIT: 4,
@@ -518,16 +532,18 @@ class GameService:
         profiles = await self.recalculate_stack_profiles(user_id=user_id)
         onboarding_package = await self.create_onboarding_reward_package(user_id=user_id)
         daily_reward = await self.create_daily_reward_package(user_id=user_id)
-        packages = await self.generate_stack_reward_packages(
+        stack_packages = await self.generate_stack_reward_packages(
             user_id=user_id,
             profiles=profiles.items,
         )
+        event_packages = await self.generate_event_reward_packages(user_id=user_id)
         synced_packages: list[RewardPackageResponse] = []
         if onboarding_package is not None:
             synced_packages.append(onboarding_package)
         if daily_reward.created and daily_reward.package is not None:
             synced_packages.append(daily_reward.package)
-        synced_packages.extend(packages)
+        synced_packages.extend(stack_packages)
+        synced_packages.extend(event_packages)
         return synced_packages
 
     async def refresh_after_github_sync(self, user_id: int) -> list[RewardPackageResponse]:
@@ -697,6 +713,66 @@ class GameService:
                 packages.append(package)
         return packages
 
+    async def generate_event_reward_packages(self, *, user_id: int) -> list[RewardPackageResponse]:
+        settings = await self.get_user_settings(user_id=user_id)
+        timezone = ZoneInfo(settings.timezone)
+        activities = await self._load_user_activities(user_id=user_id)
+        progress = self._calculate_event_reward_progress(
+            activities=activities,
+            timezone=timezone,
+            daily_cutoff_hour=settings.daily_cutoff_hour,
+        )
+        packages: list[RewardPackageResponse] = []
+        for definition in EVENT_REWARD_CATALOG.values():
+            achieved_count = progress.get(definition.condition_key, 0)
+            threshold = EVENT_REWARD_THRESHOLDS[definition.condition_key]
+            if achieved_count < threshold:
+                continue
+            grant_key = f"event_reward_unlock:{definition.reward_key}"
+            grant, created = await GameData.create_grant_once(
+                user_id=user_id,
+                grant_key=grant_key,
+                source=RewardPackageSource.ACHIEVEMENT,
+            )
+            if not created:
+                continue
+            package = await GameData.create_package_once(
+                RewardPackageCreate(
+                    user_id=user_id,
+                    grant_id=grant.id,
+                    source=RewardPackageSource.ACHIEVEMENT,
+                    title=f"{definition.reward_key} achievement package",
+                    description=f"{definition.reward_key} event reward is ready.",
+                    metadata={
+                        "grant_type": "event_reward",
+                        "condition_key": definition.condition_key,
+                        "threshold": threshold,
+                        "progress": achieved_count,
+                        "reward_key": definition.reward_key,
+                        "reward_type": definition.reward_type.value,
+                    },
+                    items=[
+                        RewardPackageCreateItem(
+                            item_type=RewardPackageItemType.STACK_REWARD_UPGRADE,
+                            item_key=definition.reward_key,
+                            quantity=1,
+                            metadata={
+                                "language": definition.language,
+                                "mastery_level": definition.required_mastery_level,
+                                "reward_key": definition.reward_key,
+                                "reward_type": definition.reward_type.value,
+                                "condition_key": definition.condition_key,
+                                "threshold": threshold,
+                                "progress": achieved_count,
+                            },
+                        )
+                    ],
+                )
+            )
+            if package is not None:
+                packages.append(package)
+        return packages
+
     async def list_reward_packages(
         self,
         *,
@@ -706,6 +782,128 @@ class GameService:
 
     async def claim_reward_package(self, *, user_id: int, package_id: int):
         return await GameData.claim_reward_package(user_id=user_id, package_id=package_id)
+
+    async def _load_user_activities(self, *, user_id: int) -> list[Activity]:
+        async with get_db() as db:
+            result = await db.execute(
+                select(Activity)
+                .where(Activity.user_id == user_id)
+                .order_by(Activity.occurred_at.asc(), Activity.id.asc())
+            )
+            return list(result.scalars().all())
+
+    def _calculate_event_reward_progress(
+        self,
+        *,
+        activities: list[Activity],
+        timezone: ZoneInfo,
+        daily_cutoff_hour: int,
+    ) -> dict[str, int]:
+        night_owl_commits = 0
+        morning_activity_dates: set[date] = set()
+        weekend_activity_dates: set[date] = set()
+        reward_dates: set[date] = set()
+        review_count = 0
+        release_count = 0
+        bugfix_count = 0
+        docs_commit_count = 0
+        collaboration_count = 0
+
+        for activity in activities:
+            activity_type = ActivityType(activity.type)
+            occurred_at = self._ensure_utc_datetime(activity.occurred_at)
+            local_occurred_at = occurred_at.astimezone(timezone)
+            reward_dates.add(
+                self._resolve_activity_reward_date(
+                    local_occurred_at=local_occurred_at,
+                    daily_cutoff_hour=daily_cutoff_hour,
+                )
+            )
+            if 5 <= local_occurred_at.hour < 9:
+                morning_activity_dates.add(local_occurred_at.date())
+            if local_occurred_at.weekday() >= 5:
+                weekend_activity_dates.add(local_occurred_at.date())
+
+            metadata = activity.event_metadata or {}
+            if activity_type == ActivityType.COMMIT and 0 <= local_occurred_at.hour < 5:
+                night_owl_commits += 1
+            if activity_type == ActivityType.REVIEW:
+                review_count += 1
+            if activity_type == ActivityType.RELEASE:
+                release_count += 1
+            if activity_type in {
+                ActivityType.REVIEW,
+                ActivityType.PULL_REQUEST_OPENED,
+                ActivityType.PULL_REQUEST_MERGED,
+            }:
+                collaboration_count += 1
+            if self._activity_metadata_matches(
+                activity=activity,
+                metadata=metadata,
+                keywords=BUGFIX_KEYWORDS,
+            ):
+                bugfix_count += 1
+            if activity_type == ActivityType.COMMIT and self._activity_metadata_matches(
+                activity=activity,
+                metadata=metadata,
+                keywords=DOCS_KEYWORDS,
+            ):
+                docs_commit_count += 1
+
+        return {
+            "night_owl_commits": night_owl_commits,
+            "morning_activity_days": len(morning_activity_dates),
+            "pull_request_reviews": review_count,
+            "release_activity": release_count,
+            "bugfix_activity": bugfix_count,
+            "weekend_activity": len(weekend_activity_dates),
+            "docs_commits": docs_commit_count,
+            "first_github_sync": 1 if activities else 0,
+            "activity_streak": len(reward_dates),
+            "mentor_collaboration": collaboration_count,
+        }
+
+    def _resolve_activity_reward_date(
+        self,
+        *,
+        local_occurred_at: datetime,
+        daily_cutoff_hour: int,
+    ) -> date:
+        reward_date = local_occurred_at.date()
+        if local_occurred_at.time() < time(hour=daily_cutoff_hour):
+            reward_date -= timedelta(days=1)
+        return reward_date
+
+    def _ensure_utc_datetime(self, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+
+    def _activity_metadata_matches(
+        self,
+        *,
+        activity: Activity,
+        metadata: dict[str, object],
+        keywords: tuple[str, ...],
+    ) -> bool:
+        searchable_parts: list[str] = []
+        if activity.repository_full_name:
+            searchable_parts.append(activity.repository_full_name)
+        self._append_metadata_search_parts(metadata, searchable_parts)
+        searchable = " ".join(searchable_parts).lower()
+        return any(keyword in searchable for keyword in keywords)
+
+    def _append_metadata_search_parts(self, value: object, parts: list[str]) -> None:
+        if isinstance(value, str):
+            parts.append(value)
+            return
+        if isinstance(value, dict):
+            for nested_value in value.values():
+                self._append_metadata_search_parts(nested_value, parts)
+            return
+        if isinstance(value, list):
+            for nested_value in value:
+                self._append_metadata_search_parts(nested_value, parts)
 
     async def _load_language_volume(
         self,

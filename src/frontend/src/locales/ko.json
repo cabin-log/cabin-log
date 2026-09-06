@@ -147,6 +147,8 @@
             "dailyDescription": "정산된 활동 보상이 준비되었습니다.",
             "onboardingTitle": "GitHub 기록 온보딩 소포",
             "onboardingDescription": "동기화된 GitHub 기록 기반 시작 보상이 준비되었습니다.",
+            "eventTitle": "{{reward}} 업적 소포",
+            "eventDescription": "활동 업적을 달성해 {{reward}} 보상이 준비되었습니다.",
             "stackOriginTitle": "{{language}} 시작 소포",
             "stackOriginDescription": "{{language}} 스택 보상이 준비되었습니다.",
             "itemCount": "{{count}}개 아이템",

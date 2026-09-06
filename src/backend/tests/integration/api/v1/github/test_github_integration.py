@@ -376,7 +376,7 @@ def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
         "repository_count": 1,
         "created_activity_count": 4,
         "duplicate_activity_count": 0,
-        "created_package_count": 1,
+        "created_package_count": 2,
     }
     assert duplicate_response.json() == {
         "repository_count": 1,
@@ -415,9 +415,16 @@ def test_github_oauth_snapshot_sync_persists_repositories_and_activities(
     )
     assert packages_response.status_code == 200
     packages = packages_response.json()
-    assert len(packages) == 1
-    assert packages[0]["metadata"]["grant_type"] == "onboarding"
-    assert packages[0]["metadata"]["total_activity_count"] == 4
+    assert len(packages) == 2
+    onboarding_package = next(
+        package for package in packages if package["metadata"]["grant_type"] == "onboarding"
+    )
+    achievement_package = next(
+        package for package in packages if package["metadata"]["grant_type"] == "event_reward"
+    )
+    assert onboarding_package["metadata"]["total_activity_count"] == 4
+    assert achievement_package["source"] == "ACHIEVEMENT"
+    assert achievement_package["metadata"]["reward_key"] == "event.first-sync-compass"
     assert {activity["source"] for activity in activities} == {"OAUTH_API"}
     assert all(activity["github_external_id"] for activity in activities)
     assert all(activity["repository_full_name"] == "octodev/cabin" for activity in activities)

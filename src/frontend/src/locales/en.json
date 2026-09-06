@@ -147,6 +147,8 @@
             "dailyDescription": "Settled activity rewards are ready.",
             "onboardingTitle": "GitHub history onboarding package",
             "onboardingDescription": "Welcome rewards from your synced GitHub history are ready.",
+            "eventTitle": "{{reward}} achievement package",
+            "eventDescription": "{{reward}} is ready from your activity milestone.",
             "stackOriginTitle": "{{language}} origin package",
             "stackOriginDescription": "{{language}} stack reward is ready.",
             "itemCount": "{{count}} item(s)",

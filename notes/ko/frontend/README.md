@@ -72,7 +72,7 @@ Tauri에서는 네이티브 창 컨트롤이 랜딩, 인증 및 앱 내부 Nav�
 - `/login/success`는 legacy fallback으로 유지하며 React routing render 전에 `/cabin`으로 치환됩니다. 두 경로 모두 중간 "오두막 들어가기" 페이지를 렌더링하지 않습니다.
 - 인증된 사용자 route는 사용자를 `/show-case`로 보내면 안 됩니다.
 - `/cabin`은 첫 playable init 화면입니다. `GET /api/v1/game/state`를 불러오고, pixel-art 오두막 장면 위에 player/cabin summary를 표시하며, 소포, 인벤토리, 도감, 설정은 장면 위에 회색 backdrop이 깔린 투명 modal panel로 엽니다.
-- `/cabin`은 local user와 정산 reward date 기준 첫 방문 시 `POST /api/v1/game/rewards/sync`를 한 번 호출한 뒤 `GET /api/v1/game/state`를 다시 불러옵니다. Backend는 마지막 완료 daily window와 1회성 GitHub history onboarding package를 함께 정산하며, HUD refresh button은 같은 sync를 수동으로 다시 실행합니다.
+- `/cabin`은 local user와 정산 reward date 기준 첫 방문 시 `POST /api/v1/game/rewards/sync`를 한 번 호출한 뒤 `GET /api/v1/game/state`를 다시 불러옵니다. Backend는 마지막 완료 daily window, 1회성 GitHub history onboarding package, stack reward package, event achievement package를 함께 정산하며, HUD refresh button은 같은 sync를 수동으로 다시 실행합니다.
 - 소포 card는 `POST /api/v1/rewards/packages/{package_id}/claim`으로 화면 안에서 수령할 수 있고, 수령 뒤 cabin state를 다시 불러와 인벤토리와 도감에 즉시 반영합니다. 소포, 인벤토리, 도감 modal은 높이를 고정하고 내부 list/grid만 scroll합니다. 인벤토리는 소모품, 가구, 펫로그를 square asset slot으로 나누며, 선택 시 왼쪽 상세 영역에 수량 또는 보상 레벨, 배치 상태, 배치된 오두막 object의 수거 action을 표시합니다. 도감은 stack/event 가구와 펫로그를 추적합니다. 잠긴 도감 slot은 `?`로 표시하고, 선택 시 보상 이름, asset key, 수령 조건을 상세 영역에 표시합니다.
 - 설정 modal은 현재 GitHub 기반 프로필 세션을 표시하고, 공통 auth context를 통해 로그아웃한 뒤 `/login`으로 돌아갑니다.
 - 첫 cabin renderer는 Phaser `1280 x 720` FIT canvas와 `1500 x 800` camera world를 사용하고 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`를 isometric room base로 preload합니다. Room은 world 중앙에 정렬하며, 방향키로 camera를 이동하고 `Q`/`E`로 축소/확대하며 mouse wheel zoom과 pointer drag pan을 지원합니다.

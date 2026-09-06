@@ -93,7 +93,7 @@ Game foundation:
 - `GET /api/v1/game/inventory` returns claimed rewards grouped as supplies, furniture, and pet logs. Supplies are consumable inventory items such as feed; furniture and pet logs are owned stack rewards.
 - `GET /api/v1/game/collection` returns the furniture and pet-log codex from the full stack and event reward catalogs, including owned and locked entries, asset keys, and unlock requirements. Supplies are intentionally excluded from the codex.
 - `POST /api/v1/game/stacks/recalculate` recalculates stack profiles from stored GitHub repository language data and recent activities.
-- `POST /api/v1/game/rewards/sync` settles game rewards from stored GitHub data: one-time history onboarding, last completed daily reward, and stack reward packages.
+- `POST /api/v1/game/rewards/sync` settles game rewards from stored GitHub data: one-time history onboarding, last completed daily reward, stack reward packages, and one-time achievement packages from event reward conditions.
 - `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD` returns daily activity counts, points, capped coins, food, and pet EXP for the selected reward date. When omitted, the reward date defaults to the last completed daily window.
 - `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD` creates the selected date's daily activity reward package once. When omitted, it settles the last completed daily window.
 - `GET /api/v1/rewards/packages` returns pending and claimed reward packages for the current user.

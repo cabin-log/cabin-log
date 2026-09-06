@@ -367,7 +367,8 @@ stack_reward_unlock:{language_slug}:{reward_key}
    package를 한 번만 생성합니다.
 4. `POST /api/v1/game/rewards/sync`는 저장된 GitHub 데이터를 기준으로
    GitHub history onboarding package를 한 번 생성하고 stack profile을 재계산하며,
-   마지막 완료 reward date의 daily reward package를 생성합니다.
+   마지막 완료 reward date의 daily reward package와 이벤트 조건 달성에 따른
+   achievement package를 생성합니다.
 5. `POST /api/v1/github/sync`가 GitHub repository, language, activity를 갱신한 뒤
    같은 game reward sync를 실행합니다.
 6. `/cabin` 첫 접속은 local user와 정산 reward date 기준 하루 한 번 game reward sync를 실행하고, HUD refresh button은 같은 작업을 수동으로 다시 실행합니다.
@@ -491,9 +492,11 @@ Stack reward 외에도 사용자의 개발 습관을 기념하는 이벤트성 �
 
 1. 이벤트 보상은 `ACHIEVEMENT` package source로 전달합니다.
 2. 조건은 사용자 timezone 기준으로 계산합니다.
-3. farming 방지를 위해 대부분 누적 milestone으로 설계하고, 일일 반복 claim은 피합니다.
-4. 이벤트 reward key는 stack reward와 충돌하지 않도록 `event.*` prefix를 사용합니다.
-5. 이벤트성 펫로그도 stack 펫로그와 동일한 asset state(`idle`, `walk`, `sleep`,
+3. 조건은 저장된 GitHub activity의 `occurred_at`, activity type, repository name,
+   metadata message/title/files를 기준으로 계산합니다.
+4. farming 방지를 위해 대부분 누적 milestone으로 설계하고, 일일 반복 claim은 피합니다.
+5. 이벤트 reward key는 stack reward와 충돌하지 않도록 `event.*` prefix를 사용합니다.
+6. 이벤트성 펫로그도 stack 펫로그와 동일한 asset state(`idle`, `walk`, `sleep`,
    `held`)를 따라야 합니다.
 
 ## Animal Reward Evolution
@@ -634,7 +637,7 @@ Package source:
 | --- | --- |
 | `GITHUB_SYNC` | Stack unlock 또는 sync milestone |
 | `DAILY_REWARD` | Daily activity reward package |
-| `ACHIEVEMENT` | 미래 achievement package |
+| `ACHIEVEMENT` | Event achievement package |
 
 권장 package title:
 
