@@ -159,10 +159,10 @@ GitHub raw event가 pet, inventory, cabin state를 직접 변경하면 안 됩�
 | `COMMIT` | 4 | 3 | 45 | 사료와 소량 EXP |
 | `PUSH` | 6 | 4 | 24 | 사료와 소량 coin |
 | `PULL_REQUEST_OPENED` | 18 | 18 | 54 | coin과 EXP |
-| `PULL_REQUEST_MERGED` | 35 | 35 | 70 | coin, EXP, 성장 재료 |
+| `PULL_REQUEST_MERGED` | 35 | 35 | 70 | coin과 큰 EXP |
 | `ISSUE` | 10 | 10 | 40 | coin과 정리 점수 |
 | `REVIEW` | 22 | 22 | 66 | 협업 EXP |
-| `RELEASE` | 45 | 50 | 100 | 희귀 재료 |
+| `RELEASE` | 45 | 50 | 100 | milestone coin |
 
 초기 MVP에서는 `COMMIT`, `PULL_REQUEST_OPENED`, `PULL_REQUEST_MERGED`,
 `ISSUE`만 reward 계산에 사용해도 됩니다. 다른 타입은 수집이 생길 때까지
@@ -180,7 +180,6 @@ Daily cap은 reward farming을 막고, repository 규모 차이가 큰 사용자
 | Food | 10 |
 | Coins | 150 |
 | Pet EXP | 300 |
-| Growth material | 3 |
 | Package count from daily activity | 1 |
 
 Point를 reward로 변환하는 기본 규칙:
@@ -190,7 +189,6 @@ Point를 reward로 변환하는 기본 규칙:
 | Food | `min(10, floor(total_points / 12))` |
 | Coins | `min(150, sum(activity_coin_rewards_after_type_caps))` |
 | Pet EXP | `min(300, total_points * 4)` |
-| Growth material | `min(3, merged_pr_count)` |
 
 권장 일일 coin 예시:
 
@@ -215,10 +213,24 @@ daily:{yyyy-mm-dd}:github-activity
 3. `occurred_at`을 사용자 timezone으로 변환한 뒤 로컬 05:00 cutoff를 적용해
    reward date를 계산합니다.
 4. 사용자가 timezone을 설정하지 않았다면 `UTC`를 사용합니다.
+5. API에서 reward date를 생략하면 진행 중인 reward window가 아니라 마지막으로
+   완료된 reward date를 정산합니다.
 
 05:00 cutoff는 자정 이후 이어지는 개발 세션이 두 reward day로 쪼개지는 문제를
 줄이면서도 규칙을 결정적으로 유지하기 위한 기준입니다. Grant key에 들어가는
 날짜는 DB 원본 날짜가 아니라 계산된 reward date여야 합니다.
+
+GitHub history onboarding grant key:
+
+```text
+onboarding:github-history:v1
+```
+
+이 패키지는 첫 GitHub sync 이후 지금까지 수집된 전체 activity를 기준으로 한 번만
+생성합니다. Daily reward와 분리하여 기존 기록을 시작 보상으로 전환하고, 이후
+반복 sync에서는 같은 onboarding package를 다시 만들지 않습니다. Stack 성장과
+진화는 onboarding material이 아니라 언어별 synced bytes 기반 mastery package로
+처리합니다.
 
 하루 중 reward를 다시 계산할 수는 있지만 package 생성은 idempotent해야 합니다.
 추후 일일 reward를 누적 보정해야 한다면 package를 중복 생성하지 말고 bucket별
@@ -324,23 +336,25 @@ Python stack reward를 획득한 뒤 Python ratio가 낮아져도 보유 reward�
 이미 claim한 최고 level도 내려가지 않습니다. 현재 stack score로 바뀌는 것은
 active bonus와 추천 노출 순서 정도로 제한합니다.
 
-언어의 핵심 reward는 level마다 새로 지급하지 않습니다. Level 1에서 owned stack
-reward를 만들고, 이후 level은 같은 reward track의 upgrade package를 생성합니다.
+언어의 핵심 reward는 level마다 새로 지급하지 않습니다. Package는 Level 1에서
+owned stack reward를 만드는 unlock 용도로만 사용합니다. 이후 level up/evolution은
+사용자가 보유한 animal 또는 furniture를 선택했을 때 현재 stack mastery와 EXP 조건을
+확인한 뒤 실행합니다.
 
 기본 stack unlock ladder:
 
-| Mastery level | Package type | Package item | Claim result |
-| ---: | --- | --- | --- |
-| 1 | Origin package | Language reward seed | Owned stack reward를 level 1로 생성 |
-| 2 | Upgrade package | Level 2 upgrade material | Owned stack reward를 level 2로 upgrade |
-| 3 | Evolution package | Level 3 evolution material | Owned stack reward를 level 3으로 upgrade/evolve |
-| 4 | Mastery package | Level 4 mastery material | Owned stack reward를 level 4로 upgrade |
-| 5 | Signature package | Level 5 signature material | Owned stack reward를 level 5로 upgrade |
+| Mastery level | Unlock/level-up path | Result |
+| ---: | --- | --- |
+| 1 | Origin package claim | Owned stack reward를 level 1로 생성 |
+| 2 | Owned reward 선택 후 level-up action | Owned stack reward를 level 2로 upgrade |
+| 3 | Owned reward 선택 후 evolution action | Owned stack reward를 level 3으로 upgrade/evolve |
+| 4 | Owned reward 선택 후 mastery action | Owned stack reward를 level 4로 upgrade |
+| 5 | Owned reward 선택 후 signature action | Owned stack reward를 level 5로 upgrade |
 
 Stack unlock grant key:
 
 ```text
-stack_reward_upgrade:{language_slug}:level:{mastery_level}:{reward_key}
+stack_reward_unlock:{language_slug}:{reward_key}
 ```
 
 현재 backend 구현 범위:
@@ -351,14 +365,18 @@ stack_reward_upgrade:{language_slug}:level:{mastery_level}:{reward_key}
    capped reward preview 값을 반환합니다.
 3. `POST /api/v1/game/activity/daily-reward`는 선택한 날짜의 daily activity reward
    package를 한 번만 생성합니다.
-4. `POST /api/v1/github/sync`가 GitHub repository, language, activity를 갱신한 뒤
-   stack profile을 재계산합니다.
-5. 새로 도달한 mastery level마다 stack reward package를 생성합니다.
-6. `GET /api/v1/game/stacks`로 계산된 stack profile을 조회합니다.
-7. `GET /api/v1/rewards/packages`로 도착한 package를 조회합니다.
-8. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
-   wallet coin 증가, inventory item 적재, owned stack reward 생성/upgrade를 처리합니다.
-9. `GET /api/v1/game/state`는 첫 playable cabin screen에 필요한 backend state를
+4. `POST /api/v1/game/rewards/sync`는 저장된 GitHub 데이터를 기준으로
+   GitHub history onboarding package를 한 번 생성하고 stack profile을 재계산하며,
+   마지막 완료 reward date의 daily reward package를 생성합니다.
+5. `POST /api/v1/github/sync`가 GitHub repository, language, activity를 갱신한 뒤
+   같은 game reward sync를 실행합니다.
+6. `/cabin` 첫 접속은 local user와 정산 reward date 기준 하루 한 번 game reward sync를 실행하고, HUD refresh button은 같은 작업을 수동으로 다시 실행합니다.
+7. 새로 level 1에 도달한 stack마다 origin package를 생성합니다.
+8. `GET /api/v1/game/stacks`로 계산된 stack profile을 조회합니다.
+9. `GET /api/v1/rewards/packages`로 도착한 package를 조회합니다.
+10. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
+   wallet coin 증가, inventory item 적재, owned stack reward 생성을 처리합니다.
+11. `GET /api/v1/game/state`는 첫 playable cabin screen에 필요한 backend state를
    반환합니다.
 
 기본 language reward key:
@@ -409,8 +427,8 @@ Animal lifecycle:
 | ---: | --- | --- | --- |
 | 0 | Package item | Level 1 package pending | Package item only |
 | 1 | Companion | Level 1 package claim | `user_stack_rewards.stage = 1`, `stack_reward_level = 1` |
-| 2 | Skilled companion | Level 3 upgrade claim + growth requirement 충족 | `user_stack_rewards.stage = 2`, `stack_reward_level = 3` |
-| 3 | Master companion | Level 4 upgrade claim + growth requirement 충족 | `user_stack_rewards.stage = 3`, `stack_reward_level = 4` |
+| 2 | Skilled companion | 보유 animal 선택 후 Level 3 + growth requirement 충족 | `user_stack_rewards.stage = 2`, `stack_reward_level = 3` |
+| 3 | Master companion | 보유 animal 선택 후 Level 4 + growth requirement 충족 | `user_stack_rewards.stage = 3`, `stack_reward_level = 4` |
 
 Animal growth requirement:
 
@@ -424,11 +442,12 @@ Reward engine은 기본적으로 현재 featured animal을 대상으로 EXP를 �
 Featured animal이 없다면 account EXP로 보관하거나, 이후 가장 높은 stack score animal에
 적용할 수 있습니다.
 
-Upgrade package 동작:
+선택 기반 level-up/evolution 동작:
 
-1. 사용자가 stack reward를 보유하고 EXP/material 조건을 충족하면 claim 시 즉시 upgrade/evolve할 수 있습니다.
-2. EXP/material 조건을 충족하지 못하면 claim은 upgrade material을 기록하고 visible reward는 유지합니다.
-3. 이후 별도 evolution API 또는 다음 claim에서 조건 충족 시 stored material을 소비합니다.
+1. 사용자가 보유한 animal을 선택하면 현재 stack mastery, pet EXP, 필요한 조건을 비교합니다.
+2. 조건을 충족하면 UI에 level-up/evolution 문구와 action button을 표시합니다.
+3. 사용자가 실행하면 별도 evolution API가 owned reward level/stage를 갱신합니다.
+4. 조건을 충족하지 못하면 부족한 EXP 또는 mastery 조건을 표시합니다.
 
 ## Furniture Reward Progression
 
@@ -541,9 +560,8 @@ Package source:
 | Source | Title pattern |
 | --- | --- |
 | Stack origin package | `{Language} origin package` |
-| Stack upgrade package | `{Language} level {level} upgrade package` |
-| Stack evolution package | `{Language} evolution package` |
-| Daily activity | `Today's developer care package` |
+| GitHub history onboarding | `GitHub history onboarding package` |
+| Daily activity | `{yyyy-mm-dd} activity package` |
 
 Claim 동작:
 

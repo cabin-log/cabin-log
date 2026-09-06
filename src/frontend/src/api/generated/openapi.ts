@@ -467,6 +467,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/game/rewards/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Game Reward Packages Sync */
+        post: operations["game_reward_packages_sync_api_v1_game_rewards_sync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/game/activity/daily-summary": {
         parameters: {
             query?: never;
@@ -1020,11 +1037,6 @@ export interface components {
              */
             pet_exp: number;
             /**
-             * Growth Material
-             * @default 3
-             */
-            growth_material: number;
-            /**
              * Package Count
              * @default 1
              */
@@ -1075,8 +1087,6 @@ export interface components {
             food: number;
             /** Pet Exp */
             pet_exp: number;
-            /** Growth Material */
-            growth_material: number;
             caps?: components["schemas"]["DailyActivitySummaryCaps"];
             /** Items */
             items?: components["schemas"]["DailyActivitySummaryItem"][];
@@ -3229,6 +3239,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StackProfilesResponse"];
+                };
+            };
+        };
+    };
+    game_reward_packages_sync_api_v1_game_rewards_sync_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RewardPackageResponse"][];
                 };
             };
         };

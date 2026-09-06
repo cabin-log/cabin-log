@@ -37,6 +37,9 @@ from app.models.github import GitHubRepository, GitHubRepositoryLanguage
 
 RECENT_ACTIVITY_WINDOW_DAYS = 30
 DAILY_CUTOFF_HOUR = 5
+ONBOARDING_COIN_CAP = 750
+ONBOARDING_FOOD_CAP = 25
+ONBOARDING_PET_EXP_CAP = 1500
 
 ACTIVITY_POINT_WEIGHTS: dict[ActivityType, int] = {
     ActivityType.COMMIT: 4,
@@ -195,7 +198,6 @@ class GameService:
         raw_coins = sum(item.raw_coins for item in items)
         capped_type_coins = sum(item.capped_coins for item in items)
         caps = DailyActivitySummaryCaps()
-        merged_pr_count = counts.get(ActivityType.PULL_REQUEST_MERGED, 0)
         return DailyActivitySummaryResponse(
             reward_date=resolved_reward_date,
             timezone=settings.timezone,
@@ -208,7 +210,6 @@ class GameService:
             coins=min(caps.coins, capped_type_coins),
             food=min(caps.food, total_points // 12),
             pet_exp=min(caps.pet_exp, total_points * 4),
-            growth_material=min(caps.growth_material, merged_pr_count),
             caps=caps,
             items=items,
         )
@@ -270,15 +271,6 @@ class GameService:
                     quantity=summary.pet_exp,
                 )
             )
-        if summary.growth_material > 0:
-            items.append(
-                RewardPackageCreateItem(
-                    item_type=RewardPackageItemType.MATERIAL,
-                    item_key="growth_crystal",
-                    quantity=summary.growth_material,
-                )
-            )
-
         package = await GameData.create_package_once(
             RewardPackageCreate(
                 user_id=user_id,
@@ -303,11 +295,82 @@ class GameService:
             summary=summary,
         )
 
-    async def refresh_after_github_sync(self, user_id: int) -> list[RewardPackageResponse]:
+    async def sync_reward_packages(self, user_id: int) -> list[RewardPackageResponse]:
         profiles = await self.recalculate_stack_profiles(user_id=user_id)
-        return await self.generate_stack_reward_packages(
+        onboarding_package = await self.create_onboarding_reward_package(user_id=user_id)
+        daily_reward = await self.create_daily_reward_package(user_id=user_id)
+        packages = await self.generate_stack_reward_packages(
             user_id=user_id,
             profiles=profiles.items,
+        )
+        synced_packages: list[RewardPackageResponse] = []
+        if onboarding_package is not None:
+            synced_packages.append(onboarding_package)
+        if daily_reward.created and daily_reward.package is not None:
+            synced_packages.append(daily_reward.package)
+        synced_packages.extend(packages)
+        return synced_packages
+
+    async def refresh_after_github_sync(self, user_id: int) -> list[RewardPackageResponse]:
+        return await self.sync_reward_packages(user_id=user_id)
+
+    async def create_onboarding_reward_package(
+        self,
+        *,
+        user_id: int,
+    ) -> RewardPackageResponse | None:
+        counts = await GameData.list_activity_counts(user_id=user_id)
+        total_activity_count = sum(counts.values())
+        if total_activity_count <= 0:
+            return None
+
+        total_points = sum(
+            ACTIVITY_POINT_WEIGHTS[activity_type] * count for activity_type, count in counts.items()
+        )
+        raw_coins = sum(
+            ACTIVITY_COIN_REWARDS[activity_type] * count for activity_type, count in counts.items()
+        )
+        grant, created = await GameData.create_grant_once(
+            user_id=user_id,
+            grant_key="onboarding:github-history:v1",
+            source=RewardPackageSource.GITHUB_SYNC,
+        )
+        if not created:
+            return None
+
+        items: list[RewardPackageCreateItem] = [
+            RewardPackageCreateItem(
+                item_type=RewardPackageItemType.CURRENCY,
+                item_key="coins",
+                quantity=min(ONBOARDING_COIN_CAP, raw_coins),
+            ),
+            RewardPackageCreateItem(
+                item_type=RewardPackageItemType.FOOD,
+                item_key="basic_feed",
+                quantity=min(ONBOARDING_FOOD_CAP, max(1, total_points // 40)),
+            ),
+            RewardPackageCreateItem(
+                item_type=RewardPackageItemType.PET_EXP,
+                item_key="pet_exp",
+                quantity=min(ONBOARDING_PET_EXP_CAP, total_points * 2),
+            ),
+        ]
+        return await GameData.create_package_once(
+            RewardPackageCreate(
+                user_id=user_id,
+                grant_id=grant.id,
+                source=RewardPackageSource.GITHUB_SYNC,
+                title="GitHub history onboarding package",
+                description="Welcome rewards from your synced GitHub history are ready.",
+                metadata={
+                    "grant_type": "onboarding",
+                    "activity_scope": "github_history",
+                    "total_activity_count": total_activity_count,
+                    "total_points": total_points,
+                    "raw_coins": raw_coins,
+                },
+                items=items,
+            )
         )
 
     async def get_stack_profiles(self, user_id: int) -> StackProfilesResponse:
@@ -369,51 +432,50 @@ class GameService:
             definition = STACK_REWARD_CATALOG.get(profile.language)
             if definition is None or profile.mastery_level <= 0:
                 continue
-            for level in range(1, profile.mastery_level + 1):
-                grant_key = (
-                    f"stack_reward_upgrade:{_slugify_language(profile.language)}:"
-                    f"level:{level}:{definition.reward_key}"
-                )
-                grant, created = await GameData.create_grant_once(
+            level = 1
+            grant_key = (
+                f"stack_reward_unlock:{_slugify_language(profile.language)}:{definition.reward_key}"
+            )
+            grant, created = await GameData.create_grant_once(
+                user_id=user_id,
+                grant_key=grant_key,
+                source=RewardPackageSource.GITHUB_SYNC,
+            )
+            if not created:
+                continue
+            package = await GameData.create_package_once(
+                RewardPackageCreate(
                     user_id=user_id,
-                    grant_key=grant_key,
+                    grant_id=grant.id,
                     source=RewardPackageSource.GITHUB_SYNC,
+                    title=self._build_stack_package_title(
+                        language=profile.language,
+                        level=level,
+                    ),
+                    description=(f"{profile.language} stack reward is ready."),
+                    metadata={
+                        "language": profile.language,
+                        "mastery_level": level,
+                        "reward_key": definition.reward_key,
+                        "reward_type": definition.reward_type.value,
+                    },
+                    items=[
+                        RewardPackageCreateItem(
+                            item_type=RewardPackageItemType.STACK_REWARD_UPGRADE,
+                            item_key=definition.reward_key,
+                            quantity=1,
+                            metadata={
+                                "language": profile.language,
+                                "mastery_level": level,
+                                "reward_key": definition.reward_key,
+                                "reward_type": definition.reward_type.value,
+                            },
+                        )
+                    ],
                 )
-                if not created:
-                    continue
-                package = await GameData.create_package_once(
-                    RewardPackageCreate(
-                        user_id=user_id,
-                        grant_id=grant.id,
-                        source=RewardPackageSource.GITHUB_SYNC,
-                        title=self._build_stack_package_title(
-                            language=profile.language,
-                            level=level,
-                        ),
-                        description=(f"{profile.language} stack reward level {level} is ready."),
-                        metadata={
-                            "language": profile.language,
-                            "mastery_level": level,
-                            "reward_key": definition.reward_key,
-                            "reward_type": definition.reward_type.value,
-                        },
-                        items=[
-                            RewardPackageCreateItem(
-                                item_type=RewardPackageItemType.STACK_REWARD_UPGRADE,
-                                item_key=definition.reward_key,
-                                quantity=1,
-                                metadata={
-                                    "language": profile.language,
-                                    "mastery_level": level,
-                                    "reward_key": definition.reward_key,
-                                    "reward_type": definition.reward_type.value,
-                                },
-                            )
-                        ],
-                    )
-                )
-                if package is not None:
-                    packages.append(package)
+            )
+            if package is not None:
+                packages.append(package)
         return packages
 
     async def list_reward_packages(
@@ -531,15 +593,12 @@ class GameService:
         return 0
 
     def _build_stack_package_title(self, *, language: str, level: int) -> str:
-        if level == 1:
-            return f"{language} origin package"
-        if level == 3:
-            return f"{language} evolution package"
-        return f"{language} level {level} upgrade package"
+        return f"{language} origin package"
 
     def _resolve_reward_date(self, *, now: datetime, timezone: ZoneInfo) -> date:
         local_time = now.astimezone(timezone)
-        return (local_time - timedelta(hours=DAILY_CUTOFF_HOUR)).date()
+        active_reward_date = (local_time - timedelta(hours=DAILY_CUTOFF_HOUR)).date()
+        return active_reward_date - timedelta(days=1)
 
     def _resolve_daily_window(
         self,

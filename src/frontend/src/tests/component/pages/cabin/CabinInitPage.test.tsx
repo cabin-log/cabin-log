@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +9,7 @@ import i18n from "../../../../i18n";
 import { renderWithRouter } from "../../../utils/renderWithRouter";
 
 const getGameStateMock = vi.fn();
+const syncRewardPackagesMock = vi.fn();
 const extractGameErrorDetailMock = vi.fn();
 const resolveGameErrorMessageMock = vi.fn();
 const logoutMock = vi.fn();
@@ -41,6 +42,7 @@ vi.mock("react-router-dom", async () => {
 vi.mock("../../../../hooks/api/game/useGameApi", () => ({
     useGameApi: () => ({
         getGameState: getGameStateMock,
+        syncRewardPackages: syncRewardPackagesMock,
         extractGameErrorDetail: extractGameErrorDetailMock,
         resolveGameErrorMessage: resolveGameErrorMessageMock,
     }),
@@ -64,7 +66,6 @@ const gameState: GameState = {
         coins: 24,
         food: 3,
         pet_exp: 160,
-        growth_material: 0,
         items: [],
     },
     wallet: {
@@ -104,9 +105,15 @@ const gameState: GameState = {
             id: 9,
             source: "GITHUB_SYNC",
             status: "PENDING",
-            title: "TypeScript level 2 upgrade package",
-            description: "TypeScript stack reward level 2 is ready.",
+            title: "TypeScript origin package",
+            description: "TypeScript stack reward is ready.",
             created_at: "2026-09-03T00:00:00Z",
+            metadata: {
+                language: "TypeScript",
+                mastery_level: 1,
+                reward_key: "stack.terminal-desk",
+                reward_type: "FURNITURE",
+            },
             items: [
                 {
                     id: 11,
@@ -123,13 +130,16 @@ const gameState: GameState = {
 describe("CabinInitPage", () => {
     beforeEach(() => {
         getGameStateMock.mockReset();
+        syncRewardPackagesMock.mockReset();
         extractGameErrorDetailMock.mockReset();
         resolveGameErrorMessageMock.mockReset();
         logoutMock.mockReset();
         navigateMock.mockReset();
         logoutMock.mockResolvedValue(undefined);
         void i18n.changeLanguage("en");
+        window.localStorage.clear();
         getGameStateMock.mockResolvedValue(gameState);
+        syncRewardPackagesMock.mockResolvedValue([]);
         extractGameErrorDetailMock.mockReturnValue(null);
         resolveGameErrorMessageMock.mockReturnValue("Could not load cabin state.");
     });
@@ -151,8 +161,63 @@ describe("CabinInitPage", () => {
 
         // Then: the transparent package modal shows pending reward data.
         const dialog = screen.getByRole("dialog", { name: "Packages" });
-        expect(within(dialog).getByText("TypeScript level 2 upgrade package")).toBeVisible();
-        expect(within(dialog).getByText("TypeScript stack reward level 2 is ready.")).toBeVisible();
+        expect(within(dialog).getByText("TypeScript origin package")).toBeVisible();
+        expect(within(dialog).getByText("TypeScript stack reward is ready.")).toBeVisible();
+    });
+
+    it("runs the automatic daily reward refresh once per reward date", async () => {
+        // Given: the player opens the cabin for the first time on the reward date.
+        const { unmount } = renderWithRouter(<CabinInitPage />, "/cabin");
+
+        // Then: the page creates the daily reward package and reloads game state once.
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+        await waitFor(() => expect(syncRewardPackagesMock).toHaveBeenCalledTimes(1));
+        expect(syncRewardPackagesMock).toHaveBeenCalledWith();
+        expect(getGameStateMock).toHaveBeenCalledTimes(2);
+
+        // When: the page is opened again on the same reward date.
+        unmount();
+        getGameStateMock.mockClear();
+        syncRewardPackagesMock.mockClear();
+        renderWithRouter(<CabinInitPage />, "/cabin");
+
+        // Then: the automatic refresh is skipped because the daily attempt already completed.
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+        await waitFor(() => expect(getGameStateMock).toHaveBeenCalledTimes(1));
+        expect(syncRewardPackagesMock).not.toHaveBeenCalled();
+    });
+
+    it("updates daily rewards when the player clicks refresh", async () => {
+        // Given: the cabin state is visible after the automatic refresh.
+        const user = userEvent.setup();
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+        await waitFor(() => expect(syncRewardPackagesMock).toHaveBeenCalledTimes(1));
+
+        // When: the player manually refreshes daily rewards.
+        await user.click(screen.getByRole("button", { name: "Update daily rewards" }));
+
+        // Then: the page asks the backend to refresh rewards again and reloads state.
+        await waitFor(() => expect(syncRewardPackagesMock).toHaveBeenCalledTimes(2));
+        expect(syncRewardPackagesMock).toHaveBeenLastCalledWith();
+        expect(getGameStateMock).toHaveBeenCalledTimes(3);
+    });
+
+    it("localizes package names from package metadata", async () => {
+        // Given: the player uses Korean while package titles are stored in English.
+        const user = userEvent.setup();
+        await i18n.changeLanguage("ko");
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+
+        // When: the user opens packages.
+        await user.click(screen.getByRole("button", { name: "소포" }));
+
+        // Then: the modal renders a localized title from package metadata.
+        const dialog = screen.getByRole("dialog", { name: "소포" });
+        expect(within(dialog).getByText("TypeScript 시작 소포")).toBeVisible();
+        expect(within(dialog).getByText("TypeScript 스택 보상이 준비되었습니다.")).toBeVisible();
+        expect(within(dialog).getByText("1개 아이템")).toBeVisible();
     });
 
     it("reveals the cabin scene when reached from the login success callback", async () => {

@@ -91,13 +91,15 @@ Game foundation:
 - `DELETE /api/v1/game/cabin/placements/{placement_id}` removes a user-adjustable placement.
 - `GET /api/v1/game/stacks` returns the current user's calculated stack profiles.
 - `POST /api/v1/game/stacks/recalculate` recalculates stack profiles from stored GitHub repository language data and recent activities.
-- `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD` returns daily activity counts, points, capped coins, food, pet EXP, and growth material for the selected reward date.
-- `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD` creates the selected date's daily activity reward package once.
+- `POST /api/v1/game/rewards/sync` settles game rewards from stored GitHub data: one-time history onboarding, last completed daily reward, and stack reward packages.
+- `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD` returns daily activity counts, points, capped coins, food, and pet EXP for the selected reward date. When omitted, the reward date defaults to the last completed daily window.
+- `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD` creates the selected date's daily activity reward package once. When omitted, it settles the last completed daily window.
 - `GET /api/v1/rewards/packages` returns pending and claimed reward packages for the current user.
-- `POST /api/v1/rewards/packages/{package_id}/claim` claims a reward package, creates or upgrades the owned stack reward, adds coins to the wallet, and stacks food/material/PET_EXP items in inventory.
+- `POST /api/v1/rewards/packages/{package_id}/claim` claims a reward package, creates the owned stack reward for origin packages, adds coins to the wallet, and stacks food/PET_EXP items in inventory.
 - Stack reward packages are idempotent through `reward_grants.grant_key`; sync can be repeated without duplicate packages.
-- Stack profiles can go down when GitHub data changes, but claimed stack rewards keep their highest claimed level.
-- Daily activity summaries use the user's timezone with a 05:00 local cutoff. Activity timestamps remain stored in UTC.
+- Stack profiles can go down when GitHub data changes, but owned stack rewards are not removed or downgraded.
+- Daily activity summaries use the user's timezone with a 05:00 local cutoff. Activity timestamps remain stored in UTC, and default settlement targets the previous completed reward date rather than the in-progress day.
+- GitHub OAuth sync refreshes repository/activity data, then runs the same game reward sync used by the cabin screen.
 
 GitHub OAuth snapshot flow:
 

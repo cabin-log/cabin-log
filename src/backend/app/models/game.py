@@ -382,7 +382,6 @@ class DailyActivitySummaryCaps(BaseModel):
     food: int = 10
     coins: int = 150
     pet_exp: int = 300
-    growth_material: int = 3
     package_count: int = 1
 
 
@@ -398,7 +397,6 @@ class DailyActivitySummaryResponse(BaseModel):
     coins: int
     food: int
     pet_exp: int
-    growth_material: int
     caps: DailyActivitySummaryCaps = Field(default_factory=DailyActivitySummaryCaps)
     items: list[DailyActivitySummaryItem] = Field(default_factory=list)
 
@@ -703,6 +701,17 @@ class GameRepository:
                     Activity.occurred_at >= window_start,
                     Activity.occurred_at < window_end,
                 )
+                .group_by(Activity.type)
+            )
+            return {
+                ActivityType(activity_type): int(count) for activity_type, count in result.all()
+            }
+
+    async def list_activity_counts(self, *, user_id: int) -> dict[ActivityType, int]:
+        async with get_db() as db:
+            result = await db.execute(
+                select(Activity.type, func.count(Activity.id))
+                .where(Activity.user_id == user_id)
                 .group_by(Activity.type)
             )
             return {

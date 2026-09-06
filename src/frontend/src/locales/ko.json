@@ -123,6 +123,7 @@
         },
         "actions": {
             "packages": "소포",
+            "refresh": "일일 보상 업데이트",
             "settings": "설정",
             "zoomControls": "오두막 확대/축소 조작",
             "zoomIn": "확대 (E 또는 마우스 휠)",
@@ -131,7 +132,7 @@
         },
         "stats": {
             "coins": "코인",
-            "today": "오늘 활동",
+            "today": "정산 활동",
             "food": "사료",
             "packages": "소포"
         },
@@ -140,6 +141,12 @@
             "description": "GitHub 동기화와 일일 보상으로 도착한 소포가 여기에 표시됩니다.",
             "empty": "아직 도착한 소포가 없습니다.",
             "noDescription": "동기화 후 소포 상세 정보가 표시됩니다.",
+            "dailyTitle": "{{date}} 활동 정산 소포",
+            "dailyDescription": "정산된 활동 보상이 준비되었습니다.",
+            "onboardingTitle": "GitHub 기록 온보딩 소포",
+            "onboardingDescription": "동기화된 GitHub 기록 기반 시작 보상이 준비되었습니다.",
+            "stackOriginTitle": "{{language}} 시작 소포",
+            "stackOriginDescription": "{{language}} 스택 보상이 준비되었습니다.",
             "itemCount": "{{count}}개 아이템"
         },
         "settings": {
