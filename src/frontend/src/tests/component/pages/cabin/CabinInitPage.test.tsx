@@ -10,6 +10,7 @@ import { renderWithRouter } from "../../../utils/renderWithRouter";
 
 const getGameStateMock = vi.fn();
 const syncRewardPackagesMock = vi.fn();
+const claimRewardPackageMock = vi.fn();
 const extractGameErrorDetailMock = vi.fn();
 const resolveGameErrorMessageMock = vi.fn();
 const logoutMock = vi.fn();
@@ -43,6 +44,7 @@ vi.mock("../../../../hooks/api/game/useGameApi", () => ({
     useGameApi: () => ({
         getGameState: getGameStateMock,
         syncRewardPackages: syncRewardPackagesMock,
+        claimRewardPackage: claimRewardPackageMock,
         extractGameErrorDetail: extractGameErrorDetailMock,
         resolveGameErrorMessage: resolveGameErrorMessageMock,
     }),
@@ -72,7 +74,89 @@ const gameState: GameState = {
         coins: 120,
         updated_at: "2026-09-03T00:00:00Z",
     },
-    inventory: [],
+    inventory: [
+        {
+            item_type: "FOOD",
+            item_key: "basic_feed",
+            quantity: 3,
+            metadata: {},
+            updated_at: "2026-09-03T00:00:00Z",
+        },
+    ],
+    categorized_inventory: {
+        supplies: [
+            {
+                item_type: "FOOD",
+                item_key: "basic_feed",
+                quantity: 3,
+                metadata: {},
+                updated_at: "2026-09-03T00:00:00Z",
+            },
+        ],
+        furniture: [
+            {
+                reward_key: "stack.terminal-desk",
+                reward_type: "FURNITURE",
+                source_language: "TypeScript",
+                stack_reward_level: 1,
+                stage: 1,
+                exp: 0,
+                is_featured: false,
+                updated_at: "2026-09-03T00:00:00Z",
+            },
+        ],
+        pet_logs: [
+            {
+                reward_key: "stack.python-serpent",
+                reward_type: "ANIMAL",
+                source_language: "Python",
+                stack_reward_level: 1,
+                stage: 1,
+                exp: 0,
+                is_featured: false,
+                updated_at: "2026-09-03T00:00:00Z",
+            },
+        ],
+    },
+    collection: {
+        furniture: [
+            {
+                reward_key: "stack.terminal-desk",
+                reward_type: "FURNITURE",
+                source_language: "TypeScript",
+                owned: true,
+                stack_reward_level: 1,
+                stage: 1,
+                mastery_level: 2,
+                total_bytes: 443000,
+                repository_count: 4,
+            },
+            {
+                reward_key: "stack.forge-bench",
+                reward_type: "FURNITURE",
+                source_language: "Rust",
+                owned: false,
+                stack_reward_level: 0,
+                stage: 0,
+                mastery_level: 0,
+                total_bytes: 0,
+                repository_count: 0,
+            },
+        ],
+        pet_logs: [
+            {
+                reward_key: "stack.python-serpent",
+                reward_type: "ANIMAL",
+                source_language: "Python",
+                owned: true,
+                stack_reward_level: 1,
+                stage: 1,
+                mastery_level: 1,
+                total_bytes: 150000,
+                repository_count: 2,
+            },
+        ],
+    },
     cabin: {
         id: 1,
         width: 12,
@@ -99,7 +183,18 @@ const gameState: GameState = {
             },
         ],
     },
-    stack_rewards: [],
+    stack_rewards: [
+        {
+            reward_key: "stack.terminal-desk",
+            reward_type: "FURNITURE",
+            source_language: "TypeScript",
+            stack_reward_level: 1,
+            stage: 1,
+            exp: 0,
+            is_featured: false,
+            updated_at: "2026-09-03T00:00:00Z",
+        },
+    ],
     pending_packages: [
         {
             id: 9,
@@ -131,6 +226,7 @@ describe("CabinInitPage", () => {
     beforeEach(() => {
         getGameStateMock.mockReset();
         syncRewardPackagesMock.mockReset();
+        claimRewardPackageMock.mockReset();
         extractGameErrorDetailMock.mockReset();
         resolveGameErrorMessageMock.mockReset();
         logoutMock.mockReset();
@@ -140,6 +236,12 @@ describe("CabinInitPage", () => {
         window.localStorage.clear();
         getGameStateMock.mockResolvedValue(gameState);
         syncRewardPackagesMock.mockResolvedValue([]);
+        claimRewardPackageMock.mockResolvedValue({
+            package: { ...gameState.pending_packages?.[0], status: "CLAIMED" },
+            stack_rewards: gameState.categorized_inventory.furniture,
+            wallet: gameState.wallet,
+            inventory: gameState.categorized_inventory.supplies,
+        });
         extractGameErrorDetailMock.mockReturnValue(null);
         resolveGameErrorMessageMock.mockReturnValue("Could not load cabin state.");
     });
@@ -163,6 +265,58 @@ describe("CabinInitPage", () => {
         const dialog = screen.getByRole("dialog", { name: "Packages" });
         expect(within(dialog).getByText("TypeScript origin package")).toBeVisible();
         expect(within(dialog).getByText("TypeScript stack reward is ready.")).toBeVisible();
+    });
+
+    it("claims a package and refreshes the cabin state", async () => {
+        // Given: a pending reward package is visible.
+        const user = userEvent.setup();
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+        await user.click(screen.getByRole("button", { name: "Packages" }));
+
+        // When: the player claims the package.
+        await user.click(screen.getByRole("button", { name: "Claim" }));
+
+        // Then: the backend claim route is called and the cabin state is reloaded.
+        await waitFor(() => expect(claimRewardPackageMock).toHaveBeenCalledWith(9));
+        expect(getGameStateMock).toHaveBeenCalledTimes(3);
+    });
+
+    it("groups claimed rewards by inventory category", async () => {
+        // Given: the cabin state includes supplies, furniture, and pet logs.
+        const user = userEvent.setup();
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+
+        // When: the player opens inventory.
+        await user.click(screen.getByRole("button", { name: "Inventory" }));
+
+        // Then: claimed items are separated into all three inventory groups.
+        const dialog = screen.getByRole("dialog", { name: "Inventory" });
+        expect(within(dialog).getByRole("tab", { name: "Supplies" })).toBeVisible();
+        expect(within(dialog).getByText("Basic feed")).toBeVisible();
+        await user.click(within(dialog).getByRole("tab", { name: "Furniture" }));
+        expect(within(dialog).getByText("TypeScript terminal desk")).toBeVisible();
+        await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
+        expect(within(dialog).getByText("Python serpent pet log")).toBeVisible();
+    });
+
+    it("tracks furniture and pet logs in the collection", async () => {
+        // Given: supplies and stack rewards have been claimed.
+        const user = userEvent.setup();
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+
+        // When: the player opens the collection.
+        await user.click(screen.getByRole("button", { name: "Collection" }));
+
+        // Then: only furniture and pet logs are shown in the collection.
+        const dialog = screen.getByRole("dialog", { name: "Collection" });
+        expect(within(dialog).getByText("TypeScript terminal desk")).toBeVisible();
+        expect(within(dialog).getByText("Rust forge bench")).toBeVisible();
+        await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
+        expect(within(dialog).getByText("Python serpent pet log")).toBeVisible();
+        expect(within(dialog).queryByText("Basic feed")).not.toBeInTheDocument();
     });
 
     it("runs the automatic daily reward refresh once per reward date", async () => {

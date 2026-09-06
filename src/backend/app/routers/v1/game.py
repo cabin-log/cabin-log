@@ -11,6 +11,8 @@ from app.models.game import (
     CabinResponse,
     DailyActivitySummaryResponse,
     DailyRewardPackageResponse,
+    GameCollectionResponse,
+    GameInventoryResponse,
     GameStateResponse,
     RewardPackageResponse,
     StackProfilesResponse,
@@ -54,6 +56,22 @@ async def game_cabin(
     service: GameService = Depends(GameService),
 ) -> CabinResponse:
     return await service.get_cabin(user_id=current_user.id)
+
+
+@router.get("/inventory", response_model=GameInventoryResponse)
+async def game_inventory(
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> GameInventoryResponse:
+    return await service.get_inventory(user_id=current_user.id)
+
+
+@router.get("/collection", response_model=GameCollectionResponse)
+async def game_collection(
+    current_user: UserResponse = Depends(get_current_user),
+    service: GameService = Depends(GameService),
+) -> GameCollectionResponse:
+    return await service.get_collection(user_id=current_user.id)
 
 
 @router.post(

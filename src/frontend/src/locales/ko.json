@@ -123,6 +123,8 @@
         },
         "actions": {
             "packages": "소포",
+            "inventory": "인벤토리",
+            "collection": "도감",
             "refresh": "일일 보상 업데이트",
             "settings": "설정",
             "zoomControls": "오두막 확대/축소 조작",
@@ -147,7 +149,42 @@
             "onboardingDescription": "동기화된 GitHub 기록 기반 시작 보상이 준비되었습니다.",
             "stackOriginTitle": "{{language}} 시작 소포",
             "stackOriginDescription": "{{language}} 스택 보상이 준비되었습니다.",
-            "itemCount": "{{count}}개 아이템"
+            "itemCount": "{{count}}개 아이템",
+            "claim": "받기"
+        },
+        "inventory": {
+            "title": "인벤토리",
+            "description": "수령한 보상을 소모품, 가구, 펫로그로 나누어 보여줍니다.",
+            "supplies": "소모품",
+            "furniture": "가구",
+            "petLogs": "펫로그",
+            "emptySupplies": "아직 받은 소모품이 없습니다.",
+            "emptyFurniture": "아직 받은 가구가 없습니다.",
+            "emptyPetLogs": "아직 받은 펫로그가 없습니다.",
+            "quantity": "x{{quantity}}",
+            "level": "Lv. {{level}}",
+            "stage": "단계 {{stage}}"
+        },
+        "collection": {
+            "title": "도감",
+            "description": "스택 기록으로 해금한 가구와 펫로그를 추적합니다.",
+            "furniture": "가구",
+            "petLogs": "펫로그",
+            "owned": "보유",
+            "locked": "Lv. {{level}}"
+        },
+        "supplies": {
+            "basic_feed": "기본 사료",
+            "pet_exp": "펫 성장치"
+        },
+        "rewards": {
+            "stack": {
+                "python-serpent": "Python 뱀 펫로그",
+                "terminal-desk": "TypeScript 터미널 책상",
+                "coffee-sprout": "Java 커피 새싹",
+                "forge-bench": "Rust 대장간 작업대",
+                "cloud-helper": "Go 구름 도우미 펫로그"
+            }
         },
         "settings": {
             "title": "오두막 설정",

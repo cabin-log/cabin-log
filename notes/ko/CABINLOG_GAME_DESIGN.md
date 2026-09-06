@@ -376,6 +376,8 @@ stack_reward_unlock:{language_slug}:{reward_key}
 9. `GET /api/v1/rewards/packages`로 도착한 package를 조회합니다.
 10. `POST /api/v1/rewards/packages/{package_id}/claim`으로 package를 수령하고
    wallet coin 증가, inventory item 적재, owned stack reward 생성을 처리합니다.
+11. `GET /api/v1/game/inventory`는 수령 완료된 보상을 소모품, 가구, 펫로그로 나누어 반환합니다.
+12. `GET /api/v1/game/collection`은 stack reward catalog 기준 가구와 펫로그 도감을 반환합니다. 사료 같은 소모품은 도감 항목이 아니라 inventory 항목으로만 추적합니다.
 11. `GET /api/v1/game/state`는 첫 playable cabin screen에 필요한 backend state를
    반환합니다.
 

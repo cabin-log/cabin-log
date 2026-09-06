@@ -452,6 +452,29 @@ class UserInventoryItemResponse(BaseModel):
     updated_at: datetime
 
 
+class GameInventoryResponse(BaseModel):
+    supplies: list[UserInventoryItemResponse] = Field(default_factory=list)
+    furniture: list[UserStackRewardResponse] = Field(default_factory=list)
+    pet_logs: list[UserStackRewardResponse] = Field(default_factory=list)
+
+
+class GameCollectionEntryResponse(BaseModel):
+    reward_key: str
+    reward_type: StackRewardType
+    source_language: str
+    owned: bool
+    stack_reward_level: int = 0
+    stage: int = 0
+    mastery_level: int = 0
+    total_bytes: int = 0
+    repository_count: int = 0
+
+
+class GameCollectionResponse(BaseModel):
+    furniture: list[GameCollectionEntryResponse] = Field(default_factory=list)
+    pet_logs: list[GameCollectionEntryResponse] = Field(default_factory=list)
+
+
 class CabinPlacementBase(BaseModel):
     x: int = Field(ge=0)
     y: int = Field(ge=0)
@@ -526,6 +549,8 @@ class GameStateResponse(BaseModel):
     today: DailyActivitySummaryResponse
     wallet: UserWalletResponse
     inventory: list[UserInventoryItemResponse] = Field(default_factory=list)
+    categorized_inventory: GameInventoryResponse
+    collection: GameCollectionResponse
     cabin: CabinResponse
     stack_profiles: StackProfilesResponse
     stack_rewards: list[UserStackRewardResponse] = Field(default_factory=list)

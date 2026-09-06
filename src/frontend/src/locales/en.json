@@ -123,6 +123,8 @@
         },
         "actions": {
             "packages": "Packages",
+            "inventory": "Inventory",
+            "collection": "Collection",
             "refresh": "Update daily rewards",
             "settings": "Settings",
             "zoomControls": "Cabin zoom controls",
@@ -147,7 +149,42 @@
             "onboardingDescription": "Welcome rewards from your synced GitHub history are ready.",
             "stackOriginTitle": "{{language}} origin package",
             "stackOriginDescription": "{{language}} stack reward is ready.",
-            "itemCount": "{{count}} item(s)"
+            "itemCount": "{{count}} item(s)",
+            "claim": "Claim"
+        },
+        "inventory": {
+            "title": "Inventory",
+            "description": "Claimed rewards are grouped by supplies, furniture, and pet logs.",
+            "supplies": "Supplies",
+            "furniture": "Furniture",
+            "petLogs": "Pet logs",
+            "emptySupplies": "No supplies claimed yet.",
+            "emptyFurniture": "No furniture claimed yet.",
+            "emptyPetLogs": "No pet logs claimed yet.",
+            "quantity": "x{{quantity}}",
+            "level": "Lv. {{level}}",
+            "stage": "Stage {{stage}}"
+        },
+        "collection": {
+            "title": "Collection",
+            "description": "Track furniture and pet logs unlocked by your stack history.",
+            "furniture": "Furniture",
+            "petLogs": "Pet logs",
+            "owned": "Owned",
+            "locked": "Lv. {{level}}"
+        },
+        "supplies": {
+            "basic_feed": "Basic feed",
+            "pet_exp": "Pet growth points"
+        },
+        "rewards": {
+            "stack": {
+                "python-serpent": "Python serpent pet log",
+                "terminal-desk": "TypeScript terminal desk",
+                "coffee-sprout": "Java coffee sprout",
+                "forge-bench": "Rust forge bench",
+                "cloud-helper": "Go cloud helper pet log"
+            }
         },
         "settings": {
             "title": "Cabin settings",
