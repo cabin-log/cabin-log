@@ -91,7 +91,7 @@ Game 기반:
 - `GET /api/v1/game/inventory`는 수령한 보상을 소모품, 가구, 펫로그로 분류해 반환합니다. 소모품은 사료 같은 소비용 inventory item이고, 가구와 펫로그는 보유 stack reward입니다.
 - `GET /api/v1/game/collection`은 전체 stack 및 event reward catalog 기준 가구와 펫로그 도감을 반환하며, 보유/미보유 항목, asset key, 수령 조건을 함께 포함합니다. 소모품은 도감에서 제외합니다.
 - `POST /api/v1/game/stacks/recalculate`는 저장된 GitHub repository language와 최근 activity를 기준으로 stack profile을 재계산합니다.
-- `POST /api/v1/game/rewards/sync`는 저장된 GitHub 데이터를 기준으로 GitHub history onboarding, 마지막 완료 daily reward, stack reward package를 정산합니다.
+- `POST /api/v1/game/rewards/sync`는 저장된 GitHub 데이터를 기준으로 GitHub history onboarding, 마지막 완료 daily reward, stack reward package, 이벤트 조건 달성에 따른 1회성 achievement package를 정산합니다.
 - `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD`는 선택한 reward date의 activity count, point, capped coin, food, pet EXP를 반환합니다. 생략하면 마지막으로 완료된 daily window가 기본 reward date가 됩니다.
 - `POST /api/v1/game/activity/daily-reward?reward_date=YYYY-MM-DD`는 선택한 날짜의 daily activity reward package를 한 번만 생성합니다. 생략하면 마지막으로 완료된 daily window를 정산합니다.
 - `GET /api/v1/rewards/packages`는 현재 사용자의 pending/claimed reward package를 반환합니다.

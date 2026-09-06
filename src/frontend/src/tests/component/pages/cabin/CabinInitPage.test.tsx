@@ -492,6 +492,52 @@ describe("CabinInitPage", () => {
         expect(within(dialog).getByText("1개 아이템")).toBeVisible();
     });
 
+    it("localizes achievement package names from package metadata", async () => {
+        // Given: an event reward package arrived from achievement sync.
+        const user = userEvent.setup();
+        await i18n.changeLanguage("ko");
+        getGameStateMock.mockResolvedValue({
+            ...gameState,
+            pending_packages: [
+                {
+                    id: 12,
+                    source: "ACHIEVEMENT",
+                    status: "PENDING",
+                    title: "event.night-owl-bed achievement package",
+                    description: "event.night-owl-bed event reward is ready.",
+                    created_at: "2026-09-03T00:00:00Z",
+                    metadata: {
+                        grant_type: "event_reward",
+                        condition_key: "night_owl_commits",
+                        reward_key: "event.night-owl-bed",
+                        reward_type: "FURNITURE",
+                    },
+                    items: [
+                        {
+                            id: 12,
+                            item_type: "STACK_REWARD_UPGRADE",
+                            item_key: "event.night-owl-bed",
+                            quantity: 1,
+                            metadata: {},
+                        },
+                    ],
+                },
+            ],
+        });
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+
+        // When: the user opens packages.
+        await user.click(screen.getByRole("button", { name: "소포" }));
+
+        // Then: the package uses the localized reward name instead of the raw reward key.
+        const dialog = screen.getByRole("dialog", { name: "소포" });
+        expect(within(dialog).getByText("새벽 작업 침대 업적 소포")).toBeVisible();
+        expect(
+            within(dialog).getByText("활동 업적을 달성해 새벽 작업 침대 보상이 준비되었습니다."),
+        ).toBeVisible();
+    });
+
     it("reveals the cabin scene when reached from the login success callback", async () => {
         // Given: login success redirected the user to the cabin with entry reveal state.
         const { container } = render(

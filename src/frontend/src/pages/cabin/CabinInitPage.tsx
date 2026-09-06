@@ -98,6 +98,15 @@ function resolvePackageDisplayText(
         };
     }
 
+    const rewardKey = getStringMetadataValue(metadata, "reward_key");
+    if (grantType === "event_reward" && rewardKey) {
+        const rewardName = resolveRewardName(rewardKey, "Achievement", t);
+        return {
+            title: t("cabin.packages.eventTitle", { reward: rewardName }),
+            description: t("cabin.packages.eventDescription", { reward: rewardName }),
+        };
+    }
+
     const language = getStringMetadataValue(metadata, "language");
     if (language) {
         return {
