@@ -169,6 +169,41 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     assert claimed["stack_rewards"][0]["stack_reward_level"] == 1
     assert claimed["stack_rewards"][0]["stage"] == 1
 
+    typescript_origin = next(
+        package
+        for package in packages
+        if package["metadata"].get("language") == "TypeScript"
+        and package["metadata"].get("mastery_level") == 1
+    )
+    typescript_claim_response = integration_client.post(
+        f"/api/v1/rewards/packages/{typescript_origin['id']}/claim",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert typescript_claim_response.status_code == 200
+
+    inventory_response = integration_client.get(
+        "/api/v1/game/inventory",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert inventory_response.status_code == 200
+    inventory = inventory_response.json()
+    assert inventory["supplies"] == []
+    assert [item["reward_key"] for item in inventory["furniture"]] == ["stack.terminal-desk"]
+    assert [item["reward_key"] for item in inventory["pet_logs"]] == ["stack.python-serpent"]
+
+    collection_response = integration_client.get(
+        "/api/v1/game/collection",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert collection_response.status_code == 200
+    collection = collection_response.json()
+    collection_furniture = {item["reward_key"]: item for item in collection["furniture"]}
+    collection_pet_logs = {item["reward_key"]: item for item in collection["pet_logs"]}
+    assert collection_furniture["stack.terminal-desk"]["owned"] is True
+    assert collection_furniture["stack.forge-bench"]["owned"] is False
+    assert collection_pet_logs["stack.python-serpent"]["owned"] is True
+    assert collection_pet_logs["stack.coffee-sprout"]["owned"] is False
+
     duplicate_claim_response = integration_client.post(
         f"/api/v1/rewards/packages/{python_origin['id']}/claim",
         headers={"Authorization": f"Bearer {token}"},

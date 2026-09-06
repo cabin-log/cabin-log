@@ -16,7 +16,10 @@ from app.models.game import (
     DailyActivitySummaryItem,
     DailyActivitySummaryResponse,
     DailyRewardPackageResponse,
+    GameCollectionEntryResponse,
+    GameCollectionResponse,
     GameData,
+    GameInventoryResponse,
     GameStateResponse,
     RewardPackageCreate,
     RewardPackageCreateItem,
@@ -110,6 +113,54 @@ class GameService:
     async def list_inventory_items(self, user_id: int) -> list[UserInventoryItemResponse]:
         return await GameData.list_inventory_items(user_id=user_id)
 
+    async def get_inventory(self, user_id: int) -> GameInventoryResponse:
+        supplies = await self.list_inventory_items(user_id=user_id)
+        stack_rewards = await GameData.list_stack_rewards(user_id=user_id)
+        return GameInventoryResponse(
+            supplies=supplies,
+            furniture=[
+                reward
+                for reward in stack_rewards
+                if reward.reward_type == StackRewardType.FURNITURE
+            ],
+            pet_logs=[
+                reward for reward in stack_rewards if reward.reward_type == StackRewardType.ANIMAL
+            ],
+        )
+
+    async def get_collection(self, user_id: int) -> GameCollectionResponse:
+        owned_rewards = {
+            reward.reward_key: reward
+            for reward in await GameData.list_stack_rewards(user_id=user_id)
+        }
+        profiles = {
+            profile.language: profile for profile in (await self.get_stack_profiles(user_id)).items
+        }
+        furniture: list[GameCollectionEntryResponse] = []
+        pet_logs: list[GameCollectionEntryResponse] = []
+        for definition in sorted(
+            STACK_REWARD_CATALOG.values(),
+            key=lambda item: (item.reward_type.value, item.language),
+        ):
+            owned_reward = owned_rewards.get(definition.reward_key)
+            profile = profiles.get(definition.language)
+            entry = GameCollectionEntryResponse(
+                reward_key=definition.reward_key,
+                reward_type=definition.reward_type,
+                source_language=definition.language,
+                owned=owned_reward is not None,
+                stack_reward_level=owned_reward.stack_reward_level if owned_reward else 0,
+                stage=owned_reward.stage if owned_reward else 0,
+                mastery_level=profile.mastery_level if profile else 0,
+                total_bytes=profile.total_bytes if profile else 0,
+                repository_count=profile.repository_count if profile else 0,
+            )
+            if definition.reward_type == StackRewardType.FURNITURE:
+                furniture.append(entry)
+            else:
+                pet_logs.append(entry)
+        return GameCollectionResponse(furniture=furniture, pet_logs=pet_logs)
+
     async def get_cabin(self, user_id: int) -> CabinResponse:
         return await GameData.get_or_create_cabin(user_id=user_id)
 
@@ -142,6 +193,8 @@ class GameService:
         today = await self.get_daily_activity_summary(user_id=user_id)
         wallet = await self.get_wallet(user_id=user_id)
         inventory = await self.list_inventory_items(user_id=user_id)
+        categorized_inventory = await self.get_inventory(user_id=user_id)
+        collection = await self.get_collection(user_id=user_id)
         cabin = await self.get_cabin(user_id=user_id)
         stack_profiles = await self.get_stack_profiles(user_id=user_id)
         stack_rewards = await GameData.list_stack_rewards(user_id=user_id)
@@ -154,6 +207,8 @@ class GameService:
             today=today,
             wallet=wallet,
             inventory=inventory,
+            categorized_inventory=categorized_inventory,
+            collection=collection,
             cabin=cabin,
             stack_profiles=stack_profiles,
             stack_rewards=stack_rewards,

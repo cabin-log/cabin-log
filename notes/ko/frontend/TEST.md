@@ -198,6 +198,9 @@ it("<behavior>", async () => {
     - Playable init 화면이 backend game state를 불러옴
     - Cabin 진입 시 정산 reward date별 game reward sync를 한 번 실행하고 HUD 수동 refresh를 지원함
     - 소포/설정 버튼이 `/cabin`을 벗어나지 않고 modal overlay를 엶
+    - 소포 수령 시 backend claim API를 호출하고 cabin state를 다시 불러옴
+    - 인벤토리는 수령 보상을 소모품, 가구, 펫로그로 분류함
+    - 도감은 가구와 펫로그만 추적하고 소모품은 제외함
     - Login success entry state가 cabin reveal class를 적용함
 11. `src/tests/component/pages/settings/SettingsPage.test.tsx`
     - 역할 배지 표시 분기:

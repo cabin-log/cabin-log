@@ -2471,14 +2471,17 @@ a {
 
 .cabin-init-modal .ui-modal__header h2,
 .cabin-init-package h3,
-.cabin-init-settings-list dt {
+.cabin-init-settings-list dt,
+.cabin-init-tracker__section h3,
+.cabin-init-tracker__item strong {
     color: #f8faf2;
 }
 
 .cabin-init-modal .ui-modal__header p,
 .cabin-init-package p,
 .cabin-init-empty,
-.cabin-init-settings-list dd {
+.cabin-init-settings-list dd,
+.cabin-init-tracker__item span {
     color: rgba(248, 250, 242, 0.78);
 }
 
@@ -2633,6 +2636,258 @@ a {
     background: rgba(248, 250, 242, 0.16);
     font-size: 0.74rem;
     font-weight: 800;
+    white-space: nowrap;
+}
+
+.cabin-init-package__actions {
+    flex: 0 0 auto;
+    display: grid;
+    justify-items: end;
+    gap: 0.45rem;
+}
+
+.cabin-init-package__actions > span {
+    flex: 0 0 auto;
+    min-width: 4.6rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65rem;
+    background: rgba(248, 250, 242, 0.16);
+    font-size: 0.74rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.cabin-init-package__claim.ui-button {
+    width: auto;
+    height: 1.65rem;
+    min-height: 1.65rem;
+    min-width: 4.15rem;
+    justify-self: end;
+    padding: 0 0.48rem;
+    border-radius: 0.52rem;
+    font-size: 0.7rem;
+}
+
+.cabin-init-package__claim.ui-button .ui-button__content {
+    gap: 0.24rem;
+}
+
+.cabin-init-package__claim.ui-button .ui-button__content svg {
+    width: 0.82rem;
+    height: 0.82rem;
+}
+
+.cabin-init-tracker {
+    display: grid;
+    gap: 0.82rem;
+    max-height: min(31rem, calc(100dvh - 12rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 0.25rem;
+    scrollbar-gutter: stable;
+}
+
+.cabin-init-tracker__tabs {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 0.35rem;
+    padding: 0.28rem;
+    border: 1px solid rgba(248, 250, 242, 0.18);
+    border-radius: 0.74rem;
+    background: rgba(16, 20, 22, 0.82);
+}
+
+.cabin-init-tracker__tab {
+    min-width: 0;
+    min-height: 2.15rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.34rem;
+    border: 0;
+    border-radius: 0.54rem;
+    background: transparent;
+    color: rgba(248, 250, 242, 0.72);
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 850;
+}
+
+.cabin-init-tracker__tab svg {
+    width: 0.92rem;
+    height: 0.92rem;
+    flex: 0 0 auto;
+}
+
+.cabin-init-tracker__tab span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cabin-init-tracker__tab--active {
+    background: rgba(255, 216, 136, 0.2);
+    color: rgba(255, 249, 226, 0.98);
+    box-shadow: inset 0 0 0 1px rgba(255, 216, 136, 0.32);
+}
+
+.cabin-init-tracker__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.8rem, 1fr));
+    gap: 0.58rem;
+}
+
+.cabin-init-tracker__slot {
+    position: relative;
+    min-width: 0;
+    aspect-ratio: 1;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: end;
+    justify-items: center;
+    gap: 0.18rem;
+    padding: 0.62rem 0.48rem;
+    border: 1px solid rgba(248, 250, 242, 0.22);
+    border-radius: 0.5rem;
+    background:
+        linear-gradient(180deg, rgba(255, 249, 226, 0.12), rgba(16, 20, 22, 0.28)),
+        rgba(248, 250, 242, 0.1);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 249, 226, 0.16),
+        inset 0 -0.55rem 1.8rem rgba(16, 20, 22, 0.2);
+}
+
+.cabin-init-tracker__slot::before {
+    content: "";
+    width: min(2.6rem, 46%);
+    aspect-ratio: 1;
+    align-self: center;
+    border: 1px dashed rgba(255, 216, 136, 0.32);
+    border-radius: 0.42rem;
+    background: rgba(255, 216, 136, 0.08);
+}
+
+.cabin-init-tracker__slot--locked {
+    opacity: 0.55;
+    filter: grayscale(0.45);
+}
+
+.cabin-init-tracker__slot strong,
+.cabin-init-tracker__slot span {
+    max-width: 100%;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cabin-init-tracker__slot strong {
+    color: #f8faf2;
+    font-size: 0.72rem;
+    font-weight: 850;
+}
+
+.cabin-init-tracker__slot span {
+    color: rgba(248, 250, 242, 0.65);
+    font-size: 0.62rem;
+}
+
+.cabin-init-tracker__slot b {
+    position: absolute;
+    right: 0.42rem;
+    bottom: 0.42rem;
+    min-width: 1.45rem;
+    max-width: calc(100% - 0.84rem);
+    padding: 0.18rem 0.32rem;
+    border-radius: 0.38rem;
+    background: rgba(20, 21, 22, 0.76);
+    color: rgba(255, 249, 226, 0.94);
+    font-size: 0.62rem;
+    font-weight: 850;
+    line-height: 1;
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cabin-init-tracker__section {
+    display: grid;
+    gap: 0.58rem;
+}
+
+.cabin-init-tracker__section h3 {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0;
+    font-size: 0.92rem;
+}
+
+.cabin-init-tracker__section h3 svg {
+    width: 1rem;
+    height: 1rem;
+    color: rgba(255, 216, 136, 0.92);
+}
+
+.cabin-init-tracker__list {
+    display: grid;
+    gap: 0.52rem;
+}
+
+.cabin-init-tracker__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.68rem;
+    border: 1px solid rgba(248, 250, 242, 0.2);
+    border-radius: 0.78rem;
+    background: rgba(248, 250, 242, 0.11);
+}
+
+.cabin-init-tracker__item--locked {
+    opacity: 0.62;
+}
+
+.cabin-init-tracker__item div {
+    min-width: 0;
+    display: grid;
+    gap: 0.1rem;
+}
+
+.cabin-init-tracker__item strong,
+.cabin-init-tracker__item span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cabin-init-tracker__item strong {
+    font-size: 0.84rem;
+}
+
+.cabin-init-tracker__item span {
+    font-size: 0.74rem;
+}
+
+.cabin-init-tracker__item b {
+    flex: 0 0 auto;
+    min-width: 4.2rem;
+    padding: 0.38rem 0.5rem;
+    border-radius: 0.58rem;
+    background: rgba(248, 250, 242, 0.14);
+    color: rgba(255, 249, 226, 0.94);
+    font-size: 0.72rem;
+    text-align: center;
     white-space: nowrap;
 }
 

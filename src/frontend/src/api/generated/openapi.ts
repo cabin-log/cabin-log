@@ -398,6 +398,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/game/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Game Inventory */
+        get: operations["game_inventory_api_v1_game_inventory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/game/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Game Collection */
+        get: operations["game_collection_api_v1_game_collection_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/game/cabin/placements": {
         parameters: {
             query?: never;
@@ -1113,6 +1147,48 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** GameCollectionEntryResponse */
+        GameCollectionEntryResponse: {
+            /** Reward Key */
+            reward_key: string;
+            reward_type: components["schemas"]["StackRewardType"];
+            /** Source Language */
+            source_language: string;
+            /** Owned */
+            owned: boolean;
+            /**
+             * Stack Reward Level
+             * @default 0
+             */
+            stack_reward_level: number;
+            /**
+             * Stage
+             * @default 0
+             */
+            stage: number;
+            /**
+             * Mastery Level
+             * @default 0
+             */
+            mastery_level: number;
+            /**
+             * Total Bytes
+             * @default 0
+             */
+            total_bytes: number;
+            /**
+             * Repository Count
+             * @default 0
+             */
+            repository_count: number;
+        };
+        /** GameCollectionResponse */
+        GameCollectionResponse: {
+            /** Furniture */
+            furniture?: components["schemas"]["GameCollectionEntryResponse"][];
+            /** Pet Logs */
+            pet_logs?: components["schemas"]["GameCollectionEntryResponse"][];
+        };
         /** GameErrorDetail */
         GameErrorDetail: {
             /**
@@ -1139,6 +1215,15 @@ export interface components {
         GameErrorResponse: {
             detail: components["schemas"]["GameErrorDetail"];
         };
+        /** GameInventoryResponse */
+        GameInventoryResponse: {
+            /** Supplies */
+            supplies?: components["schemas"]["UserInventoryItemResponse"][];
+            /** Furniture */
+            furniture?: components["schemas"]["UserStackRewardResponse"][];
+            /** Pet Logs */
+            pet_logs?: components["schemas"]["UserStackRewardResponse"][];
+        };
         /** GameStateResponse */
         GameStateResponse: {
             settings: components["schemas"]["UserGameSettingsResponse"];
@@ -1146,6 +1231,8 @@ export interface components {
             wallet: components["schemas"]["UserWalletResponse"];
             /** Inventory */
             inventory?: components["schemas"]["UserInventoryItemResponse"][];
+            categorized_inventory: components["schemas"]["GameInventoryResponse"];
+            collection: components["schemas"]["GameCollectionResponse"];
             cabin: components["schemas"]["CabinResponse"];
             stack_profiles: components["schemas"]["StackProfilesResponse"];
             /** Stack Rewards */
@@ -2949,6 +3036,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CabinResponse"];
+                };
+            };
+        };
+    };
+    game_inventory_api_v1_game_inventory_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameInventoryResponse"];
+                };
+            };
+        };
+    };
+    game_collection_api_v1_game_collection_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GameCollectionResponse"];
                 };
             };
         };

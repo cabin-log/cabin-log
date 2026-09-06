@@ -198,6 +198,9 @@ When a new frontend domain is added:
     - Playable init screen loads backend game state.
     - Cabin entry runs one automatic game reward sync per settled reward date and supports manual HUD refresh.
     - Package and settings buttons open modal overlays without leaving `/cabin`.
+    - Package claim calls the backend claim API and reloads cabin state.
+    - Inventory groups claimed rewards as supplies, furniture, and pet logs.
+    - Collection tracks furniture and pet logs only; supplies stay out of the codex.
     - Login success entry state applies the cabin reveal class.
 11. `src/tests/component/pages/settings/SettingsPage.test.tsx`
     - Role badge visibility branch:

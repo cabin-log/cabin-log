@@ -82,7 +82,7 @@ GitHub backend foundation:
 - Unsupported webhook events are acknowledged as ignored and do not create game activity.
 
 Game foundation:
-- `GET /api/v1/game/state` returns the current game state for the playable cabin view: settings, today's activity summary, wallet, inventory, fixed-size cabin layout, stack profiles, owned stack rewards, and pending packages.
+- `GET /api/v1/game/state` returns the current game state for the playable cabin view: settings, today's activity summary, wallet, raw inventory, categorized inventory, furniture/pet-log collection, fixed-size cabin layout, stack profiles, owned stack rewards, and pending packages.
 - `GET /api/v1/game/settings` returns the current user's game settings, including timezone and the daily cutoff hour.
 - `PATCH /api/v1/game/settings` updates the current user's IANA timezone, for example `{"timezone":"Asia/Seoul"}`.
 - `GET /api/v1/game/cabin` returns the current user's fixed `12 x 12` isometric cabin, `60 x 30 px` tile contract, and saved placements.
@@ -90,6 +90,8 @@ Game foundation:
 - `PATCH /api/v1/game/cabin/placements/{placement_id}` updates a user-adjustable placement's `x`, `y`, `z`, `rotation`, `width`, or `depth`.
 - `DELETE /api/v1/game/cabin/placements/{placement_id}` removes a user-adjustable placement.
 - `GET /api/v1/game/stacks` returns the current user's calculated stack profiles.
+- `GET /api/v1/game/inventory` returns claimed rewards grouped as supplies, furniture, and pet logs. Supplies are consumable inventory items such as feed; furniture and pet logs are owned stack rewards.
+- `GET /api/v1/game/collection` returns the furniture and pet-log codex from the stack reward catalog, including owned and locked entries. Supplies are intentionally excluded from the codex.
 - `POST /api/v1/game/stacks/recalculate` recalculates stack profiles from stored GitHub repository language data and recent activities.
 - `POST /api/v1/game/rewards/sync` settles game rewards from stored GitHub data: one-time history onboarding, last completed daily reward, and stack reward packages.
 - `GET /api/v1/game/activity/daily-summary?reward_date=YYYY-MM-DD` returns daily activity counts, points, capped coins, food, and pet EXP for the selected reward date. When omitted, the reward date defaults to the last completed daily window.
