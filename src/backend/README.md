@@ -89,6 +89,7 @@ Game foundation:
 - `POST /api/v1/game/cabin/placements` places an owned stack reward or inventory item in the cabin grid.
 - `PATCH /api/v1/game/cabin/placements/{placement_id}` updates a user-adjustable placement's `x`, `y`, `z`, `rotation`, `width`, or `depth`.
 - `DELETE /api/v1/game/cabin/placements/{placement_id}` removes a user-adjustable placement.
+- GitHub-linked users automatically receive the default `default.octocat` pet log as an owned stack reward when game inventory, collection, state, or placement flows load.
 - `GET /api/v1/game/stacks` returns the current user's calculated stack profiles.
 - `GET /api/v1/game/inventory` returns claimed rewards grouped as supplies, furniture, and pet logs. Supplies are consumable inventory items such as feed; furniture and pet logs are owned stack rewards.
 - `GET /api/v1/game/collection` returns the furniture and pet-log codex from the full stack and event reward catalogs, including owned and locked entries, asset keys, and unlock requirements. Supplies are intentionally excluded from the codex.

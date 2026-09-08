@@ -171,6 +171,7 @@
             "placed": "Placed in the cabin.",
             "notPlaced": "Not placed in the cabin.",
             "notPlaceable": "This supply is used from inventory and is not placed in the cabin.",
+            "place": "Place",
             "collect": "Collect"
         },
         "collection": {
@@ -185,6 +186,7 @@
             "ownedDetail": "{{language}} reward is owned at level {{level}}.",
             "conditions": {
                 "achievement": "Unlock this achievement reward by meeting its event condition.",
+                "github_account": "Unlocked automatically when your GitHub account is connected.",
                 "night_owl_commits": "Unlock by making 10 commits between midnight and 05:00 in your timezone.",
                 "morning_activity_days": "Unlock by recording activity between 05:00 and 09:00 on 7 different days.",
                 "pull_request_reviews": "Unlock by completing 20 pull request reviews.",
@@ -202,6 +204,9 @@
             "pet_exp": "Pet growth points"
         },
         "rewards": {
+            "default": {
+                "octocat": "Cabin Log Octocat pet log"
+            },
             "stack": {
                 "python-serpent": "Python serpent pet log",
                 "terminal-desk": "TypeScript terminal desk",

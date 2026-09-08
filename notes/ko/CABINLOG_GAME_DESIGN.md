@@ -425,7 +425,7 @@ Stack-themed reward catalog:
 
 도감 표시 규칙:
 
-1. 모든 `STACK_REWARD_CATALOG`와 `EVENT_REWARD_CATALOG` 항목은 도감에 표시합니다.
+1. 모든 `DEFAULT_REWARD_CATALOG`, `STACK_REWARD_CATALOG`, `EVENT_REWARD_CATALOG` 항목은 도감에 표시합니다.
 2. 보유하지 않은 항목은 슬롯 내부 이름을 `?`로 표시합니다.
 3. 잠긴 항목을 선택하면 상세 패널에서 실제 이름과 수령 조건을 표시합니다.
 4. 기본 stack 수령 조건은 `{Language} 코드 50,000 bytes 이상` 또는
@@ -433,6 +433,15 @@ Stack-themed reward catalog:
 5. 보유 항목은 이름, stack, 현재 level/stage를 표시합니다.
 6. 상세 패널은 `asset_key`를 함께 표시하여 추후 실제 sprite asset 연결 위치를
    확인할 수 있게 합니다.
+7. GitHub 계정이 연결된 사용자는 기본 펫로그 `default.octocat`을 자동 보유합니다.
+   이 항목은 도감에서 `github_account` 조건으로 표시하고, 인벤토리에서 배치/수거
+   확인용 기본 펫로그로 사용합니다.
+8. 배치는 인벤토리 action에서 바로 좌표를 확정하지 않습니다. 사용자가 보유 항목을
+   선택하면 Phaser stage가 held pose preview를 마우스에 붙이고, 사용자가 클릭한
+   isometric cell에 placement API를 호출합니다. 성공 뒤에는 전체 cabin state를 다시
+   불러오지 않고 응답 placement만 local state에 추가합니다.
+9. 수거는 delete API 성공 뒤 전체 cabin state를 다시 불러오지 않고 해당 placement만
+   local state에서 제거합니다.
 
 ## Reward Asset Manifest
 
@@ -446,6 +455,16 @@ Stack-themed reward catalog:
 | Furniture | `public/sprites/rewards/furniture/{asset_key}/{direction}.png` | `front`, `back`, `left`, `right` 4방향 |
 | Pet log idle/walk | `public/sprites/rewards/pet-logs/{asset_key}/{state}-{direction}.png` | `idle`, `walk`, `sleep`, `held` 상태와 4방향 |
 | Collection icon | `public/sprites/rewards/icons/{asset_key}.png` | 도감/인벤토리 슬롯용 1:1 아이콘 |
+
+기본 펫로그:
+
+| Reward key | Asset key | Unlock |
+| --- | --- | --- |
+| `default.octocat` | `default-octocat` | GitHub account connected |
+
+실제 Octocat sprite가 들어오기 전까지 Phaser stage는 `default.octocat` placement를
+감지해 임시 vector placeholder와 idle/walk 움직임을 렌더링합니다. 배치 대기 중에는
+같은 placeholder를 held pose로 마우스에 붙여 표시합니다.
 
 가구 asset 요구사항:
 

@@ -57,6 +57,8 @@ EVENT_REWARD_THRESHOLDS: dict[str, int] = {
 }
 BUGFIX_KEYWORDS = ("bug", "bugfix", "fix", "fixed", "hotfix", "resolve", "resolved")
 DOCS_KEYWORDS = ("readme", "docs", "doc", "documentation", ".md", "markdown")
+DEFAULT_PET_LOG_KEY = "default.octocat"
+DEFAULT_PET_LOG_SOURCE = "GitHub"
 
 ACTIVITY_POINT_WEIGHTS: dict[ActivityType, int] = {
     ActivityType.COMMIT: 4,
@@ -267,6 +269,19 @@ EVENT_REWARD_CATALOG: dict[str, StackRewardDefinition] = {
     ),
 }
 
+DEFAULT_REWARD_CATALOG: dict[str, StackRewardDefinition] = {
+    DEFAULT_PET_LOG_KEY: StackRewardDefinition(
+        DEFAULT_PET_LOG_SOURCE,
+        StackRewardType.ANIMAL,
+        DEFAULT_PET_LOG_KEY,
+        "default-octocat",
+        required_mastery_level=0,
+        required_bytes=0,
+        required_recent_activity_count=0,
+        condition_key="github_account",
+    ),
+}
+
 
 class GameService:
     async def get_user_settings(self, user_id: int) -> UserGameSettingsResponse:
@@ -287,6 +302,7 @@ class GameService:
         return await GameData.list_inventory_items(user_id=user_id)
 
     async def get_inventory(self, user_id: int) -> GameInventoryResponse:
+        await self.ensure_default_pet_logs(user_id=user_id)
         supplies = await self.list_inventory_items(user_id=user_id)
         stack_rewards = await GameData.list_stack_rewards(user_id=user_id)
         return GameInventoryResponse(
@@ -302,6 +318,7 @@ class GameService:
         )
 
     async def get_collection(self, user_id: int) -> GameCollectionResponse:
+        await self.ensure_default_pet_logs(user_id=user_id)
         owned_rewards = {
             reward.reward_key: reward
             for reward in await GameData.list_stack_rewards(user_id=user_id)
@@ -312,7 +329,11 @@ class GameService:
         furniture: list[GameCollectionEntryResponse] = []
         pet_logs: list[GameCollectionEntryResponse] = []
         for definition in sorted(
-            [*STACK_REWARD_CATALOG.values(), *EVENT_REWARD_CATALOG.values()],
+            [
+                *DEFAULT_REWARD_CATALOG.values(),
+                *STACK_REWARD_CATALOG.values(),
+                *EVENT_REWARD_CATALOG.values(),
+            ],
             key=lambda item: (item.reward_type.value, item.language),
         ):
             owned_reward = owned_rewards.get(definition.reward_key)
@@ -348,6 +369,7 @@ class GameService:
         user_id: int,
         form: CabinPlacementCreate,
     ) -> CabinPlacementResponse:
+        await self.ensure_default_pet_logs(user_id=user_id)
         return await GameData.create_cabin_placement(user_id=user_id, form=form)
 
     async def update_cabin_placement(
@@ -367,6 +389,7 @@ class GameService:
         await GameData.delete_cabin_placement(user_id=user_id, placement_id=placement_id)
 
     async def get_game_state(self, user_id: int) -> GameStateResponse:
+        await self.ensure_default_pet_logs(user_id=user_id)
         settings = await self.get_user_settings(user_id=user_id)
         today = await self.get_daily_activity_summary(user_id=user_id)
         wallet = await self.get_wallet(user_id=user_id)
@@ -548,6 +571,18 @@ class GameService:
 
     async def refresh_after_github_sync(self, user_id: int) -> list[RewardPackageResponse]:
         return await self.sync_reward_packages(user_id=user_id)
+
+    async def ensure_default_pet_logs(self, *, user_id: int) -> None:
+        if not await GameData.user_has_oauth_identity(user_id=user_id, provider="github"):
+            return
+        definition = DEFAULT_REWARD_CATALOG[DEFAULT_PET_LOG_KEY]
+        await GameData.upsert_default_stack_reward(
+            user_id=user_id,
+            reward_key=definition.reward_key,
+            reward_type=definition.reward_type,
+            source_language=definition.language,
+            stack_reward_level=1,
+        )
 
     async def create_onboarding_reward_package(
         self,

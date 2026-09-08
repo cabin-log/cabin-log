@@ -8,6 +8,7 @@ export type GameInventory = components["schemas"]["GameInventoryResponse"];
 export type GameCollection = components["schemas"]["GameCollectionResponse"];
 export type DailyRewardPackage = components["schemas"]["DailyRewardPackageResponse"];
 export type CabinPlacement = components["schemas"]["CabinPlacementResponse"];
+export type CabinPlacementCreate = components["schemas"]["CabinPlacementCreate"];
 
 export async function getGameState(): Promise<GameState> {
     const { data, error } = await apiClient.GET("/api/v1/game/state", {
@@ -72,6 +73,19 @@ export async function getInventory(): Promise<GameInventory> {
 export async function getCollection(): Promise<GameCollection> {
     const { data, error } = await apiClient.GET("/api/v1/game/collection", {
         headers: getAuthHeader(),
+    });
+    if (error || !data) {
+        throw error;
+    }
+    return data;
+}
+
+export async function createCabinPlacement(
+    placement: CabinPlacementCreate,
+): Promise<CabinPlacement> {
+    const { data, error } = await apiClient.POST("/api/v1/game/cabin/placements", {
+        headers: getAuthHeader(),
+        body: placement,
     });
     if (error || !data) {
         throw error;

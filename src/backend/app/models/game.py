@@ -24,6 +24,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
 from app.core.db.session import Base, get_db
 from app.core.error import GameErrorCode, GameException
 from app.models.activity import Activity, ActivityType
+from app.models.user import AuthIdentity
 
 
 class StackRewardType(StrEnum):
@@ -1059,6 +1060,38 @@ class GameRepository:
                 .order_by(UserStackReward.source_language, UserStackReward.reward_key)
             )
             return [_to_stack_reward_response(reward) for reward in result.scalars().all()]
+
+    async def user_has_oauth_identity(self, *, user_id: int, provider: str) -> bool:
+        async with get_db() as db:
+            result = await db.execute(
+                select(AuthIdentity.id).where(
+                    AuthIdentity.user_id == user_id,
+                    AuthIdentity.provider == provider,
+                )
+            )
+            return result.scalar_one_or_none() is not None
+
+    async def upsert_default_stack_reward(
+        self,
+        *,
+        user_id: int,
+        reward_key: str,
+        reward_type: StackRewardType,
+        source_language: str,
+        stack_reward_level: int,
+    ) -> UserStackRewardResponse:
+        async with get_db() as db:
+            stack_reward = await self._upsert_stack_reward_in_session(
+                db,
+                user_id=user_id,
+                reward_key=reward_key,
+                reward_type=reward_type,
+                source_language=source_language,
+                stack_reward_level=stack_reward_level,
+            )
+            await db.commit()
+            await db.refresh(stack_reward)
+            return _to_stack_reward_response(stack_reward)
 
     async def claim_reward_package(
         self,
