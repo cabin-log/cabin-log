@@ -87,6 +87,7 @@ Game 기반:
 - `POST /api/v1/game/cabin/placements`는 사용자가 보유한 stack reward 또는 inventory item을 cabin grid에 배치합니다.
 - `PATCH /api/v1/game/cabin/placements/{placement_id}`는 사용자가 조정 가능한 placement의 `x`, `y`, `z`, `rotation`, `width`, `depth`를 갱신합니다.
 - `DELETE /api/v1/game/cabin/placements/{placement_id}`는 사용자가 조정 가능한 placement를 제거합니다.
+- GitHub 계정이 연결된 사용자는 game inventory, collection, state, placement 흐름에서 기본 `default.octocat` 펫로그를 owned stack reward로 자동 지급받습니다.
 - `GET /api/v1/game/stacks`는 현재 사용자의 계산된 stack profile을 반환합니다.
 - `GET /api/v1/game/inventory`는 수령한 보상을 소모품, 가구, 펫로그로 분류해 반환합니다. 소모품은 사료 같은 소비용 inventory item이고, 가구와 펫로그는 보유 stack reward입니다.
 - `GET /api/v1/game/collection`은 전체 stack 및 event reward catalog 기준 가구와 펫로그 도감을 반환하며, 보유/미보유 항목, asset key, 수령 조건을 함께 포함합니다. 소모품은 도감에서 제외합니다.

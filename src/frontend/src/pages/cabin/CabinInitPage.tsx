@@ -73,6 +73,8 @@ type InventoryDisplayItem =
           placement: CabinPlacement | null;
       };
 
+type PendingCabinPlacement = Extract<InventoryDisplayItem, { kind: "reward" }>;
+
 function formatNumber(value: number): string {
     return new Intl.NumberFormat().format(value);
 }
@@ -206,6 +208,7 @@ function useCabinState(userId: number | null | undefined) {
     const { t } = useTranslation();
     const {
         claimRewardPackage,
+        createCabinPlacement,
         deleteCabinPlacement,
         getGameState,
         extractGameErrorDetail,
@@ -303,13 +306,65 @@ function useCabinState(userId: number | null | undefined) {
         [claimRewardPackage, extractGameErrorDetail, getGameState, resolveGameErrorMessage, t],
     );
 
+    const createCabinRewardPlacement = useCallback(
+        async (item: PendingCabinPlacement, target: { x: number; y: number }) => {
+            try {
+                const placement = await createCabinPlacement({
+                    object_type: "STACK_REWARD",
+                    object_key: item.key,
+                    x: target.x,
+                    y: target.y,
+                    z: 0,
+                    rotation: 0,
+                    width: 1,
+                    depth: 1,
+                });
+                setState((current) =>
+                    current
+                        ? {
+                              ...current,
+                              cabin: {
+                                  ...current.cabin,
+                                  placements: [...(current.cabin.placements ?? []), placement],
+                                  updated_at: placement.updated_at,
+                              },
+                          }
+                        : current,
+                );
+                setError(null);
+                return true;
+            } catch (caught) {
+                setError(
+                    resolveGameErrorMessage(
+                        t,
+                        extractGameErrorDetail(caught),
+                        "cabin.errors.stateLoadFailed",
+                    ),
+                );
+                return false;
+            }
+        },
+        [createCabinPlacement, extractGameErrorDetail, resolveGameErrorMessage, t],
+    );
+
     const removeCabinPlacement = useCallback(
         async (placementId: number) => {
             setRemovingPlacementId(placementId);
             try {
                 await deleteCabinPlacement(placementId);
-                const payload = await getGameState();
-                setState(payload);
+                setState((current) =>
+                    current
+                        ? {
+                              ...current,
+                              cabin: {
+                                  ...current.cabin,
+                                  placements: (current.cabin.placements ?? []).filter(
+                                      (placement) => placement.id !== placementId,
+                                  ),
+                              },
+                          }
+                        : current,
+                );
                 setError(null);
             } catch (caught) {
                 setError(
@@ -333,6 +388,7 @@ function useCabinState(userId: number | null | undefined) {
     return {
         claimPackage,
         claimingPackageId,
+        createCabinRewardPlacement,
         error,
         load,
         loading,
@@ -352,6 +408,7 @@ export function CabinInitPage() {
     const {
         claimPackage,
         claimingPackageId,
+        createCabinRewardPlacement,
         error,
         load,
         loading,
@@ -366,6 +423,7 @@ export function CabinInitPage() {
     const [collectionTab, setCollectionTab] = useState<CollectionTab>("furniture");
     const [selectedInventoryKey, setSelectedInventoryKey] = useState<string | null>(null);
     const [selectedCollectionKey, setSelectedCollectionKey] = useState<string | null>(null);
+    const [pendingPlacement, setPendingPlacement] = useState<PendingCabinPlacement | null>(null);
     const [logoutBusy, setLogoutBusy] = useState(false);
     const displayName = user?.name?.trim() || user?.email || t("cabin.player.fallbackName");
     const isGithubConnected = user?.oauth_providers?.includes("github") === true;
@@ -543,6 +601,17 @@ export function CabinInitPage() {
                 <CabinPhaserStage
                     ariaLabel={t("cabin.stage.phaserAria")}
                     cabin={state?.cabin ?? null}
+                    pendingPlacement={pendingPlacement}
+                    onPlacementCellClick={(cell) => {
+                        if (!pendingPlacement) {
+                            return;
+                        }
+                        void createCabinRewardPlacement(pendingPlacement, cell).then((placed) => {
+                            if (placed) {
+                                setPendingPlacement(null);
+                            }
+                        });
+                    }}
                     zoomControlsLabel={t("cabin.actions.zoomControls")}
                     zoomInLabel={t("cabin.actions.zoomIn")}
                     zoomOutLabel={t("cabin.actions.zoomOut")}
@@ -778,20 +847,28 @@ export function CabinInitPage() {
                                                 <Button
                                                     type="button"
                                                     className="cabin-init-tracker__detail-action"
-                                                    disabled={!selectedInventoryItem.placement}
+                                                    disabled={!state}
                                                     loading={
-                                                        removingPlacementId ===
-                                                        selectedInventoryItem.placement?.id
+                                                        selectedInventoryItem.placement
+                                                            ? removingPlacementId ===
+                                                              selectedInventoryItem.placement.id
+                                                            : pendingPlacement?.key ===
+                                                              selectedInventoryItem.key
                                                     }
                                                     onClick={() => {
                                                         if (selectedInventoryItem.placement) {
                                                             void removeCabinPlacement(
                                                                 selectedInventoryItem.placement.id,
                                                             );
+                                                            return;
                                                         }
+                                                        setPendingPlacement(selectedInventoryItem);
+                                                        setActiveModal(null);
                                                     }}
                                                 >
-                                                    {t("cabin.inventory.collect")}
+                                                    {selectedInventoryItem.placement
+                                                        ? t("cabin.inventory.collect")
+                                                        : t("cabin.inventory.place")}
                                                 </Button>
                                             </>
                                         ) : null}
@@ -869,20 +946,28 @@ export function CabinInitPage() {
                                                 <Button
                                                     type="button"
                                                     className="cabin-init-tracker__detail-action"
-                                                    disabled={!selectedInventoryItem.placement}
+                                                    disabled={!state}
                                                     loading={
-                                                        removingPlacementId ===
-                                                        selectedInventoryItem.placement?.id
+                                                        selectedInventoryItem.placement
+                                                            ? removingPlacementId ===
+                                                              selectedInventoryItem.placement.id
+                                                            : pendingPlacement?.key ===
+                                                              selectedInventoryItem.key
                                                     }
                                                     onClick={() => {
                                                         if (selectedInventoryItem.placement) {
                                                             void removeCabinPlacement(
                                                                 selectedInventoryItem.placement.id,
                                                             );
+                                                            return;
                                                         }
+                                                        setPendingPlacement(selectedInventoryItem);
+                                                        setActiveModal(null);
                                                     }}
                                                 >
-                                                    {t("cabin.inventory.collect")}
+                                                    {selectedInventoryItem.placement
+                                                        ? t("cabin.inventory.collect")
+                                                        : t("cabin.inventory.place")}
                                                 </Button>
                                             </>
                                         ) : null}

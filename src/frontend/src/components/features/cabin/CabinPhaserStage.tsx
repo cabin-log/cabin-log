@@ -7,7 +7,9 @@ import {
     getCabinGridCellDiamond,
     projectCabinGridPoint,
     type CabinGridContract,
+    type CabinWorldPoint,
 } from "../../../utils/cabinProjection";
+import type { CabinPlacement } from "../../../api/game/gameApi";
 
 type PhaserModule = typeof import("phaser");
 
@@ -31,6 +33,7 @@ const CAMERA_MIN_ZOOM = 0.9;
 const CAMERA_MAX_ZOOM = 1.8;
 const CAMERA_ZOOM_STEP = 0.12;
 const CAMERA_KEYBOARD_ZOOM_SPEED = 0.00045;
+const DEFAULT_OCTOCAT_KEY = "default.octocat";
 const DEFAULT_CABIN_GRID: CabinGridContract = {
     width: 12,
     depth: 12,
@@ -45,9 +48,31 @@ type CameraControl = {
 
 type ZoomCamera = (direction: "in" | "out") => void;
 
+type CabinStageContract = CabinGridContract & {
+    placements?: CabinPlacement[];
+};
+
+type PendingStagePlacement = {
+    key: string;
+    title: string;
+    assetKey: string;
+};
+
+type PetActor = {
+    container: Phaser.GameObjects.Container;
+    home: { x: number; y: number; z: number };
+    current: { x: number; y: number; z: number };
+    target: { x: number; y: number; z: number };
+    nextTargetAt: number;
+    speed: number;
+    phase: number;
+};
+
 type CabinPhaserStageProps = {
     ariaLabel: string;
-    cabin?: CabinGridContract | null;
+    cabin?: CabinStageContract | null;
+    pendingPlacement?: PendingStagePlacement | null;
+    onPlacementCellClick?: (cell: { x: number; y: number }) => void;
     zoomControlsLabel: string;
     zoomInLabel: string;
     zoomOutLabel: string;
@@ -56,13 +81,37 @@ type CabinPhaserStageProps = {
 export function CabinPhaserStage({
     ariaLabel,
     cabin,
+    pendingPlacement,
+    onPlacementCellClick,
     zoomControlsLabel,
     zoomInLabel,
     zoomOutLabel,
 }: CabinPhaserStageProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const zoomCameraRef = useRef<ZoomCamera | null>(null);
-    const cabinGrid = cabin ?? DEFAULT_CABIN_GRID;
+    const cabinGrid: CabinStageContract = cabin ?? { ...DEFAULT_CABIN_GRID, placements: [] };
+    const cabinPlacementSignature = (cabinGrid.placements ?? [])
+        .map((placement) =>
+            [
+                placement.id,
+                placement.object_key,
+                placement.x,
+                placement.y,
+                placement.z,
+                placement.width,
+                placement.depth,
+            ].join(":"),
+        )
+        .join("|");
+    const pendingPlacementSignature = pendingPlacement
+        ? `${pendingPlacement.key}:${pendingPlacement.assetKey}`
+        : "";
+    const onPlacementCellClickRef =
+        useRef<CabinPhaserStageProps["onPlacementCellClick"]>(undefined);
+
+    useEffect(() => {
+        onPlacementCellClickRef.current = onPlacementCellClick;
+    }, [onPlacementCellClick]);
 
     useEffect(() => {
         if (import.meta.env.MODE === "test" || !containerRef.current) {
@@ -90,6 +139,12 @@ export function CabinPhaserStage({
                 private zoomInKey?: Phaser.Input.Keyboard.Key;
 
                 private zoomOutKey?: Phaser.Input.Keyboard.Key;
+
+                private gridAnchor = { x: 0, y: 0 };
+
+                private petActors: PetActor[] = [];
+
+                private heldPlacement?: Phaser.GameObjects.Container;
 
                 private readonly handleCanvasWheel = (event: WheelEvent) => {
                     event.preventDefault();
@@ -140,6 +195,8 @@ export function CabinPhaserStage({
                     floor.setScale(ROOM_SCALE);
 
                     this.drawCabinGridOverlay();
+                    this.createPlacementActors();
+                    this.createHeldPlacementActor();
                     this.configureCameraControls(Phaser);
                     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
                         this.game.canvas.removeEventListener("wheel", this.handleCanvasWheel);
@@ -152,6 +209,8 @@ export function CabinPhaserStage({
                 update(_time: number, delta: number) {
                     this.cameraControl?.update(delta);
                     this.updateKeyboardZoom(delta);
+                    this.updateHeldPlacement();
+                    this.updatePetActors(_time, delta);
                     this.clampCameraZoom();
                 }
 
@@ -181,6 +240,13 @@ export function CabinPhaserStage({
                     }
 
                     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+                        if (pendingPlacement) {
+                            const cell = this.resolvePointerGridCell(pointer);
+                            if (cell) {
+                                onPlacementCellClickRef.current?.(cell);
+                            }
+                            return;
+                        }
                         this.draggingCamera = true;
                         this.lastPointerX = pointer.x;
                         this.lastPointerY = pointer.y;
@@ -219,6 +285,7 @@ export function CabinPhaserStage({
                         x: baseAnchor.x + CABIN_GRID_ANCHOR_OFFSET_X,
                         y: baseAnchor.y + CABIN_GRID_ANCHOR_OFFSET_Y,
                     };
+                    this.gridAnchor = anchor;
 
                     for (let y = 0; y < cabinGrid.depth; y += 1) {
                         for (let x = 0; x < cabinGrid.width; x += 1) {
@@ -311,6 +378,183 @@ export function CabinPhaserStage({
                         { x: cabinGrid.width, y: 0 },
                         { x: 0, y: cabinGrid.depth },
                     ]);
+                }
+
+                private createPlacementActors() {
+                    const placements = cabinGrid.placements ?? [];
+                    for (const placement of placements) {
+                        if (placement.object_key !== DEFAULT_OCTOCAT_KEY) {
+                            continue;
+                        }
+                        const home = {
+                            x: placement.x + placement.width / 2,
+                            y: placement.y + placement.depth / 2,
+                            z: placement.z,
+                        };
+                        const actor = this.createOctocatActor(home);
+                        this.petActors.push(actor);
+                    }
+                }
+
+                private createHeldPlacementActor() {
+                    if (!pendingPlacement) {
+                        return;
+                    }
+                    this.heldPlacement = this.createOctocatVisual("held");
+                    this.heldPlacement.setDepth(120);
+                    this.heldPlacement.setAlpha(0.88);
+                    this.updateHeldPlacement();
+                }
+
+                private updateHeldPlacement() {
+                    if (!this.heldPlacement || !pendingPlacement) {
+                        return;
+                    }
+                    const pointer = this.input.activePointer;
+                    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+                    this.heldPlacement.setPosition(worldPoint.x, worldPoint.y - 26);
+                    this.heldPlacement.setDepth(200);
+                }
+
+                private createOctocatActor(home: { x: number; y: number; z: number }): PetActor {
+                    const point = projectCabinGridPoint(cabinGrid, this.gridAnchor, home);
+                    const container = this.createOctocatVisual("idle");
+                    container.setPosition(point.x, point.y - 18);
+                    container.setDepth(38 + home.x + home.y + home.z * 10);
+                    container.setScale(0.92);
+                    return {
+                        container,
+                        home,
+                        current: { ...home },
+                        target: { ...home },
+                        nextTargetAt: 800,
+                        speed: 0.0016,
+                        phase: Math.random() * Math.PI * 2,
+                    };
+                }
+
+                private createOctocatVisual(mode: "idle" | "held"): Phaser.GameObjects.Container {
+                    const shadow = this.add.ellipse(
+                        0,
+                        18,
+                        34,
+                        12,
+                        0x121816,
+                        mode === "held" ? 0.18 : 0.34,
+                    );
+                    const body = this.add.ellipse(0, 0, 28, 24, 0x24292f, 1);
+                    body.setStrokeStyle(2, 0xf7f4ea, 0.92);
+                    const head = this.add.circle(0, -14, 18, 0x24292f, 1);
+                    head.setStrokeStyle(2, 0xf7f4ea, 0.95);
+                    const leftEar = this.add.triangle(-12, -28, 0, 12, 8, 0, 16, 12, 0x24292f, 1);
+                    leftEar.setStrokeStyle(2, 0xf7f4ea, 0.92);
+                    const rightEar = this.add.triangle(12, -28, 0, 12, 8, 0, 16, 12, 0x24292f, 1);
+                    rightEar.setScale(-1, 1);
+                    rightEar.setStrokeStyle(2, 0xf7f4ea, 0.92);
+                    const leftEye = this.add.circle(-7, -15, 2, 0xf7f4ea, 1);
+                    const rightEye = this.add.circle(7, -15, 2, 0xf7f4ea, 1);
+                    const face = this.add.arc(0, -9, 5, 20, 160, false, 0xf7f4ea, 1);
+                    const leftArm = this.add.line(
+                        -17,
+                        2,
+                        0,
+                        0,
+                        mode === "held" ? -13 : -9,
+                        mode === "held" ? -10 : 8,
+                        0xf7f4ea,
+                        0.92,
+                    );
+                    leftArm.setLineWidth(3);
+                    const rightArm = this.add.line(
+                        17,
+                        2,
+                        0,
+                        0,
+                        mode === "held" ? 13 : 9,
+                        mode === "held" ? -10 : 8,
+                        0xf7f4ea,
+                        0.92,
+                    );
+                    rightArm.setLineWidth(3);
+                    const container = this.add.container(0, 0, [
+                        shadow,
+                        body,
+                        leftArm,
+                        rightArm,
+                        leftEar,
+                        rightEar,
+                        head,
+                        leftEye,
+                        rightEye,
+                        face,
+                    ]);
+                    return container;
+                }
+
+                private updatePetActors(time: number, delta: number) {
+                    for (const actor of this.petActors) {
+                        if (time >= actor.nextTargetAt) {
+                            actor.target = this.pickPetTarget(actor.home);
+                            actor.nextTargetAt = time + 2200 + Math.random() * 1800;
+                        }
+
+                        const distanceX = actor.target.x - actor.current.x;
+                        const distanceY = actor.target.y - actor.current.y;
+                        const distance = Math.hypot(distanceX, distanceY);
+                        if (distance > 0.01) {
+                            const step = Math.min(distance, actor.speed * delta);
+                            actor.current.x += (distanceX / distance) * step;
+                            actor.current.y += (distanceY / distance) * step;
+                        }
+
+                        const point = projectCabinGridPoint(
+                            cabinGrid,
+                            this.gridAnchor,
+                            actor.current,
+                        );
+                        const bob = Math.sin(time * 0.006 + actor.phase) * 2.4;
+                        actor.container.setPosition(point.x, point.y - 18 + bob);
+                        actor.container.setDepth(
+                            38 + actor.current.x + actor.current.y + actor.current.z * 10,
+                        );
+                        actor.container.setScale(
+                            0.92 + Math.sin(time * 0.004 + actor.phase) * 0.02,
+                        );
+                    }
+                }
+
+                private pickPetTarget(home: { x: number; y: number; z: number }) {
+                    const offsets = [
+                        { x: 0, y: 0 },
+                        { x: 0.42, y: 0 },
+                        { x: -0.42, y: 0 },
+                        { x: 0, y: 0.42 },
+                        { x: 0, y: -0.42 },
+                        { x: 0.34, y: 0.34 },
+                        { x: -0.34, y: -0.34 },
+                    ];
+                    const offset =
+                        offsets[Math.floor(Math.random() * offsets.length)] ?? offsets[0];
+                    return {
+                        x: Math.min(cabinGrid.width - 0.5, Math.max(0.5, home.x + offset.x)),
+                        y: Math.min(cabinGrid.depth - 0.5, Math.max(0.5, home.y + offset.y)),
+                        z: home.z,
+                    };
+                }
+
+                private resolvePointerGridCell(pointer: Phaser.Input.Pointer) {
+                    const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+                    const gridPoint = unprojectCabinWorldPoint(
+                        cabinGrid,
+                        this.gridAnchor,
+                        worldPoint,
+                    );
+                    const x = Math.floor(gridPoint.x);
+                    const y = Math.floor(gridPoint.y);
+                    if (x < 0 || y < 0 || x >= cabinGrid.width || y >= cabinGrid.depth) {
+                        return null;
+                    }
+                    return { x, y };
                 }
 
                 private drawCabinGridZGuides(
@@ -448,13 +692,19 @@ export function CabinPhaserStage({
         cabinGrid.tile_height,
         cabinGrid.tile_width,
         cabinGrid.tile_z_height,
+        cabinPlacementSignature,
+        pendingPlacementSignature,
         cabinGrid.width,
     ]);
 
     return (
         <div
             ref={containerRef}
-            className="cabin-phaser-stage"
+            className={
+                pendingPlacement
+                    ? "cabin-phaser-stage cabin-phaser-stage--placing"
+                    : "cabin-phaser-stage"
+            }
             aria-label={ariaLabel}
             data-testid="cabin-phaser-stage"
         >
@@ -486,4 +736,17 @@ export function CabinPhaserStage({
             </div>
         </div>
     );
+}
+
+function unprojectCabinWorldPoint(
+    cabin: CabinGridContract,
+    anchor: { x: number; y: number },
+    point: CabinWorldPoint,
+): { x: number; y: number } {
+    const projectedX = (point.x - anchor.x) / (cabin.tile_width / 2);
+    const projectedY = (point.y - anchor.y) / (cabin.tile_height / 2);
+    return {
+        x: (projectedY + projectedX) / 2,
+        y: (projectedY - projectedX) / 2,
+    };
 }

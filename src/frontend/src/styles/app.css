@@ -2338,6 +2338,11 @@ a {
     image-rendering: pixelated;
 }
 
+.cabin-phaser-stage--placing,
+.cabin-phaser-stage--placing canvas {
+    cursor: grabbing;
+}
+
 .cabin-phaser-stage__zoom-controls {
     position: absolute;
     right: max(1rem, env(safe-area-inset-right));

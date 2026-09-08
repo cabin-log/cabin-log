@@ -306,7 +306,10 @@ def test_stack_profiles_packages_and_claim_flow(integration_client: TestClient):
     inventory = inventory_response.json()
     assert inventory["supplies"] == []
     assert [item["reward_key"] for item in inventory["furniture"]] == ["stack.terminal-desk"]
-    assert [item["reward_key"] for item in inventory["pet_logs"]] == ["stack.python-serpent"]
+    assert [item["reward_key"] for item in inventory["pet_logs"]] == [
+        "default.octocat",
+        "stack.python-serpent",
+    ]
 
     collection_response = integration_client.get(
         "/api/v1/game/collection",
@@ -780,3 +783,43 @@ def test_cabin_placement_flow_persists_user_adjusted_positions(
     )
     assert after_delete_response.status_code == 200
     assert all(item["id"] != placement["id"] for item in after_delete_response.json()["placements"])
+
+
+@pytest.mark.primary_data
+def test_github_user_receives_default_octocat_pet_log(integration_client: TestClient):
+    """Scenario: GitHub-linked users receive the default Octocat pet log before placement."""
+    _user_id, token = asyncio.run(_create_github_oauth_user())
+
+    state_response = integration_client.get(
+        "/api/v1/game/state",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert state_response.status_code == 200
+    state = state_response.json()
+    pet_logs = {item["reward_key"]: item for item in state["categorized_inventory"]["pet_logs"]}
+    assert pet_logs["default.octocat"]["source_language"] == "GitHub"
+    assert pet_logs["default.octocat"]["stack_reward_level"] == 1
+    collection_pet_logs = {item["reward_key"]: item for item in state["collection"]["pet_logs"]}
+    assert collection_pet_logs["default.octocat"]["owned"] is True
+    assert collection_pet_logs["default.octocat"]["asset_key"] == "default-octocat"
+    assert collection_pet_logs["default.octocat"]["condition_key"] == "github_account"
+
+    placement_response = integration_client.post(
+        "/api/v1/game/cabin/placements",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "object_type": "STACK_REWARD",
+            "object_key": "default.octocat",
+            "x": 6,
+            "y": 6,
+            "z": 0,
+            "rotation": 0,
+            "width": 1,
+            "depth": 1,
+        },
+    )
+    assert placement_response.status_code == 201
+    placement = placement_response.json()
+    assert placement["object_key"] == "default.octocat"
+    assert placement["x"] == 6
+    assert placement["y"] == 6

@@ -11,6 +11,7 @@ import { renderWithRouter } from "../../../utils/renderWithRouter";
 const getGameStateMock = vi.fn();
 const syncRewardPackagesMock = vi.fn();
 const claimRewardPackageMock = vi.fn();
+const createCabinPlacementMock = vi.fn();
 const deleteCabinPlacementMock = vi.fn();
 const extractGameErrorDetailMock = vi.fn();
 const resolveGameErrorMessageMock = vi.fn();
@@ -46,6 +47,7 @@ vi.mock("../../../../hooks/api/game/useGameApi", () => ({
         getGameState: getGameStateMock,
         syncRewardPackages: syncRewardPackagesMock,
         claimRewardPackage: claimRewardPackageMock,
+        createCabinPlacement: createCabinPlacementMock,
         deleteCabinPlacement: deleteCabinPlacementMock,
         extractGameErrorDetail: extractGameErrorDetailMock,
         resolveGameErrorMessage: resolveGameErrorMessageMock,
@@ -108,6 +110,16 @@ const gameState: GameState = {
             },
         ],
         pet_logs: [
+            {
+                reward_key: "default.octocat",
+                reward_type: "ANIMAL",
+                source_language: "GitHub",
+                stack_reward_level: 1,
+                stage: 1,
+                exp: 0,
+                is_featured: true,
+                updated_at: "2026-09-03T00:00:00Z",
+            },
             {
                 reward_key: "stack.python-serpent",
                 reward_type: "ANIMAL",
@@ -172,6 +184,22 @@ const gameState: GameState = {
             },
         ],
         pet_logs: [
+            {
+                reward_key: "default.octocat",
+                reward_type: "ANIMAL",
+                source_language: "GitHub",
+                asset_key: "default-octocat",
+                owned: true,
+                required_mastery_level: 0,
+                required_bytes: 0,
+                required_recent_activity_count: 0,
+                condition_key: "github_account",
+                stack_reward_level: 1,
+                stage: 1,
+                mastery_level: 0,
+                total_bytes: 0,
+                repository_count: 0,
+            },
             {
                 reward_key: "stack.python-serpent",
                 reward_type: "ANIMAL",
@@ -307,6 +335,7 @@ describe("CabinInitPage", () => {
         syncRewardPackagesMock.mockReset();
         claimRewardPackageMock.mockReset();
         deleteCabinPlacementMock.mockReset();
+        createCabinPlacementMock.mockReset();
         extractGameErrorDetailMock.mockReset();
         resolveGameErrorMessageMock.mockReset();
         logoutMock.mockReset();
@@ -317,6 +346,19 @@ describe("CabinInitPage", () => {
         getGameStateMock.mockResolvedValue(gameState);
         syncRewardPackagesMock.mockResolvedValue([]);
         deleteCabinPlacementMock.mockResolvedValue(undefined);
+        createCabinPlacementMock.mockResolvedValue({
+            id: 18,
+            object_type: "STACK_REWARD",
+            object_key: "default.octocat",
+            x: 6,
+            y: 6,
+            z: 0,
+            rotation: 0,
+            width: 1,
+            depth: 1,
+            locked: false,
+            updated_at: "2026-09-03T00:00:00Z",
+        });
         claimRewardPackageMock.mockResolvedValue({
             package: { ...gameState.pending_packages?.[0], status: "CLAIMED" },
             stack_rewards: gameState.categorized_inventory.furniture,
@@ -381,7 +423,9 @@ describe("CabinInitPage", () => {
         expect(within(dialog).getByText("TypeScript terminal desk")).toBeVisible();
         expect(within(dialog).getByText("Placed in the cabin.")).toBeVisible();
         await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
-        expect(within(dialog).getByText("Python serpent pet log")).toBeVisible();
+        expect(
+            within(dialog).getByRole("button", { name: "Python serpent pet log" }),
+        ).toBeVisible();
     });
 
     it("collects a placed inventory reward from the cabin", async () => {
@@ -396,9 +440,29 @@ describe("CabinInitPage", () => {
         await user.click(within(dialog).getByRole("tab", { name: "Furniture" }));
         await user.click(within(dialog).getByRole("button", { name: "Collect" }));
 
-        // Then: the cabin placement delete API is used and state is reloaded.
+        // Then: the cabin placement delete API is used without reloading the full cabin state.
         await waitFor(() => expect(deleteCabinPlacementMock).toHaveBeenCalledWith(17));
-        expect(getGameStateMock).toHaveBeenCalledTimes(3);
+        expect(getGameStateMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("starts manual placement for the default Octocat pet log from inventory", async () => {
+        // Given: the GitHub default pet log is owned but not placed.
+        const user = userEvent.setup();
+        renderWithRouter(<CabinInitPage />, "/cabin");
+        expect(await screen.findByText("Octo Dev")).toBeVisible();
+
+        // When: the player opens pet logs and places the Octocat.
+        await user.click(screen.getByRole("button", { name: "Inventory" }));
+        const dialog = screen.getByRole("dialog", { name: "Inventory" });
+        await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
+        expect(within(dialog).getByText("Cabin Log Octocat pet log")).toBeVisible();
+        await user.click(within(dialog).getByRole("button", { name: "Place" }));
+
+        // Then: placement waits for a Phaser grid click instead of reloading immediately.
+        expect(screen.queryByRole("dialog", { name: "Inventory" })).not.toBeInTheDocument();
+        expect(screen.getByTestId("cabin-phaser-stage")).toHaveClass("cabin-phaser-stage--placing");
+        expect(createCabinPlacementMock).not.toHaveBeenCalled();
+        expect(getGameStateMock).toHaveBeenCalledTimes(2);
     });
 
     it("tracks furniture and pet logs in the collection", async () => {
@@ -429,7 +493,9 @@ describe("CabinInitPage", () => {
             ),
         ).toBeVisible();
         await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
-        expect(within(dialog).getAllByText("Python serpent pet log")[0]).toBeVisible();
+        expect(
+            within(dialog).getByRole("button", { name: "Python serpent pet logPythonOwned" }),
+        ).toBeVisible();
         await user.click(within(dialog).getByRole("button", { name: /\?KotlinLocked/ }));
         expect(within(dialog).getByText("Kotlin night fox pet log")).toBeVisible();
         await user.click(within(dialog).getByRole("button", { name: /\?AchievementLocked/ }));
