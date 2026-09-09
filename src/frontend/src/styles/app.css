@@ -326,7 +326,7 @@ a {
     padding-top: clamp(6rem, 18vh, 11rem);
     background:
         linear-gradient(rgba(14, 19, 23, 0.08), rgba(14, 19, 23, 0.34)),
-        url("/sprites/img/init-page.gif") center / max(100vw, 178dvh) auto no-repeat,
+        url("/sprites/img/ui/init-page.gif") center / max(100vw, 178dvh) auto no-repeat,
         #101416;
     background-size:
         100% 100%,

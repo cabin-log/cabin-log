@@ -14,7 +14,7 @@ describe("petLogSprites", () => {
         expect(sheet).toMatchObject({
             frameWidth: 32,
             frameHeight: 32,
-            assetPath: "/sprites/aseprites/cat-Sheet.png",
+            assetPath: "/sprites/img/pet-logs/cat-Sheet.png",
             firstDirectionFrame: 10,
             directionFrameCount: 10,
         });

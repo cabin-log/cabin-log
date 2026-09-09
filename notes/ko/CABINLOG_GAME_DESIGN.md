@@ -75,7 +75,7 @@ Frontend projection source:
 
 1. `/cabin` playable init screen은 Phaser `1280 x 720` FIT canvas를 사용합니다.
 2. Camera world는 `1500 x 800`이며, cabin room base의 중심을 world 중앙에 맞춥니다.
-3. 첫 room base asset은 `src/frontend/public/sprites/img/wall.png`와 `src/frontend/public/sprites/img/floor.png`입니다.
+3. 첫 room base asset은 `src/frontend/public/sprites/img/wallpaper/wall.png`와 `src/frontend/public/sprites/img/floor/floor.png`입니다.
 4. Wall과 floor asset은 이미 isometric projection으로 제작된 단일 이미지이며, Phaser Scene에서 같은 scale로 중앙 정렬합니다.
 5. Camera는 방향키 이동, `Q`/`E` 축소/확대, mouse wheel zoom, pointer drag pan을 지원합니다.
 6. Layer 순서는 wall base를 먼저 그리고 floor base를 나중에 그려 floor가 전면에 오도록 합니다.
@@ -122,7 +122,7 @@ Dashboard data는 backend summary에서 받아야 합니다. Room renderer가 re
 
 | Property | Value |
 | --- | --- |
-| Source file | `src/frontend/public/sprites/img/init-page.gif` |
+| Source file | `src/frontend/public/sprites/img/ui/init-page.gif` |
 | Canonical pixel size | `443 x 249 px` |
 | Aspect ratio | 약 `1.78:1` |
 | Animation delay | `0.6s` per frame |
@@ -446,16 +446,20 @@ Stack-themed reward catalog:
 ## Reward Asset Manifest
 
 모든 asset은 isometric cabin grid 위에 배치되는 것을 전제로 제작합니다. 실제 파일이
-들어오기 전까지 UI는 `asset_key`와 placeholder slot을 사용합니다. Phaser 배치 화면은
+들어오기 전까지 UI는 `asset_key`와 placeholder slot을 사용합니다. 소스 파일은
+`public/sprites/aseprites` 아래, 런타임 파일은 `public/sprites/img` 아래에서 같은
+카테고리 폴더 구조를 유지합니다. Phaser 배치 화면은
 `src/frontend/src/utils/petLogSprites.ts`의 시트 정의를 기준으로 실제 프레임을 읽습니다.
 
 공통 경로 규칙:
 
 | Type | Path pattern | Notes |
 | --- | --- | --- |
-| Furniture | `public/sprites/rewards/furniture/{asset_key}/{direction}.png` | `front`, `back`, `left`, `right` 4방향 |
-| Pet log spritesheet | `public/sprites/aseprites/{registered-sheet-path}` | `petLogSprites.ts`가 asset key와 실제 파일 경로를 매핑하며, 32x32 프레임과 8방향 정지/걷기 프레임을 사용 |
-| Collection icon | `public/sprites/rewards/icons/{asset_key}.png` | 도감/인벤토리 슬롯용 1:1 아이콘 |
+| Furniture | `public/sprites/{aseprites,img}/furniture/{asset_key}` | 소스와 런타임 파일을 같은 가구 폴더에서 관리 |
+| Pet log spritesheet | `public/sprites/img/pet-logs/{registered-sheet-path}` | 런타임 PNG 경로이며, 원본 시트는 `aseprites/pet-logs`에서 관리 |
+| Wallpaper | `public/sprites/{aseprites,img}/wallpaper/{asset_key}` | 벽, 배경, 장식용 배경 |
+| Floor | `public/sprites/{aseprites,img}/floor/{asset_key}` | 바닥 타일 및 바닥 텍스처 |
+| UI / Collection icon | `public/sprites/{aseprites,img}/ui/{asset_key}` | 도감/인벤토리와 초기 화면용 |
 
 기본 펫로그:
 
@@ -463,7 +467,7 @@ Stack-themed reward catalog:
 | --- | --- | --- |
 | `default.octocat` | `default-octocat` | GitHub account connected |
 
-기본 Octocat은 `public/sprites/aseprites/cat-Sheet.png`를 사용합니다. 시트의 1-based
+기본 Octocat은 `public/sprites/img/pet-logs/cat-Sheet.png`를 사용합니다. 시트의 1-based
 프레임 1~2는 sleep, 3~4는 lie, 5는 held입니다. 11번부터는 방향 순서
 `left`, `upLeft`, `downLeft`, `down`, `up`, `right`, `upRight`, `downRight`로
 각 방향마다 standing 2프레임과 walking 8프레임을 배치합니다. Phaser stage는

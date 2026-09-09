@@ -132,7 +132,7 @@ export function LoginPage() {
             <div className="auth-panel-stack auth-panel-stack--github-only">
                 <img
                     className="auth-title-image"
-                    src="/sprites/img/title.png"
+                    src="/sprites/img/ui/title.png"
                     alt="Cabin Log"
                     draggable="false"
                 />
