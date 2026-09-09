@@ -446,14 +446,15 @@ Stack-themed reward catalog:
 ## Reward Asset Manifest
 
 모든 asset은 isometric cabin grid 위에 배치되는 것을 전제로 제작합니다. 실제 파일이
-들어오기 전까지 UI는 `asset_key`와 placeholder slot을 사용합니다.
+들어오기 전까지 UI는 `asset_key`와 placeholder slot을 사용합니다. Phaser 배치 화면은
+`src/frontend/src/utils/petLogSprites.ts`의 시트 정의를 기준으로 실제 프레임을 읽습니다.
 
 공통 경로 규칙:
 
 | Type | Path pattern | Notes |
 | --- | --- | --- |
 | Furniture | `public/sprites/rewards/furniture/{asset_key}/{direction}.png` | `front`, `back`, `left`, `right` 4방향 |
-| Pet log idle/walk | `public/sprites/rewards/pet-logs/{asset_key}/{state}-{direction}.png` | `idle`, `walk`, `sleep`, `held` 상태와 4방향 |
+| Pet log spritesheet | `public/sprites/aseprites/{registered-sheet-path}` | `petLogSprites.ts`가 asset key와 실제 파일 경로를 매핑하며, 32x32 프레임과 8방향 정지/걷기 프레임을 사용 |
 | Collection icon | `public/sprites/rewards/icons/{asset_key}.png` | 도감/인벤토리 슬롯용 1:1 아이콘 |
 
 기본 펫로그:
@@ -462,9 +463,13 @@ Stack-themed reward catalog:
 | --- | --- | --- |
 | `default.octocat` | `default-octocat` | GitHub account connected |
 
-실제 Octocat sprite가 들어오기 전까지 Phaser stage는 `default.octocat` placement를
-감지해 임시 vector placeholder와 idle/walk 움직임을 렌더링합니다. 배치 대기 중에는
-같은 placeholder를 held pose로 마우스에 붙여 표시합니다.
+기본 Octocat은 `public/sprites/aseprites/cat-Sheet.png`를 사용합니다. 시트의 1-based
+프레임 1~2는 sleep, 3~4는 lie, 5는 held입니다. 11번부터는 방향 순서
+`left`, `upLeft`, `downLeft`, `down`, `up`, `right`, `upRight`, `downRight`로
+각 방향마다 standing 2프레임과 walking 8프레임을 배치합니다. Phaser stage는
+배치 대기 중 held frame을 마우스에 붙이고, 배치 후 이동 방향에 맞는 걷기 애니메이션과
+정지 프레임을 선택합니다. 다른 펫로그도 같은 규격을 사용하면 해당 정의만
+`petLogSprites.ts`에 추가합니다.
 
 가구 asset 요구사항:
 
@@ -478,13 +483,12 @@ Stack-themed reward catalog:
 
 펫로그 asset 요구사항:
 
-1. 모든 펫로그는 `idle-front/back/left/right`, `walk-front/back/left/right`,
-   `sleep-front/back/left/right`, `held-front/back/left/right` 상태가 필요합니다.
-2. `held`는 마우스로 잡았을 때 쓰는 상태이며, 그림자와 바닥 접촉 표현을 제거하거나
+1. 모든 펫로그 시트는 기본 상태 프레임과 8방향 프레임을 같은 순서로 제공합니다.
+2. 기본 상태는 sleep 2프레임, lie 2프레임, held 1프레임을 예약합니다.
+3. 8방향 블록은 방향마다 standing 2프레임과 walking 8프레임을 예약합니다.
+4. `held`는 마우스로 잡았을 때 쓰는 상태이며, 그림자와 바닥 접촉 표현을 제거하거나
    약하게 처리합니다.
-3. `sleep`은 오두막 내부에서 자동 idle 변형으로 쓸 수 있어야 합니다.
-4. `walk`는 최소 4프레임 loop를 권장합니다.
-5. Stage 진화가 있는 펫로그는 `stage-1`, `stage-2`, `stage-3` 하위 폴더를 둡니다.
+5. Stage 진화가 있는 펫로그는 동일한 프레임 규격을 stage별 시트로 유지합니다.
 
 ## Event Reward Recommendations
 
