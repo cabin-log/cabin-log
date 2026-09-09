@@ -32,7 +32,7 @@ export type PetLogSpriteSheetDefinition = {
 export const PET_LOG_SPRITE_SHEETS: Record<string, PetLogSpriteSheetDefinition> = {
     "default-octocat": {
         textureKey: "petlog-default-octocat",
-        assetPath: "/sprites/aseprites/cat-Sheet.png",
+        assetPath: "/sprites/img/pet-logs/cat-Sheet.png",
         frameWidth: 32,
         frameHeight: 32,
         baseFrames: {
