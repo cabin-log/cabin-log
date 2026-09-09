@@ -9,6 +9,14 @@ import {
     type CabinGridContract,
     type CabinWorldPoint,
 } from "../../../utils/cabinProjection";
+import {
+    getPetDirectionFrames,
+    getPetDirectionFromGridDelta,
+    getPetLogSpriteSheetForRewardKey,
+    PET_SPRITE_DIRECTIONS,
+    type PetLogSpriteSheetDefinition,
+    type PetSpriteDirection,
+} from "../../../utils/petLogSprites";
 import type { CabinPlacement } from "../../../api/game/gameApi";
 
 type PhaserModule = typeof import("phaser");
@@ -33,7 +41,6 @@ const CAMERA_MIN_ZOOM = 0.9;
 const CAMERA_MAX_ZOOM = 1.8;
 const CAMERA_ZOOM_STEP = 0.12;
 const CAMERA_KEYBOARD_ZOOM_SPEED = 0.00045;
-const DEFAULT_OCTOCAT_KEY = "default.octocat";
 const DEFAULT_CABIN_GRID: CabinGridContract = {
     width: 12,
     depth: 12,
@@ -59,13 +66,16 @@ type PendingStagePlacement = {
 };
 
 type PetActor = {
-    container: Phaser.GameObjects.Container;
+    sprite: Phaser.GameObjects.Sprite;
+    definition: PetLogSpriteSheetDefinition;
     home: { x: number; y: number; z: number };
     current: { x: number; y: number; z: number };
     target: { x: number; y: number; z: number };
     nextTargetAt: number;
     speed: number;
-    phase: number;
+    currentSpeed: number;
+    direction: PetSpriteDirection;
+    isMoving: boolean;
 };
 
 type CabinPhaserStageProps = {
@@ -144,7 +154,7 @@ export function CabinPhaserStage({
 
                 private petActors: PetActor[] = [];
 
-                private heldPlacement?: Phaser.GameObjects.Container;
+                private heldPlacement?: Phaser.GameObjects.Sprite;
 
                 private readonly handleCanvasWheel = (event: WheelEvent) => {
                     event.preventDefault();
@@ -167,6 +177,27 @@ export function CabinPhaserStage({
                 preload() {
                     this.load.image(FLOOR_TEXTURE_KEY, FLOOR_ASSET_PATH);
                     this.load.image(WALL_TEXTURE_KEY, WALL_ASSET_PATH);
+                    const pendingDefinition = pendingPlacement
+                        ? getPetLogSpriteSheetForRewardKey(pendingPlacement.assetKey)
+                        : undefined;
+                    const placementDefinitions = (cabinGrid.placements ?? [])
+                        .map((placement) => getPetLogSpriteSheetForRewardKey(placement.object_key))
+                        .filter(
+                            (definition): definition is PetLogSpriteSheetDefinition =>
+                                definition !== undefined,
+                        );
+                    const definitions = [pendingDefinition, ...placementDefinitions].filter(
+                        (definition): definition is PetLogSpriteSheetDefinition =>
+                            definition !== undefined,
+                    );
+                    for (const definition of definitions) {
+                        if (!this.textures.exists(definition.textureKey)) {
+                            this.load.spritesheet(definition.textureKey, definition.assetPath, {
+                                frameWidth: definition.frameWidth,
+                                frameHeight: definition.frameHeight,
+                            });
+                        }
+                    }
                 }
 
                 create() {
@@ -195,6 +226,7 @@ export function CabinPhaserStage({
                     floor.setScale(ROOM_SCALE);
 
                     this.drawCabinGridOverlay();
+                    this.createPetAnimations();
                     this.createPlacementActors();
                     this.createHeldPlacementActor();
                     this.configureCameraControls(Phaser);
@@ -383,7 +415,8 @@ export function CabinPhaserStage({
                 private createPlacementActors() {
                     const placements = cabinGrid.placements ?? [];
                     for (const placement of placements) {
-                        if (placement.object_key !== DEFAULT_OCTOCAT_KEY) {
+                        const definition = getPetLogSpriteSheetForRewardKey(placement.object_key);
+                        if (!definition) {
                             continue;
                         }
                         const home = {
@@ -391,16 +424,22 @@ export function CabinPhaserStage({
                             y: placement.y + placement.depth / 2,
                             z: placement.z,
                         };
-                        const actor = this.createOctocatActor(home);
+                        const actor = this.createPetActor(home, definition);
                         this.petActors.push(actor);
                     }
                 }
 
                 private createHeldPlacementActor() {
-                    if (!pendingPlacement) {
+                    const definition = pendingPlacement
+                        ? getPetLogSpriteSheetForRewardKey(pendingPlacement.assetKey)
+                        : undefined;
+                    if (!pendingPlacement || !definition) {
                         return;
                     }
-                    this.heldPlacement = this.createOctocatVisual("held");
+                    this.heldPlacement = this.add
+                        .sprite(0, 0, definition.textureKey, definition.baseFrames.held)
+                        .setOrigin(0.5, 0.5)
+                        .setScale(definition.displayScale);
                     this.heldPlacement.setDepth(120);
                     this.heldPlacement.setAlpha(0.88);
                     this.updateHeldPlacement();
@@ -412,99 +451,138 @@ export function CabinPhaserStage({
                     }
                     const pointer = this.input.activePointer;
                     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-                    this.heldPlacement.setPosition(worldPoint.x, worldPoint.y - 26);
+                    this.heldPlacement.setPosition(worldPoint.x, worldPoint.y);
                     this.heldPlacement.setDepth(200);
                 }
 
-                private createOctocatActor(home: { x: number; y: number; z: number }): PetActor {
+                private createPetAnimations() {
+                    const definitions = (cabinGrid.placements ?? [])
+                        .map((placement) => getPetLogSpriteSheetForRewardKey(placement.object_key))
+                        .concat(
+                            pendingPlacement
+                                ? [getPetLogSpriteSheetForRewardKey(pendingPlacement.assetKey)]
+                                : [],
+                        )
+                        .filter(
+                            (definition): definition is PetLogSpriteSheetDefinition =>
+                                definition !== undefined,
+                        );
+                    for (const definition of definitions) {
+                        for (const state of ["sleep", "lie"] as const) {
+                            const animationKey = this.getPetBaseAnimationKey(definition, state);
+                            if (!this.anims.exists(animationKey)) {
+                                this.anims.create({
+                                    key: animationKey,
+                                    frames: this.anims.generateFrameNumbers(definition.textureKey, {
+                                        frames: definition.baseFrames[state],
+                                    }),
+                                    frameRate: 2,
+                                    repeat: -1,
+                                });
+                            }
+                        }
+                        for (const direction of PET_SPRITE_DIRECTIONS) {
+                            const frames = getPetDirectionFrames(definition, direction);
+                            const animationKey = this.getPetAnimationKey(definition, direction);
+                            if (!this.anims.exists(animationKey)) {
+                                this.anims.create({
+                                    key: animationKey,
+                                    frames: this.anims.generateFrameNumbers(definition.textureKey, {
+                                        frames: frames.walking,
+                                    }),
+                                    frameRate: 8,
+                                    repeat: -1,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                private getPetAnimationKey(
+                    definition: PetLogSpriteSheetDefinition,
+                    direction: PetSpriteDirection,
+                ) {
+                    return `${definition.textureKey}-walk-${direction}`;
+                }
+
+                private getPetBaseAnimationKey(
+                    definition: PetLogSpriteSheetDefinition,
+                    state: "sleep" | "lie",
+                ) {
+                    return `${definition.textureKey}-${state}`;
+                }
+
+                private createPetActor(
+                    home: { x: number; y: number; z: number },
+                    definition: PetLogSpriteSheetDefinition,
+                ): PetActor {
                     const point = projectCabinGridPoint(cabinGrid, this.gridAnchor, home);
-                    const container = this.createOctocatVisual("idle");
-                    container.setPosition(point.x, point.y - 18);
-                    container.setDepth(38 + home.x + home.y + home.z * 10);
-                    container.setScale(0.92);
+                    const direction: PetSpriteDirection = "down";
+                    const standingFrames = getPetDirectionFrames(definition, direction).standing;
+                    const sprite = this.add
+                        .sprite(point.x, point.y, definition.textureKey, standingFrames[0])
+                        .setOrigin(0.5, 1)
+                        .setDepth(38 + home.x + home.y + home.z * 10)
+                        .setScale(definition.displayScale);
                     return {
-                        container,
+                        sprite,
+                        definition,
                         home,
                         current: { ...home },
                         target: { ...home },
-                        nextTargetAt: 800,
-                        speed: 0.0016,
-                        phase: Math.random() * Math.PI * 2,
+                        nextTargetAt: 1400,
+                        speed: 0.0009,
+                        currentSpeed: 0,
+                        direction,
+                        isMoving: false,
                     };
-                }
-
-                private createOctocatVisual(mode: "idle" | "held"): Phaser.GameObjects.Container {
-                    const shadow = this.add.ellipse(
-                        0,
-                        18,
-                        34,
-                        12,
-                        0x121816,
-                        mode === "held" ? 0.18 : 0.34,
-                    );
-                    const body = this.add.ellipse(0, 0, 28, 24, 0x24292f, 1);
-                    body.setStrokeStyle(2, 0xf7f4ea, 0.92);
-                    const head = this.add.circle(0, -14, 18, 0x24292f, 1);
-                    head.setStrokeStyle(2, 0xf7f4ea, 0.95);
-                    const leftEar = this.add.triangle(-12, -28, 0, 12, 8, 0, 16, 12, 0x24292f, 1);
-                    leftEar.setStrokeStyle(2, 0xf7f4ea, 0.92);
-                    const rightEar = this.add.triangle(12, -28, 0, 12, 8, 0, 16, 12, 0x24292f, 1);
-                    rightEar.setScale(-1, 1);
-                    rightEar.setStrokeStyle(2, 0xf7f4ea, 0.92);
-                    const leftEye = this.add.circle(-7, -15, 2, 0xf7f4ea, 1);
-                    const rightEye = this.add.circle(7, -15, 2, 0xf7f4ea, 1);
-                    const face = this.add.arc(0, -9, 5, 20, 160, false, 0xf7f4ea, 1);
-                    const leftArm = this.add.line(
-                        -17,
-                        2,
-                        0,
-                        0,
-                        mode === "held" ? -13 : -9,
-                        mode === "held" ? -10 : 8,
-                        0xf7f4ea,
-                        0.92,
-                    );
-                    leftArm.setLineWidth(3);
-                    const rightArm = this.add.line(
-                        17,
-                        2,
-                        0,
-                        0,
-                        mode === "held" ? 13 : 9,
-                        mode === "held" ? -10 : 8,
-                        0xf7f4ea,
-                        0.92,
-                    );
-                    rightArm.setLineWidth(3);
-                    const container = this.add.container(0, 0, [
-                        shadow,
-                        body,
-                        leftArm,
-                        rightArm,
-                        leftEar,
-                        rightEar,
-                        head,
-                        leftEye,
-                        rightEye,
-                        face,
-                    ]);
-                    return container;
                 }
 
                 private updatePetActors(time: number, delta: number) {
                     for (const actor of this.petActors) {
                         if (time >= actor.nextTargetAt) {
                             actor.target = this.pickPetTarget(actor.home);
-                            actor.nextTargetAt = time + 2200 + Math.random() * 1800;
+                            actor.nextTargetAt = time + 3200 + Math.random() * 2800;
+                            if (Math.random() < 0.2) {
+                                const idleState = Math.random() < 0.5 ? "sleep" : "lie";
+                                actor.target = { ...actor.current };
+                                actor.isMoving = false;
+                                actor.sprite.play(
+                                    this.getPetBaseAnimationKey(actor.definition, idleState),
+                                );
+                                actor.nextTargetAt = time + 2200 + Math.random() * 2200;
+                            }
                         }
 
                         const distanceX = actor.target.x - actor.current.x;
                         const distanceY = actor.target.y - actor.current.y;
                         const distance = Math.hypot(distanceX, distanceY);
                         if (distance > 0.01) {
-                            const step = Math.min(distance, actor.speed * delta);
+                            const direction = getPetDirectionFromGridDelta(distanceX, distanceY);
+                            if (!actor.isMoving || actor.direction !== direction) {
+                                actor.direction = direction;
+                                actor.sprite.play(
+                                    this.getPetAnimationKey(actor.definition, direction),
+                                );
+                            }
+                            actor.isMoving = true;
+                            const desiredSpeed =
+                                distance < 0.8 ? actor.speed * (distance / 0.8) : actor.speed;
+                            actor.currentSpeed +=
+                                (desiredSpeed - actor.currentSpeed) * Math.min(1, delta / 420);
+                            const step = Math.min(distance, actor.currentSpeed * delta);
                             actor.current.x += (distanceX / distance) * step;
                             actor.current.y += (distanceY / distance) * step;
+                        }
+                        if (distance <= 0.01 && actor.isMoving) {
+                            actor.isMoving = false;
+                            actor.currentSpeed = 0;
+                            const standingFrames = getPetDirectionFrames(
+                                actor.definition,
+                                actor.direction,
+                            ).standing;
+                            actor.sprite.stop();
+                            actor.sprite.setFrame(standingFrames[0]);
                         }
 
                         const point = projectCabinGridPoint(
@@ -512,29 +590,20 @@ export function CabinPhaserStage({
                             this.gridAnchor,
                             actor.current,
                         );
-                        const bob = Math.sin(time * 0.006 + actor.phase) * 2.4;
-                        actor.container.setPosition(point.x, point.y - 18 + bob);
-                        actor.container.setDepth(
+                        actor.sprite.setPosition(point.x, point.y);
+                        actor.sprite.setDepth(
                             38 + actor.current.x + actor.current.y + actor.current.z * 10,
-                        );
-                        actor.container.setScale(
-                            0.92 + Math.sin(time * 0.004 + actor.phase) * 0.02,
                         );
                     }
                 }
 
                 private pickPetTarget(home: { x: number; y: number; z: number }) {
-                    const offsets = [
-                        { x: 0, y: 0 },
-                        { x: 0.42, y: 0 },
-                        { x: -0.42, y: 0 },
-                        { x: 0, y: 0.42 },
-                        { x: 0, y: -0.42 },
-                        { x: 0.34, y: 0.34 },
-                        { x: -0.34, y: -0.34 },
-                    ];
-                    const offset =
-                        offsets[Math.floor(Math.random() * offsets.length)] ?? offsets[0];
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = 1.5 + Math.random() * 2.2;
+                    const offset = {
+                        x: Math.cos(angle) * distance,
+                        y: Math.sin(angle) * distance,
+                    };
                     return {
                         x: Math.min(cabinGrid.width - 0.5, Math.max(0.5, home.x + offset.x)),
                         y: Math.min(cabinGrid.depth - 0.5, Math.max(0.5, home.y + offset.y)),
