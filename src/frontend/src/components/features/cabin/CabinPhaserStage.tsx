@@ -37,6 +37,7 @@ const FLOOR_CENTER_Y = CABIN_WORLD_CENTER_Y + 112.3;
 const CABIN_GRID_ANCHOR_OFFSET_X = 0;
 const CABIN_GRID_ANCHOR_OFFSET_Y = 0;
 const CABIN_GRID_DEBUG_Z_LEVELS = 3;
+const CABIN_GRID_VISIBLE = import.meta.env.VITE_CABIN_SHOW_GRID !== "false";
 const CAMERA_MIN_ZOOM = 0.9;
 const CAMERA_MAX_ZOOM = 1.8;
 const CAMERA_ZOOM_STEP = 0.12;
@@ -305,9 +306,6 @@ export function CabinPhaserStage({
                 }
 
                 private drawCabinGridOverlay() {
-                    const graphics = this.add.graphics();
-                    graphics.setDepth(30);
-
                     const baseAnchor = getCabinGridAnchor(
                         cabinGrid,
                         CABIN_WORLD_CENTER_X,
@@ -318,6 +316,13 @@ export function CabinPhaserStage({
                         y: baseAnchor.y + CABIN_GRID_ANCHOR_OFFSET_Y,
                     };
                     this.gridAnchor = anchor;
+
+                    if (!CABIN_GRID_VISIBLE) {
+                        return;
+                    }
+
+                    const graphics = this.add.graphics();
+                    graphics.setDepth(30);
 
                     for (let y = 0; y < cabinGrid.depth; y += 1) {
                         for (let x = 0; x < cabinGrid.width; x += 1) {

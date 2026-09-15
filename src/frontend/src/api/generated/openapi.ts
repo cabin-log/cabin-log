@@ -1203,6 +1203,7 @@ export interface components {
              * @default 0
              */
             repository_count: number;
+            progress?: components["schemas"]["RewardProgressResponse"] | null;
         };
         /** GameCollectionResponse */
         GameCollectionResponse: {
@@ -1571,6 +1572,40 @@ export interface components {
          * @enum {string}
          */
         RewardPackageStatus: "PENDING" | "CLAIMED" | "EXPIRED";
+        /** RewardProgressMetric */
+        RewardProgressMetric: {
+            /** Key */
+            key: string;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "bytes" | "activities" | "days" | "count";
+            /** Current */
+            current: number;
+            /** Target */
+            target: number;
+            /** Remaining */
+            remaining: number;
+        };
+        /** RewardProgressResponse */
+        RewardProgressResponse: {
+            /** Next Level */
+            next_level?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "tracking" | "ready" | "maximum" | "no_next_level";
+            /**
+             * Operator
+             * @default all
+             * @enum {string}
+             */
+            operator: "any" | "all";
+            /** Metrics */
+            metrics?: components["schemas"]["RewardProgressMetric"][];
+        };
         /** SignupForm */
         SignupForm: {
             /** Email */

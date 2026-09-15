@@ -1,6 +1,6 @@
 from datetime import UTC, date, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, Field, field_validator
@@ -459,6 +459,21 @@ class GameInventoryResponse(BaseModel):
     pet_logs: list[UserStackRewardResponse] = Field(default_factory=list)
 
 
+class RewardProgressMetric(BaseModel):
+    key: str
+    unit: Literal["bytes", "activities", "days", "count"]
+    current: int = Field(ge=0)
+    target: int = Field(gt=0)
+    remaining: int = Field(ge=0)
+
+
+class RewardProgressResponse(BaseModel):
+    next_level: int | None = None
+    status: Literal["tracking", "ready", "maximum", "no_next_level"]
+    operator: Literal["any", "all"] = "all"
+    metrics: list[RewardProgressMetric] = Field(default_factory=list)
+
+
 class GameCollectionEntryResponse(BaseModel):
     reward_key: str
     reward_type: StackRewardType
@@ -474,6 +489,7 @@ class GameCollectionEntryResponse(BaseModel):
     mastery_level: int = 0
     total_bytes: int = 0
     repository_count: int = 0
+    progress: RewardProgressResponse | None = None
 
 
 class GameCollectionResponse(BaseModel):

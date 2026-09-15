@@ -88,6 +88,28 @@ async def _seed_stack_activity(user_id: int) -> None:
         )
 
 
+@pytest.mark.primary_data
+def test_collection_progress_uses_persisted_activity(integration_client: TestClient):
+    """Scenario: collection API exposes actual stack and event progress from stored activity."""
+    # Given: a GitHub user with stored Python and TypeScript activity.
+    user_id, token = asyncio.run(_create_github_oauth_user())
+    asyncio.run(_seed_stack_activity(user_id))
+    asyncio.run(GameService().recalculate_stack_profiles(user_id=user_id))
+    # When: requesting the collection through the authenticated route.
+    response = integration_client.get(
+        "/api/v1/game/collection", headers={"Authorization": f"Bearer {token}"}
+    )
+    # Then: the response carries real values, acquisition readiness, and event targets.
+    assert response.status_code == 200
+    entries = response.json()["furniture"] + response.json()["pet_logs"]
+    python = next(item for item in entries if item["reward_key"] == "stack.python-serpent")
+    assert python["progress"]["status"] == "ready"
+    assert python["progress"]["operator"] == "any"
+    assert python["progress"]["metrics"][0]["current"] == 1_100_000
+    docs = next(item for item in entries if item["reward_key"] == "event.docs-scroll")
+    assert docs["progress"]["metrics"][0]["remaining"] == 10
+
+
 async def _seed_owned_stack_reward(user_id: int) -> None:
     async with get_db() as db:
         db.add(

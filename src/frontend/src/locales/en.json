@@ -115,8 +115,7 @@
             "phaserAria": "Isometric cabin room"
         },
         "player": {
-            "fallbackName": "Cabinlog user",
-            "ready": "Cabin ready"
+            "fallbackName": "Cabinlog user"
         },
         "state": {
             "loading": "Loading cabin state..."
@@ -140,11 +139,10 @@
         },
         "packages": {
             "title": "Packages",
-            "description": "Packages arrive here after GitHub sync and daily rewards.",
             "empty": "No packages have arrived yet.",
             "noDescription": "Package details will be shown after sync.",
-            "dailyTitle": "{{date}} activity package",
-            "dailyDescription": "Settled activity rewards are ready.",
+            "dailyTitle": "Activity reward package",
+            "dailyDescription": "Nice work! You saved the code; we saved you a gift.",
             "onboardingTitle": "GitHub history onboarding package",
             "onboardingDescription": "Welcome rewards from your synced GitHub history are ready.",
             "eventTitle": "{{reward}} achievement package",
@@ -152,11 +150,11 @@
             "stackOriginTitle": "{{language}} origin package",
             "stackOriginDescription": "{{language}} stack reward is ready.",
             "itemCount": "{{count}} item(s)",
-            "claim": "Claim"
+            "claim": "Claim",
+            "dailyPeriod": "{{date}}"
         },
         "inventory": {
             "title": "Inventory",
-            "description": "Claimed rewards are grouped by supplies, furniture, and pet logs.",
             "supplies": "Supplies",
             "furniture": "Furniture",
             "petLogs": "Pet logs",
@@ -165,25 +163,21 @@
             "emptyPetLogs": "No pet logs claimed yet.",
             "quantity": "x{{quantity}}",
             "level": "Lv. {{level}}",
-            "stage": "Stage {{stage}}",
             "quantityDetail": "Owned quantity: {{quantity}}.",
-            "rewardDetail": "{{language}} reward, Lv. {{level}}, stage {{stage}}.",
-            "placed": "Placed in the cabin.",
-            "notPlaced": "Not placed in the cabin.",
+            "placed": "Placed in the cabin",
+            "notPlaced": "Stored in inventory",
             "notPlaceable": "This supply is used from inventory and is not placed in the cabin.",
             "place": "Place",
             "collect": "Collect"
         },
         "collection": {
             "title": "Collection",
-            "description": "Track furniture and pet logs unlocked by your stack history.",
             "furniture": "Furniture",
             "petLogs": "Pet logs",
             "unknown": "?",
             "owned": "Owned",
             "locked": "Locked",
             "requirement": "Unlock by syncing {{language}} work with at least {{bytes}} bytes, or {{activities}} recent {{language}} activities.",
-            "ownedDetail": "{{language}} reward is owned at level {{level}}.",
             "conditions": {
                 "achievement": "Unlock this achievement reward by meeting its event condition.",
                 "github_account": "Unlocked automatically when your GitHub account is connected.",
@@ -238,29 +232,15 @@
             }
         },
         "settings": {
-            "title": "Cabin settings",
-            "description": "Current gameplay settings from the backend.",
+            "title": "Settings",
             "profileTitle": "GitHub profile",
             "language": "Language",
-            "languageDescription": "Choose the display language for this device.",
             "languages": {
                 "en": "English",
                 "ko": "한국어"
             },
-            "playTitle": "Play settings",
-            "playDescription": "Backend-backed daily and cabin state.",
-            "timezone": "Timezone",
-            "cutoff": "Daily cutoff",
-            "cutoffValue": "{{hour}}:00",
-            "cabin": "Cabin grid",
-            "cabinValue": "{{width}} x {{depth}} cells, {{tileWidth}} x {{tileHeight}} px tiles",
-            "stacks": "Top stacks",
-            "githubConnected": "GitHub profile connected",
-            "githubUnknown": "GitHub profile not connected",
             "logoutIdle": "Sign out",
-            "logoutBusy": "Signing out...",
-            "noStacks": "No stack data yet",
-            "unknown": "Unknown"
+            "logoutBusy": "Signing out..."
         },
         "modal": {
             "close": "Close"
@@ -274,6 +254,78 @@
             "cabinPlacementConflict": "Cabin placement conflicts with another object.",
             "cabinItemNotOwned": "You do not own this cabin object.",
             "cabinSystemPlacementLocked": "This cabin object cannot be changed."
+        },
+        "itemDescriptions": {
+            "fallback": "A cabin collectible discovered through your activity.",
+            "default": {
+                "octocat": "A curious cat companion from GitHub, always interested in the latest commit."
+            },
+            "stack": {
+                "python-serpent": "A serpent inspired by Python. Flexible in shape, strict about indentation.",
+                "terminal-desk": "A terminal desk inspired by TypeScript, with a well-defined place for everything.",
+                "coffee-sprout": "A sprout from a Java coffee cup, keeping you company through long builds.",
+                "forge-bench": "A forge bench inspired by Rust ownership: every borrowed tool must come back.",
+                "cloud-helper": "A cloud companion inspired by Go goroutines, quietly juggling little tasks.",
+                "browser-console-table": "A browser-console table filled with JavaScript experiments and debugging notes.",
+                "circuit-bench": "A circuit bench inspired by the precise, hands-on control of C and C++.",
+                "blueprint-studio-desk": "A studio desk inspired by C#, turning complex ideas into organized plans.",
+                "night-fox": "A quiet night fox inspired by Kotlin, quick to notice anything missing.",
+                "swiftlet-light": "A swift little light bird whose quick wingbeats brighten the cabin.",
+                "pantry-blob": "A pantry blob inspired by PHP request handling, always ready with a snack.",
+                "gem-sprite": "A gem sprite inspired by Ruby, expressive and sparkling with every movement.",
+                "command-crate": "A practical crate inspired by Shell commands: simple tools, endless combinations.",
+                "data-cabinet": "A data cabinet arranged like SQL tables, keeping everything easy to find.",
+                "container-shelf": "A shelf inspired by Docker containers, with a separate space for each collection."
+            },
+            "event": {
+                "night-owl-bed": "A bed for late-night contributors, ready for a well-earned rest.",
+                "morning-kettle": "A kettle celebrating early starts and bringing warmth to the morning desk.",
+                "review-lamp": "A lamp celebrating thoughtful code reviews and attention to small improvements.",
+                "release-banner": "A banner marking the moment a new version reaches the world.",
+                "bugfix-toolbox": "A toolbox celebrating the patient work of finding and fixing problems.",
+                "weekend-cushion": "A soft cushion marking weekend contributions and making room for a break.",
+                "docs-scroll": "A scroll celebrating documentation that helps the next reader find their way.",
+                "first-sync-compass": "A compass marking the first connection between GitHub and the cabin.",
+                "streak-spark": "A little flame born from regular activity, fond of steady steps over grand gestures.",
+                "mentor-orb": "An orb formed from collaboration, offering a little light while you work things out."
+            }
+        },
+        "progress": {
+            "title": "Next milestone progress",
+            "unowned": "Not owned",
+            "unlock": "Unlock progress",
+            "next": "Next level",
+            "any": "Either",
+            "all": "All required",
+            "values": "{{current}} / {{target}} {{unit}}",
+            "remaining": "{{amount}} {{unit}} remaining",
+            "met": "Complete",
+            "maximum": "Maximum level reached",
+            "no_next_level": "No further levels",
+            "upgradeReady": "Ready · Level-up coming later",
+            "claimReady": "Ready · Check packages",
+            "units": {
+                "bytes": "bytes",
+                "activities": "activities",
+                "days": "days",
+                "count": "times"
+            },
+            "metrics": {
+                "code": "Total code",
+                "recent_activity": "Activity in the last 30 days",
+                "active_days": "Active days in the last 30 days",
+                "night_owl_commits": "Late-night commits",
+                "morning_activity_days": "Morning activity days",
+                "pull_request_reviews": "PR reviews",
+                "release_activity": "Releases",
+                "bugfix_activity": "Bugfix activity",
+                "weekend_activity": "Weekend activity days",
+                "docs_commits": "Documentation commits",
+                "first_github_sync": "Activity sync",
+                "activity_streak": "Distinct activity days",
+                "mentor_collaboration": "Collaboration activity",
+                "github_account": "GitHub connection"
+            }
         }
     },
     "signup": {

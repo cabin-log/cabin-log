@@ -1,5 +1,7 @@
 # 프론트엔드 빠른 가이드
 
+인벤토리·도감은 백엔드 보상 진행도를 레벨 배지 아래에 공유하며, 다음 레벨·현재/목표·얇은 막대만 표시합니다. 코드량은 10진 KB/MB, 정확한 값은 툴팁으로 제공합니다. 보유한 기본·이벤트 보상은 레벨과 성장 안내를 숨기며, 남음·조건·준비 안내 문구도 표시하지 않습니다. 진행도는 조건 충족 여부이며 실제 레벨업 실행은 아직 구현되지 않았습니다.
+
 이 문서는 `src/frontend` 작업자를 위한 가이드입니다.
 전체 엔지니어링 제약은 `src/frontend/FRONTEND.md`를 따르세요.
 
@@ -20,6 +22,8 @@ npm run dev
 기본 로컬 URL:
 
 - `http://localhost:5173`
+
+`src/frontend/.env`에서 `VITE_CABIN_SHOW_GRID=false`로 설정하면 오두막 격자선·외곽선·좌표/Z 가이드를 숨깁니다. 기본값은 `true`이며, 가구 배치 좌표와 펫 이동은 유지됩니다. 변경 후 개발 서버를 재시작하고, 배포/데스크톱 앱은 다시 빌드하세요.
 
 브라우저 실행은 계속 기본 프론트엔드 방식입니다. 같은 React 애플리케이션을 선택형
 Tauri 데스크톱 셸에서 실행하려면 다음 명령을 사용합니다.
@@ -73,8 +77,17 @@ Tauri에서는 네이티브 창 컨트롤이 랜딩, 인증 및 앱 내부 Nav�
 - 인증된 사용자 route는 사용자를 `/show-case`로 보내면 안 됩니다.
 - `/cabin`은 첫 playable init 화면입니다. `GET /api/v1/game/state`를 불러오고, pixel-art 오두막 장면 위에 player/cabin summary를 표시하며, 소포, 인벤토리, 도감, 설정은 장면 위에 회색 backdrop이 깔린 투명 modal panel로 엽니다.
 - `/cabin`은 local user와 정산 reward date 기준 첫 방문 시 `POST /api/v1/game/rewards/sync`를 한 번 호출한 뒤 `GET /api/v1/game/state`를 다시 불러옵니다. Backend는 마지막 완료 daily window, 1회성 GitHub history onboarding package, stack reward package, event achievement package를 함께 정산하며, HUD refresh button은 같은 sync를 수동으로 다시 실행합니다.
+- 보상 새로고침은 저장된 활동을 재계산하며 GitHub의 새 활동을 가져오지 않습니다. 로그인 시 활동 수집에는 백엔드 `OAUTH_GITHUB_SYNC_ON_LOGIN=true`가 필요하며(기본값 `false`), 또는 GitHub sync API/webhook으로 활동이 수집되어야 합니다. 일일 정산은 저장된 사용자 시간대(기본 UTC)의 마지막 완료 05:00 구간을 사용하며 이미 생성한 일일 보상은 재계산하지 않습니다.
 - 소포 card는 `POST /api/v1/rewards/packages/{package_id}/claim`으로 화면 안에서 수령할 수 있고, 수령 뒤 cabin state를 다시 불러와 인벤토리와 도감에 즉시 반영합니다. 소포, 인벤토리, 도감 modal은 높이를 고정하고 내부 list/grid만 scroll합니다. 인벤토리는 소모품, 가구, 펫로그를 square asset slot으로 나누며, 선택 시 왼쪽 상세 영역에 수량 또는 보상 레벨, 배치 상태, 보유한 오두막 object의 배치 action, 배치된 오두막 object의 수거 action을 표시합니다. 배치는 Phaser held cursor 상태로 시작하고 사용자가 클릭한 isometric cell에 전체 cabin state reload 없이 반영합니다. 수거도 delete API 성공 뒤 local placement만 제거합니다. 도감은 default/stack/event 가구와 펫로그를 추적합니다. 잠긴 도감 slot은 `?`로 표시하고, 선택 시 보상 이름, asset key, 수령 조건을 상세 영역에 표시합니다.
 - 설정 modal은 현재 GitHub 기반 프로필 세션을 표시하고, 공통 auth context를 통해 로그아웃한 뒤 `/login`으로 돌아갑니다.
+- 설정 modal은 최대 30rem 폭으로 프로필, 언어 선택, 로그아웃을 표시합니다. 읽기 전용 플레이 설정, 연결/준비 상태 표시와 소포·인벤토리·도감·설정 modal의 도입 안내 문구는 생략합니다.
+- 오두막 modal 제목 왼쪽에 메뉴 아이콘을 표시하고 빈 상태 안내는 콘텐츠 중앙에 배치합니다. 프로필·상단 메뉴·하단 통계·확대 버튼의 부모 컨테이너는 투명하게 표시해 개별 버튼과 통계 카드만 드러냅니다.
+- 인벤토리·도감 modal은 본문 높이를 채우고 항목을 정사각형으로 표시합니다. 항목이 많으면 선택 항목 상세 영역과 별개로 목록 내부에서 스크롤합니다.
+- 소포 카드는 정산 날짜·제목·설명·아이템 수를 분리하고 우측 하단에 작은 받기 버튼을 표시합니다. 목록은 기본 카드 5개 높이를 확보하되 화면 높이로 제한하며, 넘치는 소포는 내부 스크롤로 확인합니다.
+- 인벤토리·도감 상세에서 내부 asset 키를 숨기고 보유 보상 레벨은 `Lv. N`으로 표시합니다. 펫 목록 배지도 진화 단계 대신 보상 레벨을 사용하며, 소포 날짜에는 접두 문구를 붙이지 않습니다.
+- 인벤토리 상세 패널은 어두운 배경과 밝은 글자의 배치·수거 버튼을 좌측 하단에 표시합니다. 이름과 높이 20px 레벨 배지는 같은 영역에서 0.2rem 간격으로 붙입니다. 인벤토리와 도감은 각 아이템의 특징과 스택 연관성을 설명하는 동일한 문구를 사용합니다. 한국어 설명은 합니다·입니다 체로 통일하며 잠긴 도감 항목에도 표시합니다.
+- 인벤토리 동작 버튼은 소포의 작은 버튼 스타일로 통일하고, 스택 보상 상세에 언어별 유머 설명을 표시합니다. 일일 활동 소포는 ‘활동 보상 소포’ 제목과 가벼운 도착 문구를 사용합니다.
+- 인벤토리 상세 문구는 각 스택 보상 아이템에 맞춘 유머 설명을 사용하며, 버튼과 레벨 카드는 작은 크기와 읽기 쉬운 대비로 표시합니다.
 - 첫 cabin renderer는 Phaser `1280 x 720` FIT canvas와 `1500 x 800` camera world를 사용하고 `src/frontend/public/sprites/img/wallpaper/wall.png`와 `src/frontend/public/sprites/img/floor/floor.png`를 isometric room base로 preload합니다. Room은 world 중앙에 정렬하며, 방향키로 camera를 이동하고 `Q`/`E`로 축소/확대하며 mouse wheel zoom과 pointer drag pan을 지원합니다.
 - 에셋은 수정 원본인 `src/frontend/public/sprites/aseprites`와 런타임 파일인 `src/frontend/public/sprites/img` 아래에 동일한 `pet-logs`, `furniture`, `wallpaper`, `floor`, `ui` 카테고리 폴더로 관리합니다.
 - Cabin floor projection은 `src/frontend/src/utils/cabinProjection.ts`에 중앙화합니다. Phaser stage는 `GET /api/v1/game/state`에서 받은 backend cabin grid 계약과 placement를 props로 받아 floor 위에 visible isometric debug grid를 그리고, 배치된 펫로그의 설정된 spritesheet를 표시합니다. 배치 대기 중에는 spritesheet의 held frame을 마우스에 붙이고, floor click 좌표를 backend grid coordinate로 역변환합니다. 펫로그 시트 규칙과 방향별 프레임 계산은 `src/frontend/src/utils/petLogSprites.ts`에 중앙화하며, 기본 시트는 32x32 프레임, 기본 상태 1~5번, 방향별 정지 2프레임과 걷기 8프레임을 사용합니다. 배치된 펫로그는 긴 랜덤 이동 경로, 경로 사이 정지, 가속/감속을 적용합니다. Debug overlay는 vertical placement 높이를 확인할 수 있도록 일부 기준점에 `z=1..3` guide marker도 표시합니다.
