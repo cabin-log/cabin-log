@@ -1783,6 +1783,22 @@ a {
     font-size: 1.1rem;
 }
 
+.ui-modal__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.ui-modal__title-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.ui-modal__title-icon svg {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
 .ui-modal__header p {
     margin: 0.25rem 0 0;
     color: var(--text-soft);
@@ -2191,10 +2207,7 @@ a {
     pointer-events: none;
 }
 
-.cabin-init-player,
-.cabin-init-actions,
 .cabin-init-icon-button,
-.cabin-init-panel,
 .cabin-init-modal .ui-modal__panel {
     border: 1px solid rgba(248, 250, 242, 0.26);
     background: rgba(20, 27, 22, 0.24);
@@ -2202,6 +2215,18 @@ a {
     text-shadow: 0 1px 2px rgba(16, 20, 14, 0.42);
     box-shadow: 0 0.65rem 1.35rem rgba(18, 24, 18, 0.18);
     backdrop-filter: blur(5px);
+}
+
+.cabin-init-player,
+.cabin-init-actions,
+.auth-page .panel.cabin-init-panel,
+.cabin-phaser-stage__zoom-controls {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    color: #f8faf2;
+    text-shadow: 0 1px 2px rgba(16, 20, 14, 0.42);
 }
 
 .cabin-init-player {
@@ -2222,8 +2247,7 @@ a {
     height: 2.4rem;
 }
 
-.cabin-init-player__name,
-.cabin-init-player__meta {
+.cabin-init-player__name {
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2233,12 +2257,6 @@ a {
 .cabin-init-player__name {
     font-weight: 800;
     font-size: 0.95rem;
-}
-
-.cabin-init-player__meta {
-    margin-top: 0.12rem;
-    color: rgba(248, 250, 242, 0.75);
-    font-size: 0.78rem;
 }
 
 .cabin-init-actions {
@@ -2352,11 +2370,7 @@ a {
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.45rem;
-    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 0.9rem;
-    background: rgba(15, 19, 18, 0.64);
-    box-shadow: 0 1rem 2.4rem rgba(0, 0, 0, 0.24);
-    backdrop-filter: blur(16px);
     pointer-events: auto;
 }
 
@@ -2475,9 +2489,23 @@ a {
     border-radius: 1.1rem;
 }
 
+.cabin-init-modal--tracker .ui-modal__panel {
+    height: min(44rem, calc(100dvh - 2.5rem));
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+.cabin-init-modal--tracker .ui-modal__body {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    align-content: stretch;
+}
+
+.cabin-init-modal.cabin-init-modal--settings .ui-modal__panel {
+    width: min(30rem, calc(100vw - 2rem));
+}
+
 .cabin-init-modal .ui-modal__header h2,
 .cabin-init-package h3,
-.cabin-init-settings-list dt,
 .cabin-init-tracker__section h3,
 .cabin-init-tracker__item strong {
     color: #f8faf2;
@@ -2486,7 +2514,6 @@ a {
 .cabin-init-modal .ui-modal__header p,
 .cabin-init-package p,
 .cabin-init-empty,
-.cabin-init-settings-list dd,
 .cabin-init-tracker__item span {
     color: rgba(248, 250, 242, 0.78);
 }
@@ -2497,23 +2524,33 @@ a {
     color: #f8faf2;
 }
 
-.cabin-init-package-list,
-.cabin-init-settings-list {
-    display: grid;
-    gap: 0.7rem;
+.cabin-init-modal.cabin-init-modal--packages .ui-modal__panel {
+    width: min(38rem, calc(100vw - 2rem));
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+.cabin-init-modal--packages .ui-modal__body {
+    min-height: 0;
 }
 
 .cabin-init-package-list {
-    height: var(--cabin-init-modal-content-height, min(31rem, calc(100dvh - 12rem)));
-    min-height: 0;
+    display: grid;
+    gap: 0.65rem;
+    /* Reserve five 7.25rem cards and four 0.65rem gaps, bounded by the viewport. */
+    min-height: min(38.85rem, calc(100dvh - 9rem));
+    max-height: min(38.85rem, calc(100dvh - 9rem));
     align-content: start;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-right: 0.25rem;
     scrollbar-gutter: stable;
 }
 
-.cabin-init-empty--panel {
+.cabin-init-package-list--empty {
+    align-content: stretch;
+}
+
+.cabin-init-empty {
     align-self: center;
     justify-self: center;
     text-align: center;
@@ -2577,14 +2614,6 @@ a {
     overflow-wrap: anywhere;
 }
 
-.cabin-init-settings-profile__copy span {
-    display: inline-flex;
-    margin-top: 0.2rem;
-    color: rgba(255, 216, 136, 0.92);
-    font-size: 0.78rem;
-    font-weight: 700;
-}
-
 .cabin-init-language-control {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2613,14 +2642,33 @@ a {
 }
 
 .cabin-init-package {
-    display: flex;
+    min-height: 7.25rem;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.9rem;
-    padding: 0.75rem;
-    border: 1px solid rgba(248, 250, 242, 0.22);
-    border-radius: 0.85rem;
-    background: rgba(248, 250, 242, 0.12);
+    gap: 0.75rem;
+    padding: 0.9rem;
+    border: 1px solid rgba(248, 250, 242, 0.16);
+    border-radius: 0.75rem;
+    background: rgba(248, 250, 242, 0.06);
+}
+
+.cabin-init-package__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 216, 136, 0.92);
+}
+
+.cabin-init-package__icon svg {
+    width: 1.65rem;
+    height: 1.65rem;
+}
+
+.cabin-init-package__copy {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .cabin-init-package h3,
@@ -2629,78 +2677,71 @@ a {
     margin: 0;
 }
 
+.cabin-init-package__period {
+    display: block;
+    margin-bottom: 0.28rem;
+    color: rgba(248, 250, 242, 0.58);
+    font-size: 0.68rem;
+    line-height: 1.3;
+}
+
 .cabin-init-package h3 {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
 }
 
 .cabin-init-package p {
-    margin-top: 0.18rem;
-    font-size: 0.82rem;
-    line-height: 1.35;
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    line-height: 1.4;
 }
 
-.cabin-init-package > span {
-    flex: 0 0 auto;
-    min-width: 4.6rem;
-    height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.65rem;
-    background: rgba(248, 250, 242, 0.16);
-    font-size: 0.74rem;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.cabin-init-package__actions {
-    flex: 0 0 auto;
-    display: grid;
-    justify-items: end;
-    gap: 0.45rem;
-}
-
-.cabin-init-package__actions > span {
-    flex: 0 0 auto;
-    min-width: 4.6rem;
-    height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.65rem;
-    background: rgba(248, 250, 242, 0.16);
-    font-size: 0.74rem;
-    font-weight: 800;
-    white-space: nowrap;
+.cabin-init-package__count {
+    display: block;
+    margin-top: 0.4rem;
+    color: rgba(255, 216, 136, 0.82);
+    font-size: 0.72rem;
+    font-weight: 700;
 }
 
 .cabin-init-package__claim.ui-button {
-    width: auto;
-    height: 1.65rem;
-    min-height: 1.65rem;
-    min-width: 4.15rem;
+    align-self: end;
     justify-self: end;
-    padding: 0 0.48rem;
-    border-radius: 0.52rem;
-    font-size: 0.7rem;
+    width: auto;
+    height: 1.8rem;
+    min-height: 1.5rem;
+    min-width: 3.8rem;
+    padding: 0 0.45rem;
+    border-radius: 0.45rem;
+    font-size: 0.72rem;
 }
 
 .cabin-init-package__claim.ui-button .ui-button__content {
-    gap: 0.24rem;
+    gap: 0.25rem;
 }
 
 .cabin-init-package__claim.ui-button .ui-button__content svg {
-    width: 0.82rem;
-    height: 0.82rem;
+    width: 0.95rem;
+    height: 0.95rem;
+}
+
+@media (max-width: 480px) {
+    .cabin-init-package {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 0.6rem;
+        padding: 0.75rem;
+    }
+
+    .cabin-init-package__icon {
+        display: none;
+    }
 }
 
 .cabin-init-tracker {
-    --cabin-init-modal-content-height: min(31rem, calc(100dvh - 12rem));
-
     display: grid;
     grid-template-rows: 2.8rem minmax(0, 1fr);
     gap: 0.82rem;
-    height: var(--cabin-init-modal-content-height);
+    height: 100%;
     min-height: 0;
     overflow: hidden;
     overscroll-behavior: contain;
@@ -2767,7 +2808,7 @@ a {
 .cabin-init-tracker__grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(5.6rem, 1fr));
-    grid-auto-rows: 5.6rem;
+    grid-auto-rows: max-content;
     align-content: start;
     justify-content: stretch;
     gap: 0.58rem;
@@ -2784,7 +2825,9 @@ a {
 .cabin-init-tracker__slot {
     position: relative;
     width: 100%;
-    height: 5.6rem;
+    height: auto;
+    aspect-ratio: 1;
+    min-height: 0;
     min-width: 0;
     display: grid;
     grid-template-rows: minmax(0, 1fr);
@@ -2922,9 +2965,8 @@ button.cabin-init-tracker__slot {
 }
 
 .cabin-init-tracker__detail {
-    display: grid;
-    grid-template-rows: 13rem minmax(2.6rem, auto) minmax(3.25rem, auto) auto minmax(0, 1fr);
-    align-content: stretch;
+    display: flex;
+    flex-direction: column;
     gap: 0.52rem;
     padding: 0.75rem;
     border: 1px solid rgba(255, 216, 136, 0.24);
@@ -2938,9 +2980,9 @@ button.cabin-init-tracker__slot {
     overflow-y: auto;
 }
 
-.cabin-init-tracker__detail div {
+.cabin-init-tracker__detail > div {
     min-width: 0;
-    min-height: 2.6rem;
+    min-height: 0;
     display: grid;
     align-content: start;
     gap: 0.12rem;
@@ -2962,7 +3004,7 @@ button.cabin-init-tracker__slot {
     white-space: nowrap;
 }
 
-.cabin-init-tracker__detail span {
+.cabin-init-tracker__detail > span {
     color: rgba(255, 216, 136, 0.72);
     font-size: 0.68rem;
     font-weight: 750;
@@ -2978,16 +3020,116 @@ button.cabin-init-tracker__slot {
 }
 
 .cabin-init-tracker__detail-action.ui-button {
+    align-self: end;
+    justify-self: start;
     width: fit-content;
-    min-height: 2rem;
+    height: 1.8rem;
+    min-height: 1.8rem;
+    margin-top: auto;
     padding: 0 0.7rem;
-    border-radius: 0.55rem;
+    border: 1px solid rgba(248, 250, 242, 0.24);
+    border-radius: 0.5rem;
+    background: #202925;
+    color: #f8faf2;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.cabin-init-tracker__identity .cabin-init-tracker__level-card {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    width: fit-content;
+    min-height: 1.25rem;
+    height: 1.25rem;
+    flex: 0 0 auto;
+    align-self: flex-start;
+    margin: 0;
+    padding: 0 0.4rem;
+    border: 1px solid rgba(248, 250, 242, 0.2);
+    border-radius: 0.3rem;
+    background: rgba(248, 250, 242, 0.08);
+    color: rgba(255, 249, 226, 0.96);
+    font-size: 0.66rem;
+    font-weight: 850;
+}
+
+.cabin-init-tracker__detail > .cabin-init-tracker__identity {
+    gap: 0.2rem;
+}
+
+.cabin-init-tracker__detail .cabin-init-tracker__item-description {
+    min-height: 0;
+    margin: 0.15rem 0 0;
+    color: rgba(248, 250, 242, 0.82);
     font-size: 0.76rem;
+    line-height: 1.5;
+}
+
+.cabin-init-tracker__detail > * {
+    flex-shrink: 0;
+}
+
+.cabin-init-tracker__detail-action.ui-button:hover:not(:disabled) {
+    background: #34443b;
 }
 
 .cabin-init-tracker__section {
     display: grid;
     gap: 0.58rem;
+}
+
+.cabin-reward-progress {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.2rem 0;
+}
+
+.cabin-reward-progress__header,
+.cabin-reward-progress__line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+.cabin-init-tracker__detail .cabin-reward-progress strong {
+    font-size: 0.72rem;
+}
+
+.cabin-init-tracker__detail .cabin-reward-progress__status {
+    min-height: 0;
+    font-size: 0.65rem;
+    color: #bdc8b8;
+}
+
+.cabin-init-tracker__detail-action.ui-button {
+    align-self: flex-start;
+}
+
+.cabin-reward-progress__metric,
+.cabin-reward-progress__metric label {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.cabin-reward-progress__metric progress {
+    width: 100%;
+    height: 0.35rem;
+    accent-color: #c8ddad;
+}
+
+.cabin-reward-progress span,
+.cabin-reward-progress label,
+.cabin-reward-progress__status {
+    font-size: 0.68rem;
+    color: #dce3d5;
+    line-height: 1.4;
+}
+
+.cabin-reward-progress__remaining {
+    text-align: right;
 }
 
 .cabin-init-tracker__section h3 {
@@ -3055,39 +3197,6 @@ button.cabin-init-tracker__slot {
     font-size: 0.72rem;
     text-align: center;
     white-space: nowrap;
-}
-
-.cabin-init-settings-list {
-    margin: 0;
-}
-
-.cabin-init-settings-list div {
-    display: grid;
-    grid-template-columns: minmax(7rem, 0.6fr) minmax(0, 1fr);
-    gap: 0.8rem;
-    align-items: start;
-    padding: 0.72rem 0;
-    border-bottom: 1px solid rgba(248, 250, 242, 0.16);
-}
-
-.cabin-init-settings-list div:last-child {
-    border-bottom: 0;
-}
-
-.cabin-init-settings-list dt,
-.cabin-init-settings-list dd {
-    margin: 0;
-}
-
-.cabin-init-settings-list dt {
-    font-size: 0.82rem;
-    font-weight: 800;
-}
-
-.cabin-init-settings-list dd {
-    overflow-wrap: anywhere;
-    font-size: 0.88rem;
-    line-height: 1.4;
 }
 
 .cabin-init-settings-logout.ui-button {
@@ -4167,15 +4276,7 @@ input:focus {
     }
 
     .cabin-init-modal .ui-modal__panel {
-        width: min(34rem, calc(100vw - 1rem));
-    }
-
-    .cabin-init-tracker {
-        --cabin-init-modal-content-height: min(34rem, calc(100dvh - 12rem));
-    }
-
-    .cabin-init-package-list {
-        height: var(--cabin-init-modal-content-height, min(34rem, calc(100dvh - 12rem)));
+        width: min(34rem, calc(100vw - 2rem));
     }
 
     .cabin-init-tracker__body {
@@ -4189,26 +4290,10 @@ input:focus {
 
     .cabin-init-tracker__grid {
         grid-template-columns: repeat(auto-fill, minmax(4.9rem, 1fr));
-        grid-auto-rows: 4.9rem;
-    }
-
-    .cabin-init-tracker__slot {
-        width: 100%;
-        height: 4.9rem;
-        min-width: 0;
     }
 
     .cabin-init-asset-preview--lg {
         height: 8rem;
-    }
-
-    .cabin-init-tracker__detail {
-        grid-template-rows: 8rem minmax(2.6rem, auto) minmax(2.8rem, auto) auto minmax(0, 1fr);
-    }
-
-    .cabin-init-settings-list div {
-        grid-template-columns: 1fr;
-        gap: 0.22rem;
     }
 
     .landing-page {

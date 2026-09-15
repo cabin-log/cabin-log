@@ -421,7 +421,7 @@ describe("CabinInitPage", () => {
         expect(within(dialog).getByText("Owned quantity: 3.")).toBeVisible();
         await user.click(within(dialog).getByRole("tab", { name: "Furniture" }));
         expect(within(dialog).getByText("TypeScript terminal desk")).toBeVisible();
-        expect(within(dialog).getByText("Placed in the cabin.")).toBeVisible();
+        expect(within(dialog).getByText("Placed in the cabin")).toBeVisible();
         await user.click(within(dialog).getByRole("tab", { name: "Pet logs" }));
         expect(
             within(dialog).getByRole("button", { name: "Python serpent pet log" }),
@@ -626,8 +626,8 @@ describe("CabinInitPage", () => {
         );
     });
 
-    it("opens backend-backed settings details", async () => {
-        // Given: backend game state includes settings and cabin dimensions.
+    it("opens compact profile and language settings", async () => {
+        // Given: an authenticated user is viewing the cabin.
         const user = userEvent.setup();
         renderWithRouter(<CabinInitPage />, "/cabin");
         await screen.findByText("Octo Dev");
@@ -636,11 +636,12 @@ describe("CabinInitPage", () => {
         await user.click(screen.getByRole("button", { name: "Settings" }));
 
         // Then: settings are shown without navigating away from the playable init screen.
-        const dialog = screen.getByRole("dialog", { name: "Cabin settings" });
-        expect(within(dialog).getByText("Asia/Seoul")).toBeVisible();
-        expect(within(dialog).getByText("12 x 12 cells, 60 x 30 px tiles")).toBeVisible();
-        expect(within(dialog).getByText("TypeScript")).toBeVisible();
-        expect(within(dialog).getByText("GitHub profile connected")).toBeVisible();
+        const dialog = screen.getByRole("dialog", { name: "Settings" });
+        expect(within(dialog).getByRole("heading", { name: "Octo Dev" })).toBeVisible();
+        expect(within(dialog).getByRole("button", { name: "한국어" })).toBeVisible();
+        expect(within(dialog).getByRole("button", { name: "Sign out" })).toBeVisible();
+        expect(within(dialog).queryByText("Play settings")).not.toBeInTheDocument();
+        expect(within(dialog).queryByText("GitHub profile connected")).not.toBeInTheDocument();
         expect(within(dialog).getByText("octo@example.com")).toBeVisible();
     });
 
@@ -650,13 +651,13 @@ describe("CabinInitPage", () => {
         renderWithRouter(<CabinInitPage />, "/cabin");
         await screen.findByText("Octo Dev");
         await user.click(screen.getByRole("button", { name: "Settings" }));
-        expect(screen.getByRole("dialog", { name: "Cabin settings" })).toBeVisible();
+        expect(screen.getByRole("dialog", { name: "Settings" })).toBeVisible();
 
         // When: the user switches to Korean.
         await user.click(screen.getByRole("button", { name: "한국어" }));
 
         // Then: the modal updates without leaving the cabin page.
-        expect(await screen.findByRole("dialog", { name: "오두막 설정" })).toBeVisible();
+        expect(await screen.findByRole("dialog", { name: "설정" })).toBeVisible();
         expect(screen.getByRole("button", { name: "로그아웃" })).toBeVisible();
     });
 

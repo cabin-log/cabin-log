@@ -28,6 +28,7 @@ import {
     UserAvatar,
 } from "../../components/ui";
 import { CabinPhaserStage } from "../../components/features/cabin/CabinPhaserStage";
+import { RewardProgress } from "../../components/features/cabin/RewardProgress";
 import {
     useGameApi,
     type CabinPlacement,
@@ -90,7 +91,8 @@ function getStringMetadataValue(
 function resolvePackageDisplayText(
     item: RewardPackage,
     t: ReturnType<typeof useTranslation>["t"],
-): { title: string; description: string } {
+    locale: string,
+): { title: string; description: string; period?: { date: string; label: string } } {
     const metadata = item.metadata as Record<string, unknown> | undefined;
     const grantType = getStringMetadataValue(metadata, "grant_type");
     if (grantType === "onboarding") {
@@ -118,10 +120,26 @@ function resolvePackageDisplayText(
     }
 
     const rewardDate = getStringMetadataValue(metadata, "reward_date");
-    if (item.source === "DAILY_REWARD" && rewardDate) {
+    if (item.source === "DAILY_REWARD") {
+        const date = rewardDate ? new Date(`${rewardDate}T00:00:00Z`) : null;
+        const period =
+            rewardDate && date && !Number.isNaN(date.getTime())
+                ? {
+                      date: rewardDate,
+                      label: t("cabin.packages.dailyPeriod", {
+                          date: new Intl.DateTimeFormat(locale, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              timeZone: "UTC",
+                          }).format(date),
+                      }),
+                  }
+                : undefined;
         return {
-            title: t("cabin.packages.dailyTitle", { date: rewardDate }),
+            title: t("cabin.packages.dailyTitle"),
             description: t("cabin.packages.dailyDescription"),
+            period,
         };
     }
 
@@ -137,6 +155,15 @@ function resolveRewardName(
     t: ReturnType<typeof useTranslation>["t"],
 ): string {
     return t(`cabin.rewards.${rewardKey}`, { defaultValue: `${language} reward` });
+}
+
+function resolveItemDescription(
+    rewardKey: string,
+    t: ReturnType<typeof useTranslation>["t"],
+): string {
+    return t(`cabin.itemDescriptions.${rewardKey}`, {
+        defaultValue: t("cabin.itemDescriptions.fallback"),
+    });
 }
 
 function resolveSupplyName(itemKey: string, t: ReturnType<typeof useTranslation>["t"]): string {
@@ -426,7 +453,6 @@ export function CabinInitPage() {
     const [pendingPlacement, setPendingPlacement] = useState<PendingCabinPlacement | null>(null);
     const [logoutBusy, setLogoutBusy] = useState(false);
     const displayName = user?.name?.trim() || user?.email || t("cabin.player.fallbackName");
-    const isGithubConnected = user?.oauth_providers?.includes("github") === true;
     const routeState = location.state as CabinRouteState | null;
     const [shouldPlayEntryReveal] = useState(
         () => routeState?.playCabinEntryReveal === true || consumeCabinEntryReveal(),
@@ -495,8 +521,6 @@ export function CabinInitPage() {
         visibleCollectionItems.find((item) => item.reward_key === selectedCollectionKey) ??
         visibleCollectionItems[0] ??
         null;
-    const stackProfiles = state?.stack_profiles.items ?? [];
-    const topStacks = useMemo(() => stackProfiles.slice(0, 5), [stackProfiles]);
     const normalizedLanguageId =
         (i18n.resolvedLanguage ?? i18n.language ?? "en").split("-")[0] || "en";
     const currentLanguageId: SupportedLanguageId = SUPPORTED_LANGUAGE_IDS.includes(
@@ -531,7 +555,6 @@ export function CabinInitPage() {
                     />
                     <div>
                         <p className="cabin-init-player__name">{displayName}</p>
-                        <p className="cabin-init-player__meta">{t("cabin.player.ready")}</p>
                     </div>
                 </div>
                 <div className="cabin-init-actions">
@@ -659,27 +682,49 @@ export function CabinInitPage() {
             </section>
 
             <Modal
-                className="cabin-init-modal"
+                className="cabin-init-modal cabin-init-modal--packages"
                 open={activeModal === "packages"}
                 title={t("cabin.packages.title")}
-                description={t("cabin.packages.description")}
+                titleIcon={<Package />}
                 closeLabel={t("cabin.modal.close")}
                 onClose={() => setActiveModal(null)}
             >
-                <div className="cabin-init-package-list">
+                <div
+                    className={
+                        pendingPackages.length > 0
+                            ? "cabin-init-package-list"
+                            : "cabin-init-package-list cabin-init-package-list--empty"
+                    }
+                >
                     {pendingPackages.length > 0 ? (
-                        pendingPackages.map((item) => (
-                            <article className="cabin-init-package" key={item.id}>
-                                <div>
-                                    <h3>{resolvePackageDisplayText(item, t).title}</h3>
-                                    <p>{resolvePackageDisplayText(item, t).description}</p>
-                                </div>
-                                <div className="cabin-init-package__actions">
-                                    <span>
-                                        {t("cabin.packages.itemCount", {
-                                            count: item.items?.length ?? 0,
-                                        })}
+                        pendingPackages.map((item) => {
+                            const copy = resolvePackageDisplayText(
+                                item,
+                                t,
+                                i18n.resolvedLanguage ?? i18n.language,
+                            );
+                            return (
+                                <article className="cabin-init-package" key={item.id}>
+                                    <span className="cabin-init-package__icon" aria-hidden="true">
+                                        <Package />
                                     </span>
+                                    <div className="cabin-init-package__copy">
+                                        {copy.period ? (
+                                            <time
+                                                className="cabin-init-package__period"
+                                                dateTime={copy.period.date}
+                                            >
+                                                {copy.period.label}
+                                            </time>
+                                        ) : null}
+                                        <h3>{copy.title}</h3>
+                                        <p>{copy.description}</p>
+                                        <span className="cabin-init-package__count">
+                                            {t("cabin.packages.itemCount", {
+                                                count: item.items?.length ?? 0,
+                                            })}
+                                        </span>
+                                    </div>
                                     <Button
                                         type="button"
                                         className="cabin-init-package__claim"
@@ -689,22 +734,20 @@ export function CabinInitPage() {
                                         <Check aria-hidden="true" />
                                         {t("cabin.packages.claim")}
                                     </Button>
-                                </div>
-                            </article>
-                        ))
+                                </article>
+                            );
+                        })
                     ) : (
-                        <p className="cabin-init-empty cabin-init-empty--panel">
-                            {t("cabin.packages.empty")}
-                        </p>
+                        <p className="cabin-init-empty">{t("cabin.packages.empty")}</p>
                     )}
                 </div>
             </Modal>
 
             <Modal
-                className="cabin-init-modal"
+                className="cabin-init-modal cabin-init-modal--tracker"
                 open={activeModal === "inventory"}
                 title={t("cabin.inventory.title")}
-                description={t("cabin.inventory.description")}
+                titleIcon={<Backpack />}
                 closeLabel={t("cabin.modal.close")}
                 onClose={() => setActiveModal(null)}
             >
@@ -767,7 +810,6 @@ export function CabinInitPage() {
                                         />
                                         <div>
                                             <strong>{selectedInventoryItem.title}</strong>
-                                            <span>{selectedInventoryItem.assetKey}</span>
                                         </div>
                                         <p>
                                             {"quantity" in selectedInventoryItem
@@ -825,19 +867,32 @@ export function CabinInitPage() {
                                             label={selectedInventoryItem.title}
                                             size="lg"
                                         />
-                                        <div>
+                                        <div className="cabin-init-tracker__identity">
                                             <strong>{selectedInventoryItem.title}</strong>
-                                            <span>{selectedInventoryItem.assetKey}</span>
+                                            {"level" in selectedInventoryItem &&
+                                            selectedInventoryItem.key.startsWith("stack.") ? (
+                                                <span className="cabin-init-tracker__level-card">
+                                                    {t("cabin.inventory.level", {
+                                                        level: selectedInventoryItem.level,
+                                                    })}
+                                                </span>
+                                            ) : null}
                                         </div>
                                         {"level" in selectedInventoryItem ? (
                                             <>
-                                                <p>
-                                                    {t("cabin.inventory.rewardDetail", {
-                                                        language:
-                                                            selectedInventoryItem.sourceLanguage,
-                                                        level: selectedInventoryItem.level,
-                                                        stage: selectedInventoryItem.stage,
-                                                    })}
+                                                <RewardProgress
+                                                    entry={allCollectionItems.find(
+                                                        (item) =>
+                                                            item.reward_key ===
+                                                            selectedInventoryItem.key,
+                                                    )}
+                                                />
+                                                <p className="cabin-init-tracker__item-description">
+                                                    {resolveItemDescription(
+                                                        selectedInventoryItem.key,
+
+                                                        t,
+                                                    )}
                                                 </p>
                                                 <p>
                                                     {selectedInventoryItem.placement
@@ -895,7 +950,7 @@ export function CabinInitPage() {
                                                 alt=""
                                                 label={item.title}
                                             />
-                                            {"level" in item ? (
+                                            {"level" in item && item.key.startsWith("stack.") ? (
                                                 <b>
                                                     {t("cabin.inventory.level", {
                                                         level: item.level,
@@ -924,19 +979,32 @@ export function CabinInitPage() {
                                             label={selectedInventoryItem.title}
                                             size="lg"
                                         />
-                                        <div>
+                                        <div className="cabin-init-tracker__identity">
                                             <strong>{selectedInventoryItem.title}</strong>
-                                            <span>{selectedInventoryItem.assetKey}</span>
+                                            {"level" in selectedInventoryItem &&
+                                            selectedInventoryItem.key.startsWith("stack.") ? (
+                                                <span className="cabin-init-tracker__level-card">
+                                                    {t("cabin.inventory.level", {
+                                                        level: selectedInventoryItem.level,
+                                                    })}
+                                                </span>
+                                            ) : null}
                                         </div>
                                         {"level" in selectedInventoryItem ? (
                                             <>
-                                                <p>
-                                                    {t("cabin.inventory.rewardDetail", {
-                                                        language:
-                                                            selectedInventoryItem.sourceLanguage,
-                                                        level: selectedInventoryItem.level,
-                                                        stage: selectedInventoryItem.stage,
-                                                    })}
+                                                <RewardProgress
+                                                    entry={allCollectionItems.find(
+                                                        (item) =>
+                                                            item.reward_key ===
+                                                            selectedInventoryItem.key,
+                                                    )}
+                                                />
+                                                <p className="cabin-init-tracker__item-description">
+                                                    {resolveItemDescription(
+                                                        selectedInventoryItem.key,
+
+                                                        t,
+                                                    )}
                                                 </p>
                                                 <p>
                                                     {selectedInventoryItem.placement
@@ -994,10 +1062,10 @@ export function CabinInitPage() {
                                                 alt=""
                                                 label={item.title}
                                             />
-                                            {"stage" in item ? (
+                                            {"level" in item && item.key.startsWith("stack.") ? (
                                                 <b>
-                                                    {t("cabin.inventory.stage", {
-                                                        stage: item.stage,
+                                                    {t("cabin.inventory.level", {
+                                                        level: item.level,
                                                     })}
                                                 </b>
                                             ) : null}
@@ -1013,10 +1081,10 @@ export function CabinInitPage() {
             </Modal>
 
             <Modal
-                className="cabin-init-modal"
+                className="cabin-init-modal cabin-init-modal--tracker"
                 open={activeModal === "collection"}
                 title={t("cabin.collection.title")}
-                description={t("cabin.collection.description")}
+                titleIcon={<BookOpen />}
                 closeLabel={t("cabin.modal.close")}
                 onClose={() => setActiveModal(null)}
             >
@@ -1069,7 +1137,7 @@ export function CabinInitPage() {
                                     )}
                                     size="lg"
                                 />
-                                <div>
+                                <div className="cabin-init-tracker__identity">
                                     <strong>
                                         {resolveRewardName(
                                             selectedCollectionItem.reward_key,
@@ -1077,16 +1145,28 @@ export function CabinInitPage() {
                                             t,
                                         )}
                                     </strong>
-                                    <span>{selectedCollectionItem.asset_key}</span>
+                                    {!selectedCollectionItem.owned ||
+                                    selectedCollectionItem.condition_key === "stack_bytes" ? (
+                                        <span className="cabin-init-tracker__level-card">
+                                            {selectedCollectionItem.owned
+                                                ? t("cabin.inventory.level", {
+                                                      level: selectedCollectionItem.stack_reward_level,
+                                                  })
+                                                : t("cabin.progress.unowned")}
+                                        </span>
+                                    ) : null}
                                 </div>
+                                <RewardProgress entry={selectedCollectionItem} />
                                 <p>
-                                    {selectedCollectionItem.owned
-                                        ? t("cabin.collection.ownedDetail", {
-                                              language: selectedCollectionItem.source_language,
-                                              level: selectedCollectionItem.stack_reward_level,
-                                          })
-                                        : getCollectionRequirementText(selectedCollectionItem, t)}
+                                    {resolveItemDescription(
+                                        selectedCollectionItem.reward_key,
+
+                                        t,
+                                    )}
                                 </p>
+                                {!selectedCollectionItem.owned ? (
+                                    <p>{getCollectionRequirementText(selectedCollectionItem, t)}</p>
+                                ) : null}
                             </section>
                         ) : null}
                         {collectionTab === "furniture" ? (
@@ -1179,10 +1259,10 @@ export function CabinInitPage() {
             </Modal>
 
             <Modal
-                className="cabin-init-modal"
+                className="cabin-init-modal cabin-init-modal--settings"
                 open={activeModal === "settings"}
                 title={t("cabin.settings.title")}
-                description={t("cabin.settings.description")}
+                titleIcon={<Settings />}
                 closeLabel={t("cabin.modal.close")}
                 onClose={() => setActiveModal(null)}
             >
@@ -1199,11 +1279,6 @@ export function CabinInitPage() {
                         <div className="cabin-init-settings-profile__copy">
                             <h3>{displayName}</h3>
                             <p>{user?.email}</p>
-                            <span>
-                                {isGithubConnected
-                                    ? t("cabin.settings.githubConnected")
-                                    : t("cabin.settings.githubUnknown")}
-                            </span>
                         </div>
                     </section>
 
@@ -1213,7 +1288,6 @@ export function CabinInitPage() {
                     >
                         <div className="cabin-init-settings-card__header">
                             <h3>{t("cabin.settings.language")}</h3>
-                            <p>{t("cabin.settings.languageDescription")}</p>
                         </div>
                         <div className="cabin-init-language-control" role="group">
                             {SUPPORTED_LANGUAGE_IDS.map((languageId) => (
@@ -1234,53 +1308,6 @@ export function CabinInitPage() {
                                 </button>
                             ))}
                         </div>
-                    </section>
-
-                    <section
-                        className="cabin-init-settings-card"
-                        aria-label={t("cabin.settings.playTitle")}
-                    >
-                        <div className="cabin-init-settings-card__header">
-                            <h3>{t("cabin.settings.playTitle")}</h3>
-                            <p>{t("cabin.settings.playDescription")}</p>
-                        </div>
-                        <dl className="cabin-init-settings-list">
-                            <div>
-                                <dt>{t("cabin.settings.timezone")}</dt>
-                                <dd>{state?.settings.timezone ?? t("cabin.settings.unknown")}</dd>
-                            </div>
-                            <div>
-                                <dt>{t("cabin.settings.cutoff")}</dt>
-                                <dd>
-                                    {state
-                                        ? t("cabin.settings.cutoffValue", {
-                                              hour: state.settings.daily_cutoff_hour,
-                                          })
-                                        : t("cabin.settings.unknown")}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>{t("cabin.settings.cabin")}</dt>
-                                <dd>
-                                    {state
-                                        ? t("cabin.settings.cabinValue", {
-                                              width: state.cabin.width,
-                                              depth: state.cabin.depth,
-                                              tileWidth: state.cabin.tile_width,
-                                              tileHeight: state.cabin.tile_height,
-                                          })
-                                        : t("cabin.settings.unknown")}
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>{t("cabin.settings.stacks")}</dt>
-                                <dd>
-                                    {topStacks.length > 0
-                                        ? topStacks.map((item) => item.language).join(", ")
-                                        : t("cabin.settings.noStacks")}
-                                </dd>
-                            </div>
-                        </dl>
                     </section>
                 </div>
                 <Button

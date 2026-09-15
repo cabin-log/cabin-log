@@ -1,5 +1,7 @@
 # Backend Quick Guide
 
+Collection entries expose `progress`: next owned reward level, eligibility status, any/all requirements, and per-metric current/target/remaining counts with units. Stack thresholds share the mastery calculation's level 1–5 table; event counts reuse the reward generator's activity rules and user timezone. Owned default/event rewards report no next level. This adds response schemas only, with no database migration or level-up mutation.
+
 This is a minimal quick-reference guide for backend contributors.
 For full engineering rules, follow `src/backend/BACKEND.md`.
 For backend test engineering rules, follow `src/backend/TEST.md`.

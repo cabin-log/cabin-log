@@ -1,5 +1,7 @@
 # Frontend Quick Guide
 
+Inventory and collection share backend reward progress below the level badge: next level, current/target values, and a thin progress bar. Code uses decimal KB/MB with exact values in the tooltip. Owned basic/event rewards hide level and growth text. No remaining/condition/readiness text is displayed. Progress reports eligibility only; level-up execution is not yet implemented.
+
 This guide is for human contributors working on `src/frontend`.
 For full engineering constraints, follow `src/frontend/FRONTEND.md`.
 Localized docs rule: place translations under `docs/<locale>/frontend/`.
@@ -22,6 +24,8 @@ npm run dev
 Default local URL:
 
 - `http://localhost:5173`
+
+Set `VITE_CABIN_SHOW_GRID=false` in `src/frontend/.env` to hide cabin grid lines, bounds, and coordinate/Z guides; the default is `true`. Placement coordinates and pet movement remain active. Restart the dev server after changing it; packaged builds require rebuilding.
 
 The browser remains the default frontend target. To run the same React application in the
 optional Tauri desktop shell:
@@ -75,8 +79,17 @@ Authenticated GitHub login flow:
 - Authenticated player routes must not send players to `/show-case`.
 - `/cabin` is the first playable init screen. It loads `GET /api/v1/game/state`, shows player/cabin summary data over the pixel-art cabin scene, and opens package, inventory, collection, and settings as transparent modal panels with a muted backdrop over the scene.
 - On the first cabin visit per local user and settled reward date, `/cabin` calls `POST /api/v1/game/rewards/sync` once, then reloads `GET /api/v1/game/state`. The backend settles the last completed daily window, any one-time GitHub history onboarding package, stack reward packages, and event achievement packages; the HUD refresh button repeats the same sync manually.
+- Reward refresh recalculates persisted activities; it does not fetch new GitHub activity. Login snapshot collection requires backend `OAUTH_GITHUB_SYNC_ON_LOGIN=true` (default `false`), or activity must arrive through the GitHub sync API/webhooks. Daily settlement uses the last completed 05:00 window in the saved user timezone (default UTC); an existing daily grant is not recalculated.
 - Package cards can be claimed in place with `POST /api/v1/rewards/packages/{package_id}/claim`; the cabin state is reloaded afterward so the inventory and collection immediately reflect the new rewards. Packages, inventory, and collection keep fixed-height modal content and scroll overflowing lists internally. Inventory is split into supplies, furniture, and pet logs with square asset slots; selecting an item opens a larger detail panel with quantity or reward level, placement state, a placement action for owned cabin objects, and a collect action for placed cabin objects. Placement starts a Phaser-held cursor state and commits to the clicked isometric cell without reloading the full cabin state; collect removes only the local placement after the delete API succeeds. Collection tracks default, stack, and event furniture/pet logs. Locked collection slots render as `?`; selecting one opens details with the reward name, asset key, and unlock requirement.
 - The settings modal shows the current GitHub-backed profile session and signs out through the shared auth context before returning to `/login`.
+- The settings modal uses a compact 30rem panel with profile, language selection, and sign-out. Read-only play settings, connection/ready labels, and introductory text in package, inventory, collection, and settings modals are omitted.
+- Cabin modal titles include their navigation icons, empty states are centered within the content area, and HUD/zoom/stat wrappers are transparent so only individual controls and stat cards have surfaces.
+- Inventory and collection modals use the available body height with square item cells; overflow scrolls within the item list, independently of the selected-item details.
+- Package cards separate the localized settlement date, title, description, and item count. The compact claim control sits at the bottom right of each card. The list reserves five standard card rows (bounded by viewport height), then scrolls internally.
+- Inventory/collection details hide internal asset keys and show owned reward levels as `Lv. N`; pet list badges use reward level instead of evolution stage. Settlement dates appear without a prefix.
+- Inventory detail panels use dark placement/collection buttons with light text at the bottom left. A fixed 20px level badge sits 0.2rem below the name in the same identity block. Inventory and collection share the same item description, including locked collection entries. Korean descriptions consistently use polite declarative endings (합니다/입니다).
+- Inventory action controls match the compact package button treatment, and stack reward details include localized humorous flavor text. Daily activity packages use the “activity reward package” title and a lighthearted arrival message.
+- Inventory detail copy now uses item-specific humorous descriptions tied to each stack reward, while buttons and level cards use compact dimensions with readable contrast.
 - The first cabin renderer uses Phaser with a `1280 x 720` FIT canvas, a `1500 x 800` camera world, and preloads `src/frontend/public/sprites/img/wallpaper/wall.png` and `src/frontend/public/sprites/img/floor/floor.png` as the isometric room base. The room is centered in the world; arrow keys move the camera, `Q`/`E` zoom out/in, mouse wheel zooms, and pointer drag pans the cabin.
 - Assets are organized under matching `src/frontend/public/sprites/aseprites` (editable sources) and `src/frontend/public/sprites/img` (runtime files) category folders: `pet-logs`, `furniture`, `wallpaper`, `floor`, and `ui`.
 - Cabin floor projection is centralized in `src/frontend/src/utils/cabinProjection.ts`. The Phaser stage receives the backend cabin grid contract and placements from `GET /api/v1/game/state`, draws a visible isometric debug grid over the floor, renders the configured pet-log spritesheet when a pet log is placed, and converts placement clicks back into backend grid coordinates. Pet-log sheets are described in `src/frontend/src/utils/petLogSprites.ts`; the default sheet uses 32x32 frames, base frames 1-5, and eight direction blocks of two standing plus eight walking frames. Placed pet logs use longer random wander routes, a pause between routes, and eased acceleration/deceleration. The debug overlay also draws a few `z=1..3` guide markers to verify vertical placement height.

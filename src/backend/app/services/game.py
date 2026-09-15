@@ -27,6 +27,8 @@ from app.models.game import (
     RewardPackageResponse,
     RewardPackageSource,
     RewardPackageStatus,
+    RewardProgressMetric,
+    RewardProgressResponse,
     StackProfileResponse,
     StackProfilesResponse,
     StackProfileUpsert,
@@ -40,6 +42,13 @@ from app.models.github import GitHubRepository, GitHubRepositoryLanguage
 
 RECENT_ACTIVITY_WINDOW_DAYS = 30
 DAILY_CUTOFF_HOUR = 5
+STACK_LEVEL_REQUIREMENTS = {
+    1: (50_000, 10, 0),
+    2: (250_000, 5, 0),
+    3: (1_000_000, 15, 0),
+    4: (3_000_000, 30, 7),
+    5: (10_000_000, 75, 21),
+}
 ONBOARDING_COIN_CAP = 750
 ONBOARDING_FOOD_CAP = 25
 ONBOARDING_PET_EXP_CAP = 1500
@@ -328,6 +337,15 @@ class GameService:
         }
         furniture: list[GameCollectionEntryResponse] = []
         pet_logs: list[GameCollectionEntryResponse] = []
+        settings = await self.get_user_settings(user_id=user_id)
+        event_progress = self._calculate_event_reward_progress(
+            activities=await self._load_user_activities(user_id=user_id),
+            timezone=ZoneInfo(settings.timezone),
+            daily_cutoff_hour=settings.daily_cutoff_hour,
+        )
+        github_connected = await GameData.user_has_oauth_identity(
+            user_id=user_id, provider="github"
+        )
         for definition in sorted(
             [
                 *DEFAULT_REWARD_CATALOG.values(),
@@ -353,6 +371,13 @@ class GameService:
                 mastery_level=profile.mastery_level if profile else 0,
                 total_bytes=profile.total_bytes if profile else 0,
                 repository_count=profile.repository_count if profile else 0,
+                progress=self._build_reward_progress(
+                    definition=definition,
+                    owned_level=owned_reward.stack_reward_level if owned_reward else 0,
+                    profile=profile,
+                    event_progress=event_progress,
+                    github_connected=github_connected,
+                ),
             )
             if definition.reward_type == StackRewardType.FURNITURE:
                 furniture.append(entry)
@@ -748,6 +773,74 @@ class GameService:
                 packages.append(package)
         return packages
 
+    def _build_reward_progress(
+        self,
+        *,
+        definition: StackRewardDefinition,
+        owned_level: int,
+        profile: StackProfileResponse | None,
+        event_progress: dict[str, int],
+        github_connected: bool,
+    ) -> RewardProgressResponse:
+        if definition.condition_key != "stack_bytes":
+            if owned_level:
+                return RewardProgressResponse(status="no_next_level")
+            key = definition.condition_key
+            target = EVENT_REWARD_THRESHOLDS.get(key, 1)
+            current = (
+                int(github_connected) if key == "github_account" else event_progress.get(key, 0)
+            )
+            unit = (
+                "days"
+                if key in {"morning_activity_days", "weekend_activity", "activity_streak"}
+                else "count"
+            )
+            metric = RewardProgressMetric(
+                key=key,
+                unit=unit,
+                current=current,
+                target=target,
+                remaining=max(0, target - current),
+            )
+            return RewardProgressResponse(
+                next_level=1, status="ready" if current >= target else "tracking", metrics=[metric]
+            )
+        if owned_level >= 5:
+            return RewardProgressResponse(status="maximum")
+        next_level = owned_level + 1
+        byte_target, activity_target, day_target = STACK_LEVEL_REQUIREMENTS[next_level]
+        metrics = [
+            RewardProgressMetric(
+                key=key,
+                unit=unit,
+                current=current,
+                target=target,
+                remaining=max(0, target - current),
+            )
+            for key, unit, current, target in [
+                ("code", "bytes", profile.total_bytes if profile else 0, byte_target),
+                (
+                    "recent_activity",
+                    "activities",
+                    profile.recent_activity_count if profile else 0,
+                    activity_target,
+                ),
+                ("active_days", "days", profile.active_days_30d if profile else 0, day_target),
+            ]
+            if target
+        ]
+        ready = (
+            any(m.remaining == 0 for m in metrics)
+            if next_level == 1
+            else all(m.remaining == 0 for m in metrics)
+        )
+        return RewardProgressResponse(
+            next_level=next_level,
+            status="ready" if ready else "tracking",
+            operator="any" if next_level == 1 else "all",
+            metrics=metrics,
+        )
+
     async def generate_event_reward_packages(self, *, user_id: int) -> list[RewardPackageResponse]:
         settings = await self.get_user_settings(user_id=user_id)
         timezone = ZoneInfo(settings.timezone)
@@ -1032,16 +1125,16 @@ class GameService:
         recent_activity_count: int,
         active_days_30d: int,
     ) -> int:
-        if total_bytes >= 10_000_000 and recent_activity_count >= 75 and active_days_30d >= 21:
-            return 5
-        if total_bytes >= 3_000_000 and recent_activity_count >= 30 and active_days_30d >= 7:
-            return 4
-        if total_bytes >= 1_000_000 and recent_activity_count >= 15:
-            return 3
-        if total_bytes >= 250_000 and recent_activity_count >= 5:
-            return 2
-        if total_bytes >= 50_000 or recent_activity_count >= 10:
-            return 1
+        for level, (code, activity, days) in reversed(STACK_LEVEL_REQUIREMENTS.items()):
+            if level == 1:
+                if total_bytes >= code or recent_activity_count >= activity:
+                    return level
+            elif (
+                total_bytes >= code
+                and recent_activity_count >= activity
+                and active_days_30d >= days
+            ):
+                return level
         return 0
 
     def _build_stack_package_title(self, *, language: str, level: int) -> str:

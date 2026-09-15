@@ -273,6 +273,7 @@ export function ShowCasePage() {
                                 <Modal
                                     open={sampleModalOpen}
                                     title="Sample modal"
+                                    titleIcon={<SlidersHorizontal />}
                                     description="Reusable modal with modal buttons."
                                     onClose={() => {
                                         setSampleModalOpen(false);

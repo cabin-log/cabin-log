@@ -11,6 +11,7 @@ type ModalProps = {
     onClose: () => void;
     open: boolean;
     title: string;
+    titleIcon?: ReactNode;
 };
 
 export function Modal({
@@ -22,6 +23,7 @@ export function Modal({
     onClose,
     open,
     title,
+    titleIcon,
 }: ModalProps) {
     if (!open || typeof document === "undefined") {
         return null;
@@ -40,7 +42,14 @@ export function Modal({
             <section className="ui-modal__panel">
                 <header className="ui-modal__header">
                     <div>
-                        <h2>{title}</h2>
+                        <h2 className="ui-modal__title">
+                            {titleIcon ? (
+                                <span className="ui-modal__title-icon" aria-hidden="true">
+                                    {titleIcon}
+                                </span>
+                            ) : null}
+                            {title}
+                        </h2>
                         {description ? <p>{description}</p> : null}
                     </div>
                     <button
